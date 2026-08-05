@@ -2,3 +2,4 @@ Memora Development Commit History Log
 ============================
 [2026-08-04T03:40:40.000Z] init: initialize next.js repository with tailwind config
 [2026-08-04T09:04:19.000Z] style: configure css color variables and base guidelines
+[2026-08-05T03:36:52.000Z] feat: install lucide-react and setup primitive icons library
