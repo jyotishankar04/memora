@@ -14,3 +14,4 @@ Memora Development Commit History Log
 [2026-08-08T10:04:31.000Z] feat: add sticky navigation scroll observer and blur class
 [2026-08-09T03:39:42.000Z] feat: design first prototype of double-bordered visual cards
 [2026-08-09T07:23:07.000Z] refactor: apply double-bordered containers to all feature lists
+[2026-08-09T10:24:17.000Z] style: remove double-bordered layout from pricing cards
