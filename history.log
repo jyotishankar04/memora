@@ -17,3 +17,4 @@ Memora Development Commit History Log
 [2026-08-09T10:24:17.000Z] style: remove double-bordered layout from pricing cards
 [2026-08-10T04:13:03.000Z] style: minor spacing tweaks on mobile view
 [2026-08-10T07:15:42.000Z] feat: add oauth-only auth split views with custom svg logo
+[2026-08-10T09:53:06.000Z] style: adapt login and signup forms for light and dark themes
