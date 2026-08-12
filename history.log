@@ -22,3 +22,4 @@ Memora Development Commit History Log
 [2026-08-11T06:00:42.000Z] refactor: simplify layout imports and groupings
 [2026-08-11T08:37:08.000Z] feat: design 11-step interactive onboard workflow wizard
 [2026-08-11T10:30:48.000Z] feat: simplify onboarding wizard steps to 7 core captures
+[2026-08-12T04:26:08.000Z] refactor: remove background card wrapper from onboarding page
