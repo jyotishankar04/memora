@@ -26,3 +26,4 @@ Memora Development Commit History Log
 [2026-08-12T06:25:09.000Z] fix: resolve minor typescript lint warnings
 [2026-08-12T08:51:58.000Z] feat: add missing public marketing pages
 [2026-08-12T10:58:28.000Z] fix: import cn utility on features index route
+[2026-08-13T03:36:27.000Z] refactor: use standard ReactNode children typings on root layout
