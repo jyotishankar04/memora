@@ -27,3 +27,4 @@ Memora Development Commit History Log
 [2026-08-12T08:51:58.000Z] feat: add missing public marketing pages
 [2026-08-12T10:58:28.000Z] fix: import cn utility on features index route
 [2026-08-13T03:36:27.000Z] refactor: use standard ReactNode children typings on root layout
+[2026-08-13T05:32:33.000Z] feat: change blogs route to coming soon page layout
