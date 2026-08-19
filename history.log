@@ -46,3 +46,4 @@ Memora Development Commit History Log
 [2026-08-18T06:58:58.000Z] chore: update devDependencies in package.json
 [2026-08-18T09:44:13.000Z] style: enhance double-border contrast in dark mode
 [2026-08-19T04:22:23.000Z] refactor: extract logo graphics to a separate component
+[2026-08-19T09:13:41.000Z] docs: document onboarding page capture states
