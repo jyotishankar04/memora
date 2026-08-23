@@ -499,7 +499,7 @@ export default function OnboardingPage() {
             </div>
 
             <Button
-              onClick={() => router.push("/")}
+              onClick={() => router.push("/app")}
               className="w-full max-w-xs h-11 rounded-full font-medium flex items-center justify-center gap-1.5 shadow-md"
             >
               Enter Memora <ArrowRight className="h-4 w-4" />

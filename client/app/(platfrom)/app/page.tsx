@@ -6,7 +6,7 @@ import { useTheme } from "next-themes";
 import { 
   Sparkles, Globe, Video, Image, Code, FileText, StickyNote, Plus, Search, 
   Settings, HelpCircle, Bell, ArrowRight, X, Moon, Sun, Trash2, FolderOpen, 
-  FolderPlus, Compass, RotateCcw, Check, Sparkle, Link as LinkIcon, Upload, ArrowUpRight, ChevronRight
+  FolderPlus, Compass, RotateCcw, Check, Sparkle, Link as LinkIcon, Upload, ArrowUpRight, ChevronRight 
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
