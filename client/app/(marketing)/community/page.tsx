@@ -1,0 +1,80 @@
+"use client";
+
+import React from "react";
+import { Navbar } from "@/components/marketing/navbar";
+import MainFooter from "@/components/marketing/landing/main-footer";
+import { Users, MessageSquare, Code, HelpCircle, ArrowUpRight } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+
+const communityLinks = [
+  { title: "Join Discord Server", desc: "Hang out with other users, ask questions, share RAG workflows, and suggest new integration ideas.", icon: MessageSquare, cta: "Discord Server" },
+  { title: "GitHub Discussions", desc: "Ask technical setup questions, discuss API structures, and help build core web scrapers.", icon: Code, cta: "Open GitHub" },
+  { title: "Twitter / X Community", desc: "Follow product update logs, feature announcements, user stories, and productivity advice.", icon: Users, cta: "Follow updates" },
+  { title: "Community Showcase", desc: "Share your own personal curation workflows, browser extensions setup, and capture collections.", icon: HelpCircle, cta: "See showcase" },
+];
+
+export default function CommunityPage() {
+  return (
+    <div className="flex flex-col min-h-screen bg-gradient-to-b from-primary/[0.03] via-background to-background text-foreground font-sans">
+      <Navbar />
+      
+      <main className="flex-1 pt-32 pb-20">
+        
+        {/* Header */}
+        <div className="max-w-6xl mx-auto px-6 text-center space-y-4 mb-20">
+          <span className="text-xs font-semibold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full">
+            Connect
+          </span>
+          <h1 className="text-4xl md:text-6xl font-medium tracking-tight text-foreground leading-[1.15]">
+            Join the Community.
+          </h1>
+          <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto leading-relaxed">
+            Connect with thousands of researchers, developers, and writers designing clean workflows to capture and search digital memory.
+          </p>
+        </div>
+
+        {/* Community List (Double Bordered Cards!) */}
+        <div className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-2 gap-6">
+          {communityLinks.map((item, idx) => {
+            const Icon = item.icon;
+            return (
+              <div 
+                key={idx}
+                className="rounded-2xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65 hover:border-primary/20 transition-all duration-300"
+              >
+                <div className="p-6 rounded-xl border border-border/75 bg-card flex flex-col justify-between h-full group">
+                  <div className="space-y-4">
+                    <div className="p-2 rounded-xl bg-primary/10 text-primary w-fit">
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    
+                    <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
+                      {item.title}
+                    </h3>
+                    
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {item.desc}
+                    </p>
+                  </div>
+
+                  <Button
+                    render={<Link href="#" target="_blank" />}
+                    nativeButton={false}
+                    className="mt-6 w-full h-10 rounded-full font-semibold flex items-center justify-center gap-1"
+                    variant="outline"
+                  >
+                    {item.cta} <ArrowUpRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+      </main>
+
+      <MainFooter />
+    </div>
+  );
+}
