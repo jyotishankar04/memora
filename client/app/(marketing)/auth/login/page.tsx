@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Sparkles, ArrowLeft } from "lucide-react";
 
 const GoogleIcon = () => (
@@ -20,6 +21,7 @@ const GithubIcon = () => (
 );
 
 export default function LoginPage() {
+  const router = useRouter();
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans p-4 lg:p-6 gap-6">
       
@@ -86,11 +88,17 @@ export default function LoginPage() {
 
           {/* Social Sign In Buttons (Only Google & GitHub OAuth) */}
           <div className="space-y-3">
-            <button className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer">
+            <button 
+              onClick={() => router.push("/app")}
+              className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
+            >
               <GoogleIcon />
               Continue with Google
             </button>
-            <button className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer">
+            <button 
+              onClick={() => router.push("/app")}
+              className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
+            >
               <GithubIcon />
               Continue with GitHub
             </button>
