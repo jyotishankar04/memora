@@ -89,14 +89,20 @@ export default function SignupPage() {
           {/* Social Sign Up Buttons (Only Google & GitHub OAuth) */}
           <div className="space-y-3">
             <button 
-              onClick={() => router.push("/app")}
+              onClick={() => {
+                localStorage.setItem("memora_token", "mock-secret-session-token");
+                router.push("/app");
+              }}
               className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
             >
               <GoogleIcon />
               Create account with Google
             </button>
             <button 
-              onClick={() => router.push("/app")}
+              onClick={() => {
+                localStorage.setItem("memora_token", "mock-secret-session-token");
+                router.push("/app");
+              }}
               className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
             >
               <GithubIcon />

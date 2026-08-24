@@ -1,0 +1,19 @@
+{
+  "expo": {
+    "name": "Memora",
+    "slug": "memora-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "backgroundColor": "#ffffff"
+    },
+    "plugins": [
+      "expo-router"
+    ],
+    "scheme": "memora"
+  }
+}
