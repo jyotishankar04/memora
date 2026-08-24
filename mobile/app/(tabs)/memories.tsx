@@ -4,18 +4,33 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useMemories, Memory } from "../../context/MemoryContext";
 
 export default function MobileMemoriesScreen() {
   const [filter, setFilter] = useState("all");
   const [showCollections, setShowCollections] = useState(false);
+  const { memories } = useMemories();
 
   const collections = [
-    { label: "Design", icon: "color-palette-outline", count: 42 },
-    { label: "Development", icon: "code-slash-outline", count: 38 },
-    { label: "AI", icon: "logo-android", count: 27 },
-    { label: "Ideas", icon: "bulb-outline", count: 19 },
-    { label: "Learning", icon: "book-outline", count: 51 }
+    { label: "Design", icon: "color-palette-outline", count: memories.filter(m => m.tags.includes("Design")).length + 40 },
+    { label: "Development", icon: "code-slash-outline", count: memories.filter(m => m.tags.includes("Dev")).length + 36 },
+    { label: "AI", icon: "logo-android", count: memories.filter(m => m.tags.includes("AI") || m.tags.includes("Database")).length + 24 },
+    { label: "Ideas", icon: "bulb-outline", count: memories.filter(m => m.tags.includes("Ideas")).length + 18 },
+    { label: "Learning", icon: "book-outline", count: memories.filter(m => m.tags.includes("Learning")).length + 50 }
   ];
+
+  // Dynamic filter application
+  const filteredMemories = memories.filter((m) => {
+    if (filter === "links") return m.type === "web";
+    if (filter === "videos") return m.type === "video";
+    if (filter === "notes") return m.type === "note" || m.type === "voice";
+    return true;
+  });
+
+  // Grouping by Date headings
+  const todayMemories = filteredMemories.filter(m => m.timeAgo === "Just now" || m.timeAgo === "2 min ago" || m.timeAgo === "1 hour ago");
+  const yesterdayMemories = filteredMemories.filter(m => m.timeAgo === "Yesterday");
+  const earlierMemories = filteredMemories.filter(m => m.timeAgo !== "Just now" && m.timeAgo !== "2 min ago" && m.timeAgo !== "1 hour ago" && m.timeAgo !== "Yesterday");
 
   return (
     <SafeAreaView style={styles.container}>
@@ -39,6 +54,7 @@ export default function MobileMemoriesScreen() {
             placeholder="Search memories..."
             placeholderTextColor="#8e8e93"
             style={styles.searchInput}
+            onTouchStart={() => router.push("/search")}
           />
         </View>
 
@@ -95,54 +111,38 @@ export default function MobileMemoriesScreen() {
             <View style={styles.timelineSection}>
               
               {/* Today heading */}
-              <View style={styles.timeGroup}>
-                <Text style={styles.timeGroupTitle}>Today</Text>
-                
-                {/* Website Card */}
-                <TouchableOpacity 
-                  style={styles.timelineCard}
-                  onPress={() => router.push("/memories-detail")}
-                >
-                  <View style={styles.cardHeader}>
-                    <Ionicons name="globe-outline" size={14} color="#1447E6" />
-                    <Text style={styles.cardSource}>linear.app</Text>
-                  </View>
-                  <Text style={styles.cardTitle}>SaaS Landing Page</Text>
-                  <Text style={styles.cardTags}>🎨 Design &middot; SaaS</Text>
-                </TouchableOpacity>
-
-                {/* Video Card */}
-                <TouchableOpacity 
-                  style={styles.timelineCard}
-                  onPress={() => router.push("/memories-detail")}
-                >
-                  <View style={styles.cardHeader}>
-                    <Ionicons name="logo-youtube" size={14} color="#ff0000" />
-                    <Text style={styles.cardSource}>youtube.com</Text>
-                  </View>
-                  <Text style={styles.cardTitle}>Building AI Agents</Text>
-                  <Text style={styles.cardTags}>🤖 AI &middot; Learning</Text>
-                </TouchableOpacity>
-
-              </View>
+              {todayMemories.length > 0 && (
+                <View style={styles.timeGroup}>
+                  <Text style={styles.timeGroupTitle}>Today</Text>
+                  {todayMemories.map(item => (
+                    <MemoryCardRow key={item.id} item={item} />
+                  ))}
+                </View>
+              )}
 
               {/* Yesterday heading */}
-              <View style={styles.timeGroup}>
-                <Text style={styles.timeGroupTitle}>Yesterday</Text>
+              {yesterdayMemories.length > 0 && (
+                <View style={styles.timeGroup}>
+                  <Text style={styles.timeGroupTitle}>Yesterday</Text>
+                  {yesterdayMemories.map(item => (
+                    <MemoryCardRow key={item.id} item={item} />
+                  ))}
+                </View>
+              )}
 
-                {/* Note Card */}
-                <TouchableOpacity 
-                  style={styles.timelineCard}
-                  onPress={() => router.push("/memories-detail")}
-                >
-                  <View style={styles.cardHeader}>
-                    <Ionicons name="create-outline" size={14} color="#1c1c1e" />
-                    <Text style={styles.cardSource}>Personal Note</Text>
-                  </View>
-                  <Text style={styles.cardTitle}>Indie SaaS Analytics Idea</Text>
-                  <Text style={styles.cardTags}>💡 Ideas &middot; Startup</Text>
-                </TouchableOpacity>
-              </View>
+              {/* Earlier heading */}
+              {earlierMemories.length > 0 && (
+                <View style={styles.timeGroup}>
+                  <Text style={styles.timeGroupTitle}>Earlier</Text>
+                  {earlierMemories.map(item => (
+                    <MemoryCardRow key={item.id} item={item} />
+                  ))}
+                </View>
+              )}
+
+              {filteredMemories.length === 0 && (
+                <Text style={styles.emptyFeed}>No saves matched this filter.</Text>
+              )}
 
             </View>
           )}
@@ -150,6 +150,29 @@ export default function MobileMemoriesScreen() {
 
       </View>
     </SafeAreaView>
+  );
+}
+
+// Subcomponent to render rows cleanly
+function MemoryCardRow({ item }: { item: Memory }) {
+  let IconName: any = "globe-outline";
+  let iconColor = "#1447E6";
+  if (item.type === "video") { IconName = "logo-youtube"; iconColor = "#ff0000"; }
+  else if (item.type === "note") { IconName = "create-outline"; iconColor = "#1c1c1e"; }
+  else if (item.type === "voice") { IconName = "mic-outline"; iconColor = "#8e8e93"; }
+
+  return (
+    <TouchableOpacity 
+      style={styles.timelineCard}
+      onPress={() => router.push({ pathname: "/memories-detail", params: { id: item.id } })}
+    >
+      <View style={styles.cardHeader}>
+        <Ionicons name={IconName} size={14} color={iconColor} />
+        <Text style={styles.cardSource}>{item.source}</Text>
+      </View>
+      <Text style={styles.cardTitle}>{item.title}</Text>
+      <Text style={styles.cardTags}>{item.tags.map(t => `#${t}`).join("  ")}</Text>
+    </TouchableOpacity>
   );
 }
 

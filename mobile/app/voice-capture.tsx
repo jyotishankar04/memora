@@ -4,15 +4,24 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useMemories } from "../context/MemoryContext";
 
 export default function MobileVoiceCaptureScreen() {
   const [recording, setRecording] = useState(true);
   const [saving, setSaving] = useState(false);
+  const { addMemory } = useMemories();
 
   const stopRecording = () => {
     setRecording(false);
     setSaving(true);
     setTimeout(() => {
+      addMemory({
+        type: "voice",
+        title: "Indie SaaS Analytics Idea",
+        source: "Voice Note",
+        desc: "Transcript: I just had an idea about SaaS analytics...",
+        tags: ["SaaS", "Analytics", "Startup"]
+      });
       setSaving(false);
     }, 1000);
   };

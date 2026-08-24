@@ -4,10 +4,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useMemories } from "../context/MemoryContext";
 
 export default function MobileSearchModal() {
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<any[]>([]);
+  const { memories } = useMemories();
 
   const handleSearch = (text: string) => {
     setQuery(text);
@@ -15,12 +17,12 @@ export default function MobileSearchModal() {
       setResults([]);
       return;
     }
-    setResults([
-      { title: "Linear Pricing", type: "web", source: "linear.app/pricing" },
-      { title: "Stripe Pricing", type: "web", source: "stripe.com/pricing" },
-      { title: "Vercel Pricing", type: "web", source: "vercel.com/pricing" },
-      { title: "SaaS pricing notes", type: "note", source: "Personal Note" }
-    ]);
+    const filtered = memories.filter(m => 
+      m.title.toLowerCase().includes(text.toLowerCase()) || 
+      m.desc.toLowerCase().includes(text.toLowerCase()) ||
+      m.tags.some(t => t.toLowerCase().includes(text.toLowerCase()))
+    );
+    setResults(filtered);
   };
 
   return (

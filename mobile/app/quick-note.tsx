@@ -4,15 +4,30 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useMemories } from "../context/MemoryContext";
 
 export default function MobileQuickNoteScreen() {
   const [note, setNote] = useState("");
+  const { addMemory } = useMemories();
 
   const handleSave = () => {
     if (!note.trim()) {
       Alert.alert("Error", "Please enter a note to save.");
       return;
     }
+    
+    // Extract first line as title
+    const firstLine = note.trim().split("\n")[0];
+    const computedTitle = firstLine.length > 28 ? `${firstLine.substring(0, 25)}...` : firstLine;
+    
+    addMemory({
+      type: "note",
+      title: computedTitle || "Quick Note",
+      source: "Personal Note",
+      desc: note.trim(),
+      tags: ["Ideas", "Note"]
+    });
+
     Alert.alert("Saved", "Memora will organize this automatically.");
     setNote("");
     router.back();

@@ -1,15 +1,42 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Dimensions 
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
-import { router } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
+import { useMemories } from "../context/MemoryContext";
 
 const { width } = Dimensions.get("window");
 
 export default function MobileMemoryDetailPage() {
+  const { id } = useLocalSearchParams();
+  const { memories, toggleFavorite } = useMemories();
+  
+  // Find current memory or default to first
+  const item = memories.find(m => m.id === id) || memories[0];
+
   const [note, setNote] = useState("Good reference for Memora");
   const [isEditing, setIsEditing] = useState(false);
+
+  useEffect(() => {
+    if (item) {
+      setNote(item.content || item.desc);
+    }
+  }, [item]);
+
+  if (!item) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={{ padding: 24 }}>Memory not found.</Text>
+      </SafeAreaView>
+    );
+  }
+
+  let IconName: any = "globe-outline";
+  let iconColor = "#1447E6";
+  if (item.type === "video") { IconName = "logo-youtube"; iconColor = "#ff0000"; }
+  else if (item.type === "note") { IconName = "create-outline"; iconColor = "#1c1c1e"; }
+  else if (item.type === "voice") { IconName = "mic-outline"; iconColor = "#8e8e93"; }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -20,8 +47,12 @@ export default function MobileMemoryDetailPage() {
           <Ionicons name="arrow-back" size={24} color="#1c1c1e" />
         </TouchableOpacity>
         <View style={styles.headerActions}>
-          <TouchableOpacity style={styles.actionButton}>
-            <Ionicons name="star-outline" size={20} color="#1c1c1e" />
+          <TouchableOpacity style={styles.actionButton} onPress={() => toggleFavorite(item.id)}>
+            <Ionicons 
+              name={item.isFavorite ? "star" : "star-outline"} 
+              size={20} 
+              color={item.isFavorite ? "#1447E6" : "#1c1c1e"} 
+            />
           </TouchableOpacity>
           <TouchableOpacity style={styles.actionButton}>
             <Ionicons name="ellipsis-horizontal" size={20} color="#1c1c1e" />
@@ -33,17 +64,17 @@ export default function MobileMemoryDetailPage() {
         
         {/* Source visual preview */}
         <View style={styles.previewContainer}>
-          <Ionicons name="globe-outline" size={32} color="#1447E6" />
-          <Text style={styles.previewLabel}>Website preview</Text>
+          <Ionicons name={IconName} size={32} color={iconColor} />
+          <Text style={styles.previewLabel}>{item.type.toUpperCase()} PREVIEW</Text>
         </View>
 
         {/* Title / Domain details */}
         <View style={styles.detailsGroup}>
-          <Text style={styles.title}>SaaS Landing Page</Text>
-          <Text style={styles.domain}>linear.app</Text>
+          <Text style={styles.title}>{item.title}</Text>
+          <Text style={styles.domain}>{item.source}</Text>
           
           <View style={styles.tagsRow}>
-            {["Design", "SaaS"].map((t, idx) => (
+            {item.tags.map((t, idx) => (
               <View key={idx} style={styles.tagBadge}>
                 <Text style={styles.tagText}>{t}</Text>
               </View>
@@ -55,7 +86,7 @@ export default function MobileMemoryDetailPage() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>AI Summary</Text>
           <Text style={styles.summaryText}>
-            A modern SaaS product website focused on minimal visual elements, high-fidelity dark themes, and navigation workflows.
+            {item.desc || "AI analysis pending. We are extracting concepts from this save."}
           </Text>
         </View>
 

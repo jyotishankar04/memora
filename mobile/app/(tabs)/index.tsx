@@ -4,10 +4,19 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useMemories } from "../../context/MemoryContext";
 
 const { width } = Dimensions.get("window");
 
 export default function MobileHomeScreen() {
+  const { memories } = useMemories();
+  
+  // Get latest 3 memories for recently saved feed
+  const recentMemories = memories.slice(0, 3);
+  
+  // Find a rediscovery candidate (e.g. older than 1 day or index 3)
+  const rediscoverCandidate = memories.find(m => m.tags.includes("Database") || m.tags.includes("Design")) || memories[memories.length - 1];
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -71,62 +80,59 @@ export default function MobileHomeScreen() {
           </View>
 
           <View style={styles.recentFeed}>
-            
-            {/* Website Preview card */}
-            <TouchableOpacity 
-              style={styles.memoryCard}
-              onPress={() => router.push("/memories-detail")}
-            >
-              <View style={styles.cardPreviewPlaceholder}>
-                <Ionicons name="globe-outline" size={24} color="#1447E6" />
-                <Text style={styles.previewText}>Website preview</Text>
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>Beautiful SaaS Landing</Text>
-                <Text style={styles.cardTags}>🎨 Design &middot; SaaS</Text>
-              </View>
-            </TouchableOpacity>
+            {recentMemories.map((item) => {
+              let IconName: any = "globe-outline";
+              let iconColor = "#1447E6";
+              if (item.type === "video") { IconName = "logo-youtube"; iconColor = "#ff0000"; }
+              else if (item.type === "note") { IconName = "create-outline"; iconColor = "#1c1c1e"; }
+              else if (item.type === "voice") { IconName = "mic-outline"; iconColor = "#8e8e93"; }
 
-            {/* YouTube preview card */}
-            <TouchableOpacity 
-              style={styles.memoryCard}
-              onPress={() => router.push("/memories-detail")}
-            >
-              <View style={styles.cardPreviewPlaceholder}>
-                <Ionicons name="logo-youtube" size={24} color="#ff0000" />
-                <Text style={styles.previewText}>YouTube preview</Text>
-              </View>
-              <View style={styles.cardContent}>
-                <Text style={styles.cardTitle}>Building Better SaaS Products</Text>
-                <Text style={styles.cardTags}>💻 Dev &middot; SaaS</Text>
-              </View>
-            </TouchableOpacity>
-
+              return (
+                <TouchableOpacity 
+                  key={item.id}
+                  style={styles.memoryCard}
+                  onPress={() => router.push({ pathname: "/memories-detail", params: { id: item.id } })}
+                >
+                  <View style={styles.cardPreviewPlaceholder}>
+                    <Ionicons name={IconName} size={24} color={iconColor} />
+                    <Text style={styles.previewText}>{item.type.toUpperCase()} PREVIEW</Text>
+                  </View>
+                  <View style={styles.cardContent}>
+                    <Text style={styles.cardTitle}>{item.title}</Text>
+                    <Text style={styles.cardTags}>
+                      {item.tags.map(t => `✦ ${t}`).join("  ")} &middot; {item.source}
+                    </Text>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
           </View>
         </View>
 
         {/* Rediscovery card from past */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>You saved this for a reason.</Text>
-          <View style={styles.rediscoverCard}>
-            <View style={styles.rediscoverHeader}>
-              <Ionicons name="sparkles" size={16} color="#1447E6" />
-              <Text style={styles.rediscoverLabel}>SAVED 3 MONTHS AGO</Text>
+        {rediscoverCandidate && (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>You saved this for a reason.</Text>
+            <View style={styles.rediscoverCard}>
+              <View style={styles.rediscoverHeader}>
+                <Ionicons name="sparkles" size={16} color="#1447E6" />
+                <Text style={styles.rediscoverLabel}>SAVED {rediscoverCandidate.timeAgo.toUpperCase()}</Text>
+              </View>
+              
+              <Text style={styles.rediscoverTitle}>{rediscoverCandidate.title}</Text>
+              <Text style={styles.rediscoverDesc}>
+                {rediscoverCandidate.desc}
+              </Text>
+              
+              <TouchableOpacity 
+                style={styles.revisitButton}
+                onPress={() => router.push({ pathname: "/memories-detail", params: { id: rediscoverCandidate.id } })}
+              >
+                <Text style={styles.revisitText}>Revisit &rarr;</Text>
+              </TouchableOpacity>
             </View>
-            
-            <Text style={styles.rediscoverTitle}>🎨 Dashboard Inspiration</Text>
-            <Text style={styles.rediscoverDesc}>
-              You recently saved 4 similar design references.
-            </Text>
-            
-            <TouchableOpacity 
-              style={styles.revisitButton}
-              onPress={() => router.push("/memories-detail")}
-            >
-              <Text style={styles.revisitText}>Revisit &rarr;</Text>
-            </TouchableOpacity>
           </View>
-        </View>
+        )}
 
       </ScrollView>
     </SafeAreaView>
