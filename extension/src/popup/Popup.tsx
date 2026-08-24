@@ -25,7 +25,7 @@ export default function Popup() {
     // 1. Check authentication status
     if (typeof chrome !== "undefined" && chrome.storage) {
       chrome.storage.local.get(["memora_token"], (result) => {
-        const storedToken = result.memora_token || "mock-secret-session-token"; // Default mock token for local trial
+        const storedToken = result.memora_token || null;
         setToken(storedToken);
 
         if (!storedToken) {
@@ -37,14 +37,7 @@ export default function Popup() {
       });
     } else {
       // Standalone browser trial mock
-      setToken("mock-dev-token");
-      setPageInfo({
-        url: "https://linear.app/features",
-        title: "Linear — Issue Tracking for High-Performance Teams",
-        favIconUrl: "https://linear.app/favicon.ico"
-      });
-      setTimeout(() => setState("saving"), 600);
-      setTimeout(() => setState("saved"), 1800);
+      setState("unauthorized");
     }
   }, []);
 
@@ -152,6 +145,29 @@ export default function Popup() {
           <p style={styles.unauthSub}>Connect this extension to your main Memora dashboard account.</p>
           <button style={styles.primaryButton} onClick={handleSignIn}>
             Sign in
+          </button>
+          <button 
+            style={{ ...styles.linkButton, marginTop: 12, color: "#1447E6" }} 
+            onClick={() => {
+              const mockToken = "mock-secret-session-token";
+              if (typeof chrome !== "undefined" && chrome.storage) {
+                chrome.storage.local.set({ memora_token: mockToken }, () => {
+                  setToken(mockToken);
+                  captureCurrentTab();
+                });
+              } else {
+                setToken(mockToken);
+                setPageInfo({
+                  url: "https://linear.app",
+                  title: "Linear — Issue Tracking for Teams",
+                  favIconUrl: "https://linear.app/favicon.ico"
+                });
+                setState("saving");
+                setTimeout(() => setState("saved"), 1000);
+              }
+            }}
+          >
+            Use Mock Token (Dev Mode)
           </button>
         </div>
       )}

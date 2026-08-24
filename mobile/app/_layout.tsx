@@ -6,7 +6,8 @@ import { MemoryProvider } from "../context/MemoryContext";
 export default function RootLayout() {
   return (
     <MemoryProvider>
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack screenOptions={{ headerShown: false }} initialRouteName="login">
+        <Stack.Screen name="login" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="search" options={{ presentation: "fullScreenModal" }} />
         <Stack.Screen name="settings" />

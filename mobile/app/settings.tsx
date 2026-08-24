@@ -98,7 +98,7 @@ export default function MobileSettingsPage() {
 
         {/* Privacy options / Logout */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.logoutRow} onPress={() => router.replace("/")}>
+          <TouchableOpacity style={styles.logoutRow} onPress={() => router.replace("/login")}>
             <Ionicons name="log-out-outline" size={18} color="#ff3b30" />
             <Text style={styles.logoutText}>Log out</Text>
           </TouchableOpacity>
