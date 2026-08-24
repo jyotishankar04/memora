@@ -13,6 +13,15 @@ import {
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import {
+  CommandDialog,
+  CommandInput,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+  CommandItem,
+  CommandSeparator,
+} from "@/components/ui/command";
 
 // Memory Data Type
 export interface Memory {
@@ -450,70 +459,45 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
       {/* GLOBAL SEARCH COMMAND PALETTE (⌘K) */}
-      {searchModalOpen && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-xl space-y-6 animate-scale-up">
-            
-            <div className="relative flex items-center">
-              <Search className="absolute left-4 h-5 w-5 text-primary stroke-[2.5]" />
-              <input
-                type="text"
-                autoFocus
-                placeholder="Search or jump to..."
-                value={commandQuery}
-                onChange={(e) => setCommandQuery(e.target.value)}
-                className="w-full bg-background border border-input rounded-xl pl-12 pr-4 py-3.5 text-xs text-foreground focus:outline-none focus:border-primary/80"
-              />
-              <button onClick={() => setSearchModalOpen(false)} className="absolute right-4 text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <div className="space-y-4 text-xs font-semibold">
-              
-              {/* Common Quick actions */}
-              <div className="space-y-1.5">
-                <h4 className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2">Quick Actions</h4>
-                {[
-                  { label: "Save a memory", action: () => { setSearchModalOpen(false); setSaveStep(1); setSaveModalOpen(true); } },
-                  { label: "Ask Memora", action: () => { setSearchModalOpen(false); router.push("/app/ask"); } },
-                  { label: "Create collection", action: () => { setSearchModalOpen(false); router.push("/app/collections"); } }
-                ].map((act, idx) => (
-                  <button
-                    key={idx}
-                    onClick={act.action}
-                    className="w-full text-left px-3 py-2 hover:bg-muted rounded-lg flex items-center text-foreground transition-colors"
-                  >
-                    <span>{act.label}</span>
-                  </button>
-                ))}
-              </div>
-
-              {/* Navigation Shortcuts */}
-              <div className="space-y-1.5 pt-2 border-t border-border/20">
-                <h4 className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-2">Go to</h4>
-                {[
-                  { label: "Go to Home", href: "/app" },
-                  { label: "Go to Memories", href: "/app/memories" },
-                  { label: "Go to Favorites", href: "/app/favorites" },
-                  { label: "Go to Settings", href: "/app/settings" }
-                ].map((shortcut) => (
-                  <button
-                    key={shortcut.href}
-                    onClick={() => { setSearchModalOpen(false); router.push(shortcut.href); }}
-                    className="w-full text-left px-3 py-2 hover:bg-muted rounded-lg flex items-center justify-between text-foreground transition-colors"
-                  >
-                    <span>{shortcut.label}</span>
-                    <span className="text-[9px] font-mono text-muted-foreground uppercase">Jump</span>
-                  </button>
-                ))}
-              </div>
-
-            </div>
-
-          </div>
-        </div>
-      )}
+      <CommandDialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
+        <CommandInput 
+          placeholder="Search or jump to..." 
+          value={commandQuery}
+          onValueChange={setCommandQuery}
+        />
+        <CommandList>
+          <CommandEmpty>No results found.</CommandEmpty>
+          
+          <CommandGroup heading="Quick Actions">
+            <CommandItem onSelect={() => { setSearchModalOpen(false); setSaveStep(1); setSaveModalOpen(true); }}>
+              <span>Save a memory</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/ask"); }}>
+              <span>Ask Memora</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/collections"); }}>
+              <span>Create collection</span>
+            </CommandItem>
+          </CommandGroup>
+          
+          <CommandSeparator />
+          
+          <CommandGroup heading="Go to">
+            <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app"); }}>
+              <span>Go to Home</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/memories"); }}>
+              <span>Go to Memories</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/favorites"); }}>
+              <span>Go to Favorites</span>
+            </CommandItem>
+            <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/settings"); }}>
+              <span>Go to Settings</span>
+            </CommandItem>
+          </CommandGroup>
+        </CommandList>
+      </CommandDialog>
 
       {/* Global CSS animations styles */}
       <style>{`
