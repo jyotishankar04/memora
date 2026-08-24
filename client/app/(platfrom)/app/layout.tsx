@@ -287,10 +287,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
           {/* Actions */}
           <div className="flex items-center gap-4">
-            <button className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
+            <Link href="/app/notifications" className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
               <Bell className="h-4 w-4" />
               <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-primary rounded-full" />
-            </button>
+            </Link>
             
             <button 
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
