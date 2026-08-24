@@ -470,12 +470,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           
           <CommandGroup heading="Quick Actions">
             <CommandItem onSelect={() => { setSearchModalOpen(false); setSaveStep(1); setSaveModalOpen(true); }}>
+              <Plus className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Save a memory</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/ask"); }}>
+              <Sparkles className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Ask Memora</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/collections"); }}>
+              <FolderPlus className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Create collection</span>
             </CommandItem>
           </CommandGroup>
@@ -484,15 +487,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           
           <CommandGroup heading="Go to">
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app"); }}>
+              <Compass className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Go to Home</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/memories"); }}>
+              <FolderOpen className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Go to Memories</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/favorites"); }}>
+              <Heart className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Go to Favorites</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/settings"); }}>
+              <Settings className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Go to Settings</span>
             </CommandItem>
           </CommandGroup>
