@@ -4,31 +4,36 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 
-interface Message {
-  sender: "user" | "ai";
-  text: string;
-}
-
 export default function MobileAskScreen() {
-  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
+  const [messages, setMessages] = useState<any[]>([
+    {
+      sender: "ai",
+      text: "You have 24 memories about AI agents.",
+      summary: true,
+      topics: [
+        { label: "Memory", count: 8 },
+        { label: "Tool calling", count: 6 },
+        { label: "RAG", count: 5 },
+        { label: "Evaluation", count: 3 }
+      ],
+      sources: ["AI Agents Guide", "Agent Memory Architecture", "Building Reliable Agents"]
+    }
+  ]);
 
   const handleSend = () => {
     if (!input.trim()) return;
-    const userText = input;
-    setMessages(prev => [...prev, { sender: "user", text: userText }]);
+    const userMsg = input;
+    setMessages(prev => [...prev, { sender: "user", text: userMsg }]);
     setInput("");
-    setIsTyping(true);
-
+    
     setTimeout(() => {
-      let aiText = "You've saved 24 memories related to AI agents. Most cover vector databases indexing structures and RAG evaluations.";
-      if (userText.toLowerCase().includes("design") || userText.toLowerCase().includes("ui")) {
-        aiText = "Based on your saves, 'Linear Dashboard' (saved today) and 'raycast.com/store' focus heavily on clean layout grids and sidebar menus.";
-      }
-      setMessages(prev => [...prev, { sender: "ai", text: aiText }]);
-      setIsTyping(false);
-    }, 1200);
+      setMessages(prev => [...prev, {
+        sender: "ai",
+        text: "Based on your PostgreSQL notes, you saved 5 guides on query optimizations, B-Tree index adjustments, and indexing jsonb fields for SaaS schemas.",
+        sources: ["PG index tuning tips", "JSONB queries syntax"]
+      }]);
+    }, 1000);
   };
 
   return (
@@ -36,59 +41,69 @@ export default function MobileAskScreen() {
       <KeyboardAvoidingView 
         behavior={Platform.OS === "ios" ? "padding" : "height"}
         style={styles.keyboardWrapper}
-        keyboardVerticalOffset={Platform.OS === "ios" ? 90 : 0}
       >
         <View style={styles.header}>
           <Text style={styles.title}>Ask Memora</Text>
-          <Text style={styles.subTitle}>Chat conceptually with your collection library.</Text>
+          <Text style={styles.subTitle}>Chat with your memory.</Text>
         </View>
 
         <ScrollView contentContainerStyle={styles.scrollContent}>
-          {messages.length === 0 ? (
-            <View style={styles.emptyContainer}>
-              <View style={styles.emojiCircle}>
-                <Ionicons name="sparkles" size={24} color="#1447E6" />
-              </View>
-              <Text style={styles.emptyLabel}>Ask anything about your memories:</Text>
-              {[
-                "What have I saved about AI agents?",
-                "What design patterns appear in my saves?",
-                "Summarize my PostgreSQL guides."
-              ].map((q, idx) => (
-                <TouchableOpacity key={idx} style={styles.presetButton} onPress={() => setInput(q)}>
-                  <Text style={styles.presetText}>{q}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-          ) : (
-            <View style={styles.chatContainer}>
-              {messages.map((msg, idx) => (
-                <View 
-                  key={idx} 
-                  style={[
-                    styles.bubble,
-                    msg.sender === "user" ? styles.userBubble : styles.aiBubble
-                  ]}
-                >
-                  <Text style={[styles.bubbleText, msg.sender === "user" ? styles.userText : styles.aiText]}>
-                    {msg.text}
-                  </Text>
-                </View>
-              ))}
+          <Text style={styles.promptLabel}>What do you want to remember?</Text>
+          
+          <View style={styles.chatFeed}>
+            {messages.map((msg, idx) => (
+              <View 
+                key={idx} 
+                style={[
+                  styles.msgContainer,
+                  msg.sender === "user" ? styles.userContainer : styles.aiContainer
+                ]}
+              >
+                {msg.sender === "user" ? (
+                  <View style={styles.userBubble}>
+                    <Text style={styles.userText}>{msg.text}</Text>
+                  </View>
+                ) : (
+                  <View style={styles.aiContent}>
+                    <View style={styles.aiHeader}>
+                      <Ionicons name="sparkles" size={14} color="#1447E6" />
+                      <Text style={styles.aiBubbleText}>{msg.text}</Text>
+                    </View>
 
-              {isTyping && (
-                <View style={styles.typingIndicator}>
-                  <Text style={styles.typingText}>Memora is analyzing...</Text>
-                </View>
-              )}
-            </View>
-          )}
+                    {/* Topics table */}
+                    {msg.topics && (
+                      <View style={styles.topicsTable}>
+                        <Text style={styles.tableTitle}>MAIN TOPICS</Text>
+                        {msg.topics.map((t: any, tIdx: number) => (
+                          <View key={tIdx} style={styles.tableRow}>
+                            <Text style={styles.rowLabel}>{t.label}</Text>
+                            <Text style={styles.rowCount}>{t.count}</Text>
+                          </View>
+                        ))}
+                      </View>
+                    )}
+
+                    {/* Sources lists */}
+                    {msg.sources && (
+                      <View style={styles.sourcesBox}>
+                        <Text style={styles.tableTitle}>SOURCES</Text>
+                        {msg.sources.map((src: string, sIdx: number) => (
+                          <Text key={sIdx} style={styles.sourceRow}>&bull; {src}</Text>
+                        ))}
+                      </View>
+                    )}
+
+                  </View>
+                )}
+              </View>
+            ))}
+          </View>
+
         </ScrollView>
 
-        {/* Message Input Footer */}
         <View style={styles.footer}>
           <TextInput
-            placeholder="Ask Memora about your saves..."
+            placeholder="Ask a follow-up..."
             placeholderTextColor="#8e8e93"
             value={input}
             onChangeText={setInput}
@@ -131,82 +146,93 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 24,
-    flexGrow: 1,
   },
-  emptyContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 12,
-  },
-  emojiCircle: {
-    height: 48,
-    width: 48,
-    borderRadius: 24,
-    backgroundColor: "rgba(20,71,230,0.1)",
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 8,
-  },
-  emptyLabel: {
-    fontSize: 11,
+  promptLabel: {
+    fontSize: 13,
     fontWeight: "bold",
     color: "#8e8e93",
-    textTransform: "uppercase",
-    marginBottom: 4,
-    textAlign: "center",
+    marginBottom: 20,
   },
-  presetButton: {
+  chatFeed: {
+    gap: 20,
+  },
+  msgContainer: {
     width: "100%",
-    borderWidth: 1,
-    borderColor: "#e5e5ea",
-    borderRadius: 16,
-    padding: 16,
-    backgroundColor: "#ffffff",
   },
-  presetText: {
-    fontSize: 12,
-    color: "#1447E6",
-    fontWeight: "bold",
+  userContainer: {
+    alignItems: "flex-end",
   },
-  chatContainer: {
-    gap: 12,
+  aiContainer: {
+    alignItems: "flex-start",
   },
-  bubble: {
+  userBubble: {
+    backgroundColor: "#1447E6",
     borderRadius: 18,
     paddingHorizontal: 14,
     paddingVertical: 10,
     maxWidth: "80%",
   },
-  userBubble: {
-    backgroundColor: "#1447E6",
-    alignSelf: "flex-end",
-  },
-  aiBubble: {
-    backgroundColor: "#f2f2f7",
-    alignSelf: "flex-start",
-    borderWidth: 1,
-    borderColor: "#e5e5ea",
-  },
-  bubbleText: {
-    fontSize: 13,
-  },
   userText: {
     color: "#ffffff",
+    fontSize: 13,
     fontWeight: "500",
   },
-  aiText: {
+  aiContent: {
+    backgroundColor: "#f2f2f7",
+    borderWidth: 1,
+    borderColor: "#e5e5ea",
+    borderRadius: 20,
+    padding: 16,
+    width: "100%",
+    gap: 14,
+  },
+  aiHeader: {
+    flexDirection: "row",
+    gap: 6,
+    alignItems: "flex-start",
+  },
+  aiBubbleText: {
+    flex: 1,
+    fontSize: 13,
     color: "#1c1c1e",
     lineHeight: 18,
   },
-  typingIndicator: {
-    alignSelf: "flex-start",
-    paddingLeft: 6,
+  topicsTable: {
+    borderTopWidth: 1,
+    borderTopColor: "#e5e5ea",
+    paddingTop: 10,
+    gap: 6,
   },
-  typingText: {
-    fontSize: 10,
-    fontStyle: "italic",
+  tableTitle: {
+    fontSize: 9,
+    fontWeight: "bold",
     color: "#8e8e93",
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  tableRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+  },
+  rowLabel: {
+    fontSize: 12,
+    color: "#1c1c1e",
+    fontWeight: "500",
+  },
+  rowCount: {
+    fontSize: 11,
+    fontFamily: "monospace",
+    color: "#8e8e93",
+  },
+  sourcesBox: {
+    borderTopWidth: 1,
+    borderTopColor: "#e5e5ea",
+    paddingTop: 10,
+    gap: 4,
+  },
+  sourceRow: {
+    fontSize: 11,
+    color: "#1c1c1e",
   },
   footer: {
     flexDirection: "row",

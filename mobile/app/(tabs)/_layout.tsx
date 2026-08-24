@@ -10,10 +10,11 @@ export default function TabLayout() {
         tabBarInactiveTintColor: "#8e8e93",
         tabBarStyle: {
           borderTopWidth: 1,
-          borderTopColor: "#e5e5ea",
-          height: 60,
-          paddingBottom: 8,
+          borderTopColor: "#f2f2f7",
+          height: 64,
+          paddingBottom: 10,
           paddingTop: 8,
+          backgroundColor: "#ffffff",
         },
         tabBarLabelStyle: {
           fontSize: 10,
@@ -27,25 +28,25 @@ export default function TabLayout() {
         options={{
           title: "Home",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "compass" : "compass-outline"} size={22} color={color} />
+            <Ionicons name={focused ? "home" : "home-outline"} size={22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
-        name="search"
+        name="memories"
         options={{
-          title: "Search",
+          title: "Memories",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "search" : "search-outline"} size={22} color={color} />
+            <Ionicons name={focused ? "folder" : "folder-outline"} size={22} color={color} />
           ),
         }}
       />
       <Tabs.Screen
         name="capture"
         options={{
-          title: "Capture",
+          title: "",
           tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "add-circle" : "add-circle-outline"} size={24} color={color} />
+            <Ionicons name="add-circle" size={32} color="#1447E6" style={{ marginTop: 2 }} />
           ),
         }}
       />
@@ -55,15 +56,6 @@ export default function TabLayout() {
           title: "Ask",
           tabBarIcon: ({ color, focused }) => (
             <Ionicons name={focused ? "sparkles" : "sparkles-outline"} size={22} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: "You",
-          tabBarIcon: ({ color, focused }) => (
-            <Ionicons name={focused ? "settings" : "settings-outline"} size={22} color={color} />
           ),
         }}
       />

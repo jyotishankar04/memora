@@ -12,87 +12,118 @@ export default function MobileHomeScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
         
-        {/* Dynamic Greeting */}
-        <View style={styles.header}>
-          <Text style={styles.greeting}>Good morning, Subham.</Text>
-          <Text style={styles.subGreeting}>What's on your mind?</Text>
+        {/* Top Header Row with Avatar settings trigger */}
+        <View style={styles.headerRow}>
+          <View>
+            <Text style={styles.greeting}>Good morning 👋</Text>
+            <Text style={styles.subGreeting}>Your memory is growing.</Text>
+          </View>
+          
+          <TouchableOpacity 
+            style={styles.avatarButton} 
+            onPress={() => router.push("/settings")}
+          >
+            <Text style={styles.avatarText}>JD</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Global Search Input */}
-        <View style={styles.searchWrapper}>
+        {/* 🔍 Search Input Trigger */}
+        <TouchableOpacity 
+          style={styles.searchWrapper}
+          onPress={() => router.push("/search")}
+          activeOpacity={0.9}
+        >
           <Ionicons name="search" size={20} color="#1447E6" style={styles.searchIcon} />
-          <TextInput
-            placeholder="Search your memory..."
-            placeholderTextColor="#8e8e93"
-            style={styles.searchInput}
-            onTouchStart={() => router.push("/search")}
-          />
-        </View>
+          <Text style={styles.searchPlaceholder}>Search your memory...</Text>
+        </TouchableOpacity>
 
-        {/* Try Concept Search Prompts */}
-        <View style={styles.tryContainer}>
-          <Text style={styles.tryTitle}>Try searching conceptually:</Text>
-          <View style={styles.tagWrapper}>
-            {["SaaS inspiration", "AI agents", "PostgreSQL guides"].map((tag, idx) => (
-              <TouchableOpacity key={idx} style={styles.tagButton} onPress={() => router.push({ pathname: "/search", params: { q: tag } })}>
-                <Text style={styles.tagText}>“{tag}”</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* Save Something Grid */}
+        {/* Quick Capture Row */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>SAVE SOMETHING</Text>
-          <View style={styles.grid}>
+          <Text style={styles.sectionTitle}>Quick capture</Text>
+          <View style={styles.captureRow}>
             {[
-              { label: "Save Link", icon: "link-outline" },
-              { label: "Quick Note", icon: "create-outline" },
-              { label: "Upload Image", icon: "image-outline" },
-              { label: "Save File", icon: "document-text-outline" }
+              { label: "Link", icon: "link-outline", route: "/capture" },
+              { label: "Note", icon: "create-outline", route: "/quick-note" },
+              { label: "Image", icon: "camera-outline", route: "/capture" },
+              { label: "Voice", icon: "mic-outline", route: "/voice-capture" }
             ].map((item, idx) => (
-              <TouchableOpacity key={idx} style={styles.gridItem} onPress={() => router.push("/capture")}>
+              <TouchableOpacity 
+                key={idx} 
+                style={styles.captureItem}
+                onPress={() => router.push(item.route as any)}
+              >
                 <View style={styles.iconCircle}>
-                  <Ionicons name={item.icon as any} size={20} color="#1447E6" />
+                  <Ionicons name={item.icon as any} size={20} color="#1c1c1e" />
                 </View>
-                <Text style={styles.gridLabel}>{item.label}</Text>
+                <Text style={styles.captureLabel}>{item.label}</Text>
               </TouchableOpacity>
             ))}
           </View>
         </View>
 
-        {/* Recently Saved List */}
+        {/* Recently Saved Vertical feed */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>RECENTLY SAVED</Text>
-            <TouchableOpacity onPress={() => router.push("/search")}>
-              <Text style={styles.viewAll}>View all →</Text>
+            <Text style={styles.sectionTitle}>Recently saved</Text>
+            <TouchableOpacity onPress={() => router.push("/share-confirm")}>
+              <Text style={styles.viewAll}>See &rarr;</Text>
             </TouchableOpacity>
           </View>
 
-          <View style={styles.recentCard}>
-            <View style={styles.cardHeader}>
-              <Ionicons name="globe-outline" size={16} color="#1447E6" />
-              <Text style={styles.cardDomain}>linear.app</Text>
-              <Text style={styles.cardTime}>2 min ago</Text>
-            </View>
-            <Text style={styles.cardTitle}>Linear Dashboard</Text>
-            <Text style={styles.cardDesc}>SaaS Dashboard inspiration. Clean side navigation, metrics grids, shortcuts.</Text>
-            <View style={styles.cardTags}>
-              <Text style={styles.cardTag}>DESIGN</Text>
-              <Text style={styles.cardTag}>SAAS</Text>
-            </View>
+          <View style={styles.recentFeed}>
+            
+            {/* Website Preview card */}
+            <TouchableOpacity 
+              style={styles.memoryCard}
+              onPress={() => router.push("/memories-detail")}
+            >
+              <View style={styles.cardPreviewPlaceholder}>
+                <Ionicons name="globe-outline" size={24} color="#1447E6" />
+                <Text style={styles.previewText}>Website preview</Text>
+              </View>
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>Beautiful SaaS Landing</Text>
+                <Text style={styles.cardTags}>🎨 Design &middot; SaaS</Text>
+              </View>
+            </TouchableOpacity>
+
+            {/* YouTube preview card */}
+            <TouchableOpacity 
+              style={styles.memoryCard}
+              onPress={() => router.push("/memories-detail")}
+            >
+              <View style={styles.cardPreviewPlaceholder}>
+                <Ionicons name="logo-youtube" size={24} color="#ff0000" />
+                <Text style={styles.previewText}>YouTube preview</Text>
+              </View>
+              <View style={styles.cardContent}>
+                <Text style={styles.cardTitle}>Building Better SaaS Products</Text>
+                <Text style={styles.cardTags}>💻 Dev &middot; SaaS</Text>
+              </View>
+            </TouchableOpacity>
+
           </View>
         </View>
 
         {/* Rediscovery card from past */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>FROM 6 MONTHS AGO</Text>
+          <Text style={styles.sectionTitle}>You saved this for a reason.</Text>
           <View style={styles.rediscoverCard}>
-            <Text style={styles.rediscoverTitle}>PostgreSQL index tuning guides</Text>
-            <Text style={styles.rediscoverDesc}>Saved Feb 24, 2026 &middot; 3 similar saves identified</Text>
-            <TouchableOpacity style={styles.revisitButton}>
-              <Text style={styles.revisitText}>Revisit memory</Text>
+            <View style={styles.rediscoverHeader}>
+              <Ionicons name="sparkles" size={16} color="#1447E6" />
+              <Text style={styles.rediscoverLabel}>SAVED 3 MONTHS AGO</Text>
+            </View>
+            
+            <Text style={styles.rediscoverTitle}>🎨 Dashboard Inspiration</Text>
+            <Text style={styles.rediscoverDesc}>
+              You recently saved 4 similar design references.
+            </Text>
+            
+            <TouchableOpacity 
+              style={styles.revisitButton}
+              onPress={() => router.push("/memories-detail")}
+            >
+              <Text style={styles.revisitText}>Revisit &rarr;</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -111,18 +142,36 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingBottom: 60,
   },
-  header: {
+  headerRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
     marginBottom: 24,
   },
   greeting: {
-    fontSize: 28,
+    fontSize: 26,
     fontWeight: "bold",
     color: "#1c1c1e",
   },
   subGreeting: {
-    fontSize: 15,
+    fontSize: 14,
     color: "#8e8e93",
-    marginTop: 4,
+    marginTop: 2,
+  },
+  avatarButton: {
+    height: 40,
+    width: 40,
+    borderRadius: 20,
+    backgroundColor: "rgba(20,71,230,0.1)",
+    borderWidth: 1,
+    borderColor: "rgba(20,71,230,0.15)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  avatarText: {
+    fontSize: 12,
+    fontWeight: "bold",
+    color: "#1447E6",
   },
   searchWrapper: {
     flexDirection: "row",
@@ -133,58 +182,30 @@ const styles = StyleSheet.create({
     height: 52,
     borderWidth: 1,
     borderColor: "#e5e5ea",
-    marginBottom: 16,
-  },
-  searchIcon: {
-    marginRight: 10,
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: "#1c1c1e",
-  },
-  tryContainer: {
     marginBottom: 28,
   },
-  tryTitle: {
-    fontSize: 11,
-    fontWeight: "600",
+  searchIcon: {
+    marginRight: 12,
+  },
+  searchPlaceholder: {
+    fontSize: 14,
     color: "#8e8e93",
-    textTransform: "uppercase",
-  },
-  tagWrapper: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-    marginTop: 8,
-  },
-  tagButton: {
-    backgroundColor: "rgba(20,71,230,0.05)",
-    borderWidth: 1,
-    borderColor: "rgba(20,71,230,0.1)",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  tagText: {
-    fontSize: 10,
-    color: "#1447E6",
-    fontWeight: "bold",
   },
   section: {
     marginBottom: 28,
   },
   sectionHeader: {
     flexDirection: "row",
-    justifyContent: "between",
+    justifyContent: "space-between",
     alignItems: "center",
     marginBottom: 12,
   },
   sectionTitle: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: "bold",
     color: "#8e8e93",
-    letterSpacing: 1,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
     marginBottom: 12,
   },
   viewAll: {
@@ -192,89 +213,85 @@ const styles = StyleSheet.create({
     color: "#1447E6",
     fontWeight: "600",
   },
-  grid: {
+  captureRow: {
     flexDirection: "row",
-    flexWrap: "wrap",
     justifyContent: "space-between",
-    gap: 12,
   },
-  gridItem: {
-    width: (width - 60) / 2,
-    backgroundColor: "#ffffff",
-    borderWidth: 1,
-    borderColor: "#e5e5ea",
-    borderRadius: 16,
-    padding: 16,
-    minHeight: 110,
-    justifyContent: "space-between",
+  captureItem: {
+    alignItems: "center",
+    width: (width - 48 - 30) / 4,
   },
   iconCircle: {
-    height: 36,
-    width: 36,
-    borderRadius: 18,
-    backgroundColor: "rgba(20,71,230,0.1)",
+    height: 48,
+    width: 48,
+    borderRadius: 24,
+    backgroundColor: "#f2f2f7",
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 6,
+    borderWidth: 1,
+    borderColor: "#e5e5ea",
   },
-  gridLabel: {
-    fontSize: 12,
-    fontWeight: "bold",
+  captureLabel: {
+    fontSize: 11,
+    fontWeight: "600",
     color: "#1c1c1e",
   },
-  recentCard: {
+  recentFeed: {
+    gap: 16,
+  },
+  memoryCard: {
     borderWidth: 1,
     borderColor: "#e5e5ea",
     borderRadius: 16,
-    padding: 16,
     backgroundColor: "#ffffff",
+    overflow: "hidden",
   },
-  cardHeader: {
-    flexDirection: "row",
+  cardPreviewPlaceholder: {
+    height: 120,
+    backgroundColor: "#f9f9f9",
     alignItems: "center",
-    marginBottom: 10,
+    justifyContent: "center",
+    gap: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f2f2f7",
   },
-  cardDomain: {
+  previewText: {
     fontSize: 11,
     color: "#8e8e93",
-    marginLeft: 6,
-    flex: 1,
+    fontWeight: "600",
   },
-  cardTime: {
-    fontSize: 10,
-    color: "#8e8e93",
-    fontFamily: "monospace",
+  cardContent: {
+    padding: 14,
   },
   cardTitle: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: "bold",
     color: "#1c1c1e",
-    marginBottom: 4,
-  },
-  cardDesc: {
-    fontSize: 12,
-    color: "#8e8e93",
-    lineHeight: 18,
-    marginBottom: 12,
   },
   cardTags: {
-    flexDirection: "row",
-    gap: 6,
-  },
-  cardTag: {
-    fontSize: 8,
-    fontWeight: "bold",
-    backgroundColor: "#f2f2f7",
+    fontSize: 10,
     color: "#8e8e93",
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 4,
+    marginTop: 4,
   },
   rediscoverCard: {
     borderWidth: 1,
-    borderColor: "#e5e5ea",
+    borderColor: "rgba(20,71,230,0.15)",
     borderRadius: 16,
     padding: 16,
-    backgroundColor: "#ffffff",
+    backgroundColor: "rgba(20,71,230,0.03)",
+  },
+  rediscoverHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    marginBottom: 8,
+  },
+  rediscoverLabel: {
+    fontSize: 9,
+    fontWeight: "bold",
+    color: "#1447E6",
+    letterSpacing: 0.5,
   },
   rediscoverTitle: {
     fontSize: 14,
@@ -282,20 +299,17 @@ const styles = StyleSheet.create({
     color: "#1c1c1e",
   },
   rediscoverDesc: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#8e8e93",
     marginTop: 4,
+    lineHeight: 18,
   },
   revisitButton: {
     marginTop: 12,
-    borderWidth: 1,
-    borderColor: "#1447E6",
-    borderRadius: 12,
-    paddingVertical: 8,
-    alignItems: "center",
+    alignSelf: "flex-start",
   },
   revisitText: {
-    fontSize: 11,
+    fontSize: 12,
     color: "#1447E6",
     fontWeight: "bold",
   }

@@ -1,85 +1,46 @@
-import React, { useState } from "react";
+import React from "react";
 import { 
-  View, Text, StyleSheet, TextInput, TouchableOpacity, SafeAreaView, Alert 
+  View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert 
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
+import { router } from "expo-router";
 
-export default function MobileCaptureScreen() {
-  const [url, setUrl] = useState("");
-  const [note, setNote] = useState("");
-  const [type, setType] = useState<"link" | "note">("link");
-
-  const handleSave = () => {
-    if (type === "link" && !url.trim()) {
-      Alert.alert("Error", "Please paste a valid URL to save.");
-      return;
-    }
-    if (type === "note" && !note.trim()) {
-      Alert.alert("Error", "Please write a thought down to save.");
-      return;
-    }
-    Alert.alert("Saved", "Successfully saved to your Memora library.");
-    setUrl("");
-    setNote("");
-  };
+export default function MobileCaptureBottomSheetScreen() {
+  const options = [
+    { label: "Save a link", icon: "link-outline", action: () => alert("Link capture opened.") },
+    { label: "Quick note", icon: "create-outline", action: () => router.push("/quick-note") },
+    { label: "Take a photo", icon: "camera-outline", action: () => alert("Camera opened.") },
+    { label: "From gallery", icon: "image-outline", action: () => alert("Gallery opened.") },
+    { label: "Voice note", icon: "mic-outline", action: () => router.push("/voice-capture") },
+    { label: "Paste from clipboard", icon: "clipboard-outline", action: () => alert("Pasted from clipboard conceptually.") }
+  ];
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.paddingWrapper}>
+      {/* Background Dim Backdrop simulation */}
+      <View style={styles.backdrop}>
         
-        <Text style={styles.title}>Save something</Text>
-        <Text style={styles.subTitle}>Paste links, write thoughts, or upload screenshots.</Text>
+        {/* Bottom sheet container */}
+        <View style={styles.sheet}>
+          
+          <View style={styles.dragIndicator} />
+          
+          <Text style={styles.sheetTitle}>Save something</Text>
 
-        {/* Capture types selectors */}
-        <View style={styles.selectors}>
-          <TouchableOpacity 
-            style={[styles.selectorButton, type === "link" && styles.activeButton]} 
-            onPress={() => setType("link")}
-          >
-            <Ionicons name="link-outline" size={16} color={type === "link" ? "#ffffff" : "#1c1c1e"} />
-            <Text style={[styles.selectorText, type === "link" && styles.activeText]}>Link</Text>
+          <View style={styles.optionsList}>
+            {options.map((opt, idx) => (
+              <TouchableOpacity key={idx} style={styles.optionRow} onPress={opt.action}>
+                <Ionicons name={opt.icon as any} size={20} color="#1c1c1e" style={styles.optionIcon} />
+                <Text style={styles.optionLabel}>{opt.label}</Text>
+              </TouchableOpacity>
+            ))}
+          </View>
+
+          <TouchableOpacity style={styles.cancelButton} onPress={() => router.replace("/")}>
+            <Text style={styles.cancelText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.selectorButton, type === "note" && styles.activeButton]} 
-            onPress={() => setType("note")}
-          >
-            <Ionicons name="create-outline" size={16} color={type === "note" ? "#ffffff" : "#1c1c1e"} />
-            <Text style={[styles.selectorText, type === "note" && styles.activeText]}>Note</Text>
-          </TouchableOpacity>
+
         </View>
-
-        {/* Dynamic Forms */}
-        {type === "link" ? (
-          <View style={styles.form}>
-            <Text style={styles.label}>PASTE LINK URL</Text>
-            <TextInput
-              placeholder="https://example.com/useful-article"
-              placeholderTextColor="#8e8e93"
-              value={url}
-              onChangeText={setUrl}
-              style={styles.textInput}
-              autoCapitalize="none"
-              keyboardType="url"
-            />
-          </View>
-        ) : (
-          <View style={styles.form}>
-            <Text style={styles.label}>WRITE A QUICK NOTE</Text>
-            <TextInput
-              placeholder="Write anything down..."
-              placeholderTextColor="#8e8e93"
-              value={note}
-              onChangeText={setNote}
-              style={[styles.textInput, styles.textArea]}
-              multiline
-              numberOfLines={4}
-            />
-          </View>
-        )}
-
-        <TouchableOpacity style={styles.saveButton} onPress={handleSave}>
-          <Text style={styles.saveText}>Save Memory</Text>
-        </TouchableOpacity>
 
       </View>
     </SafeAreaView>
@@ -89,92 +50,64 @@ export default function MobileCaptureScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#ffffff",
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
-  paddingWrapper: {
+  backdrop: {
     flex: 1,
-    padding: 24,
+    justifyContent: "flex-end",
   },
-  title: {
-    fontSize: 24,
-    fontWeight: "bold",
-    color: "#1c1c1e",
-  },
-  subTitle: {
-    fontSize: 12,
-    color: "#8e8e93",
-    marginTop: 4,
-    marginBottom: 24,
-  },
-  selectors: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 24,
-  },
-  selectorButton: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    borderWidth: 1,
-    borderColor: "#e5e5ea",
-    borderRadius: 20,
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+  sheet: {
     backgroundColor: "#ffffff",
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 24,
+    paddingBottom: 40,
+    gap: 20,
   },
-  activeButton: {
-    backgroundColor: "#1447E6",
-    borderColor: "#1447E6",
-  },
-  selectorText: {
-    fontSize: 12,
-    fontWeight: "bold",
-    color: "#1c1c1e",
-  },
-  activeText: {
-    color: "#ffffff",
-  },
-  form: {
-    marginBottom: 28,
-  },
-  label: {
-    fontSize: 9,
-    fontWeight: "bold",
-    color: "#8e8e93",
-    letterSpacing: 1,
+  dragIndicator: {
+    width: 36,
+    height: 5,
+    backgroundColor: "#e5e5ea",
+    borderRadius: 3,
+    alignSelf: "center",
     marginBottom: 8,
   },
-  textInput: {
-    borderWidth: 1,
-    borderColor: "#e5e5ea",
-    borderRadius: 16,
-    paddingHorizontal: 16,
-    height: 52,
-    fontSize: 13,
+  sheetTitle: {
+    fontSize: 18,
+    fontWeight: "bold",
     color: "#1c1c1e",
-    backgroundColor: "#f9f9f9",
+    marginBottom: 4,
   },
-  textArea: {
-    height: 120,
-    paddingTop: 16,
-    paddingBottom: 16,
-    textAlignVertical: "top",
+  optionsList: {
+    gap: 4,
   },
-  saveButton: {
-    backgroundColor: "#1447E6",
-    borderRadius: 28,
-    height: 52,
+  optionRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f2f2f7",
+    gap: 12,
+  },
+  optionIcon: {
+    width: 24,
+  },
+  optionLabel: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#1c1c1e",
+  },
+  cancelButton: {
+    backgroundColor: "#f2f2f7",
+    borderRadius: 16,
+    height: 48,
     alignItems: "center",
     justifyContent: "center",
-    shadowColor: "#1447E6",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
+    marginTop: 10,
   },
-  saveText: {
-    fontSize: 14,
-    color: "#ffffff",
+  cancelText: {
+    fontSize: 13,
+    color: "#8e8e93",
     fontWeight: "bold",
   }
 });
