@@ -1,0 +1,57 @@
+services:
+  db:
+    image: postgres:18-alpine
+    container_name: memora-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: memora
+      POSTGRES_PASSWORD: memora
+      POSTGRES_DB: memora
+    ports:
+      - "5432:5432"
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d app_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    container_name: redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+  mailhog:
+    image: mailhog/mailhog
+    container_name: mailhog
+    restart: unless-stopped
+    ports:
+      - "8025:8025"
+      - "1025:1025"
+
+
+volumes:
+  db_data:
+  redis_data:
+
+
+  # DATABASE_URL=postgresql://memora:memora@db:5432/memora
+  # REDIS_URL=redis://redis:6379
+  # MAILHOG_URL=http://mailhog:1025
+  # SMTP_HOST=mailhog
+  # SMTP_PORT=1025
+  # SMTP_USERNAME=
+  # SMTP_PASSWORD=
+  # SMTP_FROM_ADDRESS=
+
+
