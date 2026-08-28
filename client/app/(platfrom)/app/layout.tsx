@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -92,15 +92,37 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
   // Upgrade popup: dismissing it shrinks the card down into the user button,
-  // which picks up a highlighted border right as the card fades out.
+  // which picks up a highlighted border + badge right as the card fades out.
+  // Once dismissed, hovering that badge (or the reopened card) brings the
+  // card back; moving off either closes it again after a short debounce so
+  // crossing the gap between badge and card doesn't flicker it shut.
   const [showUpgradeCard, setShowUpgradeCard] = useState(true);
   const [isUpgradeCardClosing, setIsUpgradeCardClosing] = useState(false);
-  const [showUpgradeHint, setShowUpgradeHint] = useState(false);
+  const [upgradeCardDismissed, setUpgradeCardDismissed] = useState(false);
+  const upgradeHoverCloseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const dismissUpgradeCard = () => {
     setIsUpgradeCardClosing(true);
-    setShowUpgradeHint(true);
+    setUpgradeCardDismissed(true);
     setTimeout(() => setShowUpgradeCard(false), 350);
+  };
+
+  const openUpgradeCardOnHover = () => {
+    if (!upgradeCardDismissed) return;
+    if (upgradeHoverCloseTimeout.current) {
+      clearTimeout(upgradeHoverCloseTimeout.current);
+      upgradeHoverCloseTimeout.current = null;
+    }
+    setIsUpgradeCardClosing(false);
+    setShowUpgradeCard(true);
+  };
+
+  const scheduleUpgradeCardHoverClose = () => {
+    if (!upgradeCardDismissed) return;
+    upgradeHoverCloseTimeout.current = setTimeout(() => {
+      setIsUpgradeCardClosing(true);
+      setTimeout(() => setShowUpgradeCard(false), 350);
+    }, 150);
   };
 
   // Command palette search query
@@ -125,6 +147,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
     );
   }
+
+  const isFreeUser = !currentUser.roles.includes("pro_user") && !currentUser.roles.includes("admin");
 
   const handleInputSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -262,8 +286,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         {/* Sidebar Bottom user profile */}
         <div className="p-4 border-t border-border/40 relative">
 
-          {showUpgradeCard && !currentUser.roles.includes("pro_user") && !currentUser.roles.includes("admin") && (
+          {showUpgradeCard && isFreeUser && (
             <div
+              onMouseEnter={openUpgradeCardOnHover}
+              onMouseLeave={scheduleUpgradeCardHoverClose}
               className={cn(
                 "absolute inset-x-4 bottom-full mb-3 origin-bottom transition-all duration-[350ms] ease-in-out",
                 isUpgradeCardClosing ? "opacity-0 scale-75 translate-y-3" : "opacity-100 scale-100 translate-y-0"
@@ -279,7 +305,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               onClick={() => setUserDropdownOpen(!userDropdownOpen)}
               className={cn(
                 "w-full flex items-center justify-between px-3 py-2 -mx-1 rounded-xl text-left hover:opacity-85 transition-all duration-500",
-                showUpgradeHint && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background"
+                upgradeCardDismissed && isFreeUser && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background"
               )}
             >
               <div className="flex items-center gap-2.5">
@@ -292,9 +318,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <ChevronDown className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
             </button>
 
-            {showUpgradeHint && (
+            {upgradeCardDismissed && isFreeUser && (
               <Link
                 href="/app/settings/billing"
+                onMouseEnter={openUpgradeCardOnHover}
+                onMouseLeave={scheduleUpgradeCardHoverClose}
                 className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary text-white text-[8px] font-bold uppercase tracking-wide shadow-sm z-10 animate-in fade-in slide-in-from-top-1 duration-500 hover:bg-primary/90"
               >
                 Upgrade
