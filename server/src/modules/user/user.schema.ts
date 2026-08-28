@@ -7,4 +7,9 @@ export const completeOnboardingSchema = z.object({
   organizeMode: z.enum(["auto", "manual"]).default("auto"),
 });
 
+export const updateProfileSchema = z.object({
+  name: z.string().min(1).max(255),
+});
+
 export type CompleteOnboardingInput = z.infer<typeof completeOnboardingSchema>;
+export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;

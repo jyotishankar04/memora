@@ -2,7 +2,11 @@ import { eq } from "drizzle-orm";
 import { db } from "../../db";
 import { userOnboarding, users } from "../../db/schema";
 import { OrganizeMode } from "../../db/enums";
-import type { CompleteOnboardingInput } from "./user.schema";
+import type { CompleteOnboardingInput, UpdateProfileInput } from "./user.schema";
+
+export async function updateProfile(userId: string, input: UpdateProfileInput): Promise<void> {
+  await db.update(users).set({ name: input.name }).where(eq(users.id, userId));
+}
 
 export async function completeOnboarding(userId: string, input: CompleteOnboardingInput): Promise<void> {
   const organizeMode = input.organizeMode === "manual" ? OrganizeMode.MANUAL : OrganizeMode.AUTO;
