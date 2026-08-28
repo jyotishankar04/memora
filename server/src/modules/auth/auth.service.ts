@@ -1,6 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "../../db";
-import { authIdentities, devices, refreshTokens, roles, sessions, userRoles, users } from "../../db/schema";
+import { authIdentities, devices, refreshTokens, roles, sessions, userOnboarding, userRoles, users } from "../../db/schema";
 import { Provider, UserStatus } from "../../db/enums";
 import { env } from "../../config/env";
 import { AppError } from "../../shared/errors/app-error";
@@ -27,8 +27,9 @@ interface UserRecord {
   emailVerified: boolean;
 }
 
-interface UserWithRoles extends UserRecord {
+export interface UserWithRoles extends UserRecord {
   roles: string[];
+  onboardingCompleted: boolean;
 }
 
 interface TokenPair {
@@ -229,7 +230,17 @@ export async function getUserWithRoles(userId: string): Promise<UserWithRoles> {
     .innerJoin(roles, eq(userRoles.roleId, roles.id))
     .where(eq(userRoles.userId, userId));
 
-  return { ...user, roles: roleRows.map((r) => r.name) };
+  const [onboarding] = await db
+    .select({ completedAt: userOnboarding.completedAt })
+    .from(userOnboarding)
+    .where(eq(userOnboarding.userId, userId))
+    .limit(1);
+
+  return {
+    ...user,
+    roles: roleRows.map((r) => r.name),
+    onboardingCompleted: !!onboarding?.completedAt,
+  };
 }
 
 export async function issueTokenPair(
