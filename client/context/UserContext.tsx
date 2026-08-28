@@ -1,0 +1,59 @@
+"use client";
+
+import React, { createContext, useContext } from "react";
+import type { AuthUser } from "@/lib/auth";
+import { cn } from "@/lib/utils";
+
+interface UserContextValue {
+  user: AuthUser;
+  setUser: (user: AuthUser) => void;
+}
+
+const UserContext = createContext<UserContextValue | null>(null);
+
+export function UserProvider({
+  user,
+  setUser,
+  children,
+}: {
+  user: AuthUser;
+  setUser: (user: AuthUser) => void;
+  children: React.ReactNode;
+}) {
+  return <UserContext.Provider value={{ user, setUser }}>{children}</UserContext.Provider>;
+}
+
+/** Signed-in user for the /app section. Only usable inside the (platfrom)/app layout, which is the only place that fetches and provides it. */
+export function useUser(): UserContextValue {
+  const ctx = useContext(UserContext);
+  if (!ctx) {
+    throw new Error("useUser() must be used within the /app layout's UserProvider");
+  }
+  return ctx;
+}
+
+export function getInitials(name: string | null, email: string): string {
+  if (name?.trim()) {
+    const parts = name.trim().split(/\s+/);
+    const first = parts[0]?.[0] ?? "";
+    const last = parts.length > 1 ? (parts[parts.length - 1]?.[0] ?? "") : "";
+    return (first + last).toUpperCase();
+  }
+  return email.slice(0, 2).toUpperCase();
+}
+
+export function formatPlan(roles: string[]): string {
+  const primary = roles[0] ?? "free_user";
+  return primary.replace(/_/g, " ").toUpperCase();
+}
+
+export function UserAvatar({ user, className }: { user: AuthUser; className?: string }) {
+  if (user.avatarUrl) {
+    return <img src={user.avatarUrl} alt="" className={cn("rounded-full object-cover", className)} />;
+  }
+  return (
+    <div className={cn("rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold select-none", className)}>
+      {getInitials(user.name, user.email)}
+    </div>
+  );
+}

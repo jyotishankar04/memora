@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getCurrentUser, logout } from "@/lib/auth";
+import { getCurrentUser, logout, type AuthUser } from "@/lib/auth";
+import { UserAvatar, UserProvider, formatPlan } from "@/context/UserContext";
+import { UpgradeCard } from "@/components/upgrade-card";
 import {
   CommandDialog,
   CommandInput,
@@ -52,6 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // hasn't finished the onboarding questionnaire yet (covers direct
   // navigation to /app, not just the post-OAuth-login redirect).
   const [authChecked, setAuthChecked] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
     async function checkAuth() {
@@ -61,6 +64,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           router.replace("/onboard");
           return;
         }
+        setCurrentUser(user);
         setAuthChecked(true);
       } catch {
         router.replace("/auth/login");
@@ -102,7 +106,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  if (!authChecked) {
+  if (!authChecked || !currentUser) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Sparkles className="h-5 w-5 text-primary animate-pulse" />
@@ -134,8 +138,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
+    <UserProvider user={currentUser} setUser={setCurrentUser}>
     <div className="flex h-screen w-screen bg-background text-foreground font-sans overflow-hidden transition-colors duration-300">
-      
+
       {/* 1. DESKTOP SIDEBAR */}
       <aside className="w-60 border-r border-border/60 bg-muted/15 flex flex-col justify-between shrink-0 hidden md:flex">
         <div className="p-5 space-y-6 overflow-y-auto flex-1">
@@ -242,6 +247,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         </div>
 
+        {!currentUser.roles.includes("pro_user") && !currentUser.roles.includes("admin") && (
+          <div className="px-4">
+            <UpgradeCard />
+          </div>
+        )}
+
         {/* Sidebar Bottom settings/user profile */}
         <div className="p-4 border-t border-border/40 space-y-1.5 relative">
           <Link 
@@ -261,12 +272,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             className="w-full pt-3 flex items-center justify-between px-3 border-t border-border/20 mt-2 text-left hover:opacity-85"
           >
             <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs select-none">
-                JD
-              </div>
+              <UserAvatar user={currentUser} className="h-8 w-8 text-xs" />
               <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground truncate">Subham Jyoti</p>
-                <p className="text-[9px] text-muted-foreground font-mono leading-none">FREE PLAN</p>
+                <p className="text-xs font-bold text-foreground truncate">{currentUser.name ?? currentUser.email}</p>
+                <p className="text-[9px] text-muted-foreground font-mono leading-none">{formatPlan(currentUser.roles)}</p>
               </div>
             </div>
             <ChevronDown className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
@@ -276,8 +285,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {userDropdownOpen && (
             <div className="absolute left-4 right-4 bottom-16 bg-card border border-border rounded-xl shadow-xl py-1 z-50 text-[10px] font-bold text-foreground">
               <div className="px-3 py-2 border-b border-border/20">
-                <p className="text-[10px] text-foreground">Subham Jyoti</p>
-                <p className="text-[9px] text-muted-foreground font-mono font-medium">Free Plan</p>
+                <p className="text-[10px] text-foreground">{currentUser.name ?? currentUser.email}</p>
+                <p className="text-[9px] text-muted-foreground font-mono font-medium">{formatPlan(currentUser.roles)}</p>
               </div>
               
               <Link href="/app/settings" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
@@ -339,9 +348,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
 
             <Link href="/app/settings">
-              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold text-xs select-none">
-                SJ
-              </div>
+              <UserAvatar user={currentUser} className="h-8 w-8 text-xs border border-primary/20" />
             </Link>
           </div>
 
@@ -557,5 +564,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       `}</style>
 
     </div>
+    </UserProvider>
   );
 }
