@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getAccessToken, logout } from "@/lib/auth";
 import {
   CommandDialog,
   CommandInput,
@@ -45,25 +46,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  // Auth gate: this app currently only has a mock token written by the login/signup
-  // pages (localStorage key "memora_token"). Until a real backend session exists,
-  // this is the only signal we have for "logged in" — but it's enough to stop the
-  // dashboard from being fully open to anyone who navigates to /app directly.
+  // Auth gate: redirects to login if no access token is stored. Doesn't verify
+  // the token is still valid — an expired token surfaces as 401s from API calls
+  // once the dashboard talks to the real backend.
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("memora_token") : null;
-    if (!token) {
-      router.replace("/auth/login");
-      return;
+    function checkAuth() {
+      const token = typeof window !== "undefined" ? getAccessToken() : null;
+      if (!token) {
+        router.replace("/auth/login");
+        return;
+      }
+      setAuthChecked(true);
     }
-    setAuthChecked(true);
+    checkAuth();
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem("memora_token");
-    setUserDropdownOpen(false);
-    router.push("/");
+    logout().finally(() => {
+      setUserDropdownOpen(false);
+      router.push("/");
+    });
   };
 
   // Modals
