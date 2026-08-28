@@ -174,6 +174,12 @@ export async function exchangeGithubCode(code: string): Promise<OAuthProfile> {
   };
 }
 
+/** Keeps the stored avatar in sync with the OAuth provider's current one, without clobbering it with a null/missing value. */
+async function syncAvatar(userId: string, currentAvatarUrl: string | null, providerAvatarUrl: string | null): Promise<void> {
+  if (!providerAvatarUrl || providerAvatarUrl === currentAvatarUrl) return;
+  await db.update(users).set({ avatarUrl: providerAvatarUrl }).where(eq(users.id, userId));
+}
+
 export async function findOrCreateUser(profile: OAuthProfile): Promise<{ user: UserRecord; isNewUser: boolean }> {
   const [existingIdentity] = await db
     .select()
@@ -192,6 +198,8 @@ export async function findOrCreateUser(profile: OAuthProfile): Promise<{ user: U
       .set({ providerData: profile.providerData })
       .where(eq(authIdentities.id, existingIdentity.id));
 
+    await syncAvatar(user.id, user.avatarUrl, profile.avatarUrl);
+
     return { user, isNewUser: false };
   }
 
@@ -204,6 +212,8 @@ export async function findOrCreateUser(profile: OAuthProfile): Promise<{ user: U
       providerId: profile.providerId,
       providerData: profile.providerData,
     });
+
+    await syncAvatar(userByEmail.id, userByEmail.avatarUrl, profile.avatarUrl);
 
     return { user: userByEmail, isNewUser: false };
   }
