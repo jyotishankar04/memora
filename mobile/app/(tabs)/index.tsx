@@ -8,9 +8,17 @@ import { useMemories } from "../../context/MemoryContext";
 
 const { width } = Dimensions.get("window");
 
+function useGreeting() {
+  const hr = new Date().getHours();
+  if (hr < 12) return "Good morning";
+  if (hr < 18) return "Good afternoon";
+  return "Good evening";
+}
+
 export default function MobileHomeScreen() {
   const { memories } = useMemories();
-  
+  const greeting = useGreeting();
+
   // Get latest 3 memories for recently saved feed
   const recentMemories = memories.slice(0, 3);
   
@@ -24,7 +32,7 @@ export default function MobileHomeScreen() {
         {/* Top Header Row with Avatar settings trigger */}
         <View style={styles.headerRow}>
           <View>
-            <Text style={styles.greeting}>Good morning 👋</Text>
+            <Text style={styles.greeting}>{greeting} 👋</Text>
             <Text style={styles.subGreeting}>Your memory is growing.</Text>
           </View>
           
@@ -74,7 +82,7 @@ export default function MobileHomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recently saved</Text>
-            <TouchableOpacity onPress={() => router.push("/share-confirm")}>
+            <TouchableOpacity onPress={() => router.push("/(tabs)/memories")}>
               <Text style={styles.viewAll}>See &rarr;</Text>
             </TouchableOpacity>
           </View>

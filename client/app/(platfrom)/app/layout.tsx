@@ -44,7 +44,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const { theme, setTheme } = useTheme();
-  
+
+  // Auth gate: this app currently only has a mock token written by the login/signup
+  // pages (localStorage key "memora_token"). Until a real backend session exists,
+  // this is the only signal we have for "logged in" — but it's enough to stop the
+  // dashboard from being fully open to anyone who navigates to /app directly.
+  const [authChecked, setAuthChecked] = useState(false);
+
+  useEffect(() => {
+    const token = typeof window !== "undefined" ? localStorage.getItem("memora_token") : null;
+    if (!token) {
+      router.replace("/auth/login");
+      return;
+    }
+    setAuthChecked(true);
+  }, [router]);
+
+  const handleLogout = () => {
+    localStorage.removeItem("memora_token");
+    setUserDropdownOpen(false);
+    router.push("/");
+  };
+
   // Modals
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
@@ -70,6 +91,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
+
+  if (!authChecked) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+      </div>
+    );
+  }
 
   const handleInputSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -258,9 +287,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
               <hr className="border-border/20 my-1" />
 
-              <Link href="/" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-red-500/10 text-red-500 text-left flex items-center gap-2">
+              <button onClick={handleLogout} className="w-full px-3 py-2 hover:bg-red-500/10 text-red-500 text-left flex items-center gap-2">
                 <span>Log out</span>
-              </Link>
+              </button>
             </div>
           )}
         </div>

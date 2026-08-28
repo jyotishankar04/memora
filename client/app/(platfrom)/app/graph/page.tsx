@@ -1,10 +1,12 @@
 "use client";
 
 import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Sparkles, Maximize2, Search, SlidersHorizontal } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function GraphPage() {
+  const router = useRouter();
   const [zoom, setZoom] = useState(1);
 
   // Nodes of memory graph
@@ -60,12 +62,14 @@ export default function GraphPage() {
           style={{ transform: `scale(${zoom})` }}
         >
           {nodes.map((node, idx) => (
-            <div 
+            <button
               key={idx}
-              className={`absolute ${node.x} px-3 py-1.5 border rounded-full text-xs font-bold shadow-xs hover:border-primary hover:text-primary transition-all cursor-pointer select-none`}
+              type="button"
+              onClick={() => router.push(`/app/search?q=${encodeURIComponent(node.label)}`)}
+              className={`absolute ${node.x} px-3 py-1.5 border rounded-full text-xs font-bold shadow-xs hover:border-primary hover:text-primary transition-all cursor-pointer select-none ${node.color}`}
             >
               {node.label}
-            </div>
+            </button>
           ))}
         </div>
 

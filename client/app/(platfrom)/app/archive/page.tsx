@@ -1,12 +1,35 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Archive, RotateCcw, Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { toast } from "@/components/ui/toast";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 export default function ArchivePage() {
-  const archives = [
+  const [archives, setArchives] = useState([
     { id: "mem-6", title: "Raycast Store Extension", type: "web", source: "raycast.com" }
-  ];
+  ]);
+
+  const handleRestore = (id: string, title: string) => {
+    setArchives((prev) => prev.filter((item) => item.id !== id));
+    toast.add({ title: "Restored to active index", description: title, type: "success" });
+  };
+
+  const handleDelete = (id: string, title: string) => {
+    setArchives((prev) => prev.filter((item) => item.id !== id));
+    toast.add({ title: "Deleted permanently", description: title, type: "success" });
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-8 animate-fade-in">
@@ -26,20 +49,45 @@ export default function ArchivePage() {
                   <h4 className="text-foreground leading-snug">{item.title}</h4>
                   <span className="text-[9px] text-muted-foreground font-mono mt-0.5 block">{item.source}</span>
                 </div>
-                
+
                 <div className="flex gap-2 pt-2 border-t border-border/20">
-                  <button 
-                    onClick={() => alert("Restored to active index.")}
-                    className="flex-1 h-8 rounded-full border border-border hover:bg-muted text-[10px] flex items-center justify-center gap-1"
+                  <Button
+                    variant="outline"
+                    onClick={() => handleRestore(item.id, item.title)}
+                    className="flex-1 h-8 rounded-full text-[10px] font-semibold"
                   >
                     <RotateCcw className="h-3 w-3" /> Restore
-                  </button>
-                  <button 
-                    onClick={() => alert("Deleted permanently.")}
-                    className="flex-1 h-8 rounded-full bg-red-500/10 text-red-500 border border-red-500/20 hover:bg-red-500/15 text-[10px] flex items-center justify-center gap-1"
-                  >
-                    <Trash2 className="h-3 w-3" /> Delete
-                  </button>
+                  </Button>
+
+                  <AlertDialog>
+                    <AlertDialogTrigger
+                      render={
+                        <Button
+                          variant="outline"
+                          className="flex-1 h-8 rounded-full bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/15 text-[10px] font-semibold"
+                        >
+                          <Trash2 className="h-3 w-3" /> Delete
+                        </Button>
+                      }
+                    />
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Delete "{item.title}" permanently?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          This action can't be undone.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                          className="bg-red-500 hover:bg-red-600 text-white"
+                          onClick={() => handleDelete(item.id, item.title)}
+                        >
+                          Delete
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               </div>
             </div>

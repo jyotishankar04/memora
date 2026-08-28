@@ -23,9 +23,29 @@ chrome.runtime.onInstalled.addListener(() => {
   console.log("Memora Extension context menus initialized.");
 });
 
+// Reads the real session token synced into storage by the popup/content script,
+// instead of ever hardcoding it — background saves must use the same auth as the rest of the extension.
+function getStoredToken(): Promise<string | null> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get(["memora_token"], (result) => {
+      resolve(result.memora_token || null);
+    });
+  });
+}
+
 // Context Menus Click Handler
-chrome.contextMenus.onClicked.addListener((info, tab) => {
-  const token = "mock-secret-session-token"; // Retrieve from storage in production
+chrome.contextMenus.onClicked.addListener(async (info, tab) => {
+  const token = await getStoredToken();
+  if (!token) {
+    chrome.notifications?.create({
+      type: "basic",
+      iconUrl: "src/popup/icon-128.png",
+      title: "Sign in to Memora",
+      message: "Open the Memora extension popup and sign in before saving.",
+      priority: 1
+    });
+    return;
+  }
 
   if (info.menuItemId === "save-page" && tab?.url) {
     saveMemory({
@@ -34,8 +54,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       title: tab.title || "Saved Page",
       source: "context_menu_page"
     }, token);
-  } 
-  
+  }
+
   else if (info.menuItemId === "save-selection" && info.selectionText && tab?.url) {
     saveMemory({
       type: "note",
@@ -44,8 +64,8 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
       content: info.selectionText,
       source: "context_menu_selection"
     }, token);
-  } 
-  
+  }
+
   else if (info.menuItemId === "save-image" && info.srcUrl && tab?.url) {
     saveMemory({
       type: "image",
@@ -58,8 +78,20 @@ chrome.contextMenus.onClicked.addListener((info, tab) => {
 });
 
 // Keyboard Commands listener
-chrome.commands.onCommand.addListener((command) => {
+chrome.commands.onCommand.addListener(async (command) => {
   if (command === "quick-save-page") {
+    const token = await getStoredToken();
+    if (!token) {
+      chrome.notifications?.create({
+        type: "basic",
+        iconUrl: "src/popup/icon-128.png",
+        title: "Sign in to Memora",
+        message: "Open the Memora extension popup and sign in before saving.",
+        priority: 1
+      });
+      return;
+    }
+
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
       if (activeTab && activeTab.url) {
@@ -68,7 +100,7 @@ chrome.commands.onCommand.addListener((command) => {
           url: activeTab.url,
           title: activeTab.title || "Quick Saved Page",
           source: "keyboard_shortcut"
-        }, "mock-secret-session-token");
+        }, token);
       }
     });
   }

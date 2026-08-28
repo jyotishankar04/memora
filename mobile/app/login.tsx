@@ -4,12 +4,12 @@ import {
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useMemories } from "../context/MemoryContext";
+import { useAuth } from "../context/AuthContext";
 
 export default function MobileLoginScreen() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const { addMemory } = useMemories(); // trigger context loading if needed
+  const { login } = useAuth();
 
   const handleLogin = () => {
     if (!email.trim() || !password.trim()) {
@@ -17,9 +17,9 @@ export default function MobileLoginScreen() {
       return;
     }
 
-    // Success login simulation
-    // In a real app we'd save to AsyncStorage/SecureStore
-    Alert.alert("Success", "Welcome back to Memora!");
+    // Session lives only in AuthContext for the lifetime of the app (matching
+    // the rest of the mock data layer, which also has no persistence yet).
+    login();
     router.replace("/(tabs)");
   };
 

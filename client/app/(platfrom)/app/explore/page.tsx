@@ -6,8 +6,8 @@ import { Sparkles, Compass, Clock, RotateCcw } from "lucide-react";
 
 export default function ExplorePage() {
   const discoveries = [
-    { title: "SaaS Onboarding UX layout", source: "Captured 6 months ago &middot; 4 similar updates found", href: "/app/memories/mem-1" },
-    { title: "PostgreSQL B-Tree Indexes Tuning", source: "Captured a year ago today &middot; 2 related saves", href: "/app/memories/mem-3" }
+    { title: "SaaS Onboarding UX layout", source: "Captured 6 months ago · 4 similar updates found", href: "/app/memories/mem-1" },
+    { title: "PostgreSQL B-Tree Indexes Tuning", source: "Captured a year ago today · 2 related saves", href: "/app/memories/mem-3" }
   ];
 
   return (
@@ -30,7 +30,7 @@ export default function ExplorePage() {
                 </span>
                 
                 <h4 className="text-foreground leading-snug mt-3">{item.title}</h4>
-                <span className="text-[9px] text-muted-foreground font-mono mt-1 block" dangerouslySetInnerHTML={{ __html: item.source }} />
+                <span className="text-[9px] text-muted-foreground font-mono mt-1 block">{item.source}</span>
               </div>
               
               <Link 

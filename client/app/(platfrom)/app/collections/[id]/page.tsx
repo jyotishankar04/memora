@@ -3,12 +3,32 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { 
-  Sparkles, Globe, Video, Image as ImageIcon, Code, FileText, StickyNote, Plus, Search, 
-  FolderOpen, ChevronRight, X, ArrowLeft, MoreHorizontal, Edit, Share2, Grid, List 
+import {
+  Sparkles, Globe, Video, Image as ImageIcon, Code, FileText, StickyNote, Plus, Search,
+  FolderOpen, ChevronRight, X, ArrowLeft, MoreHorizontal, Edit, Share2, Grid, List, Trash2, Copy
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui/toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 
 // Memory local schema
 interface Memory {
@@ -62,6 +82,7 @@ export default function CollectionDetailPage() {
 
   const [searchQuery, setSearchQuery] = useState("");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Get memories or default empty
   const collectionMemories = mockCollectionMemories[id] || [
@@ -118,35 +139,90 @@ export default function CollectionDetailPage() {
         </div>
 
         <div className="flex items-center gap-2">
-          <button className="h-9 px-3 rounded-full border border-border/60 hover:bg-muted text-xs font-semibold flex items-center gap-1.5 transition-colors">
+          <Button
+            variant="outline"
+            onClick={() => toast.add({ title: "Rename collection", description: "Editing collection details isn't available yet.", type: "info" })}
+            className="h-9 px-3 rounded-full text-xs font-semibold"
+          >
             <Edit className="h-3.5 w-3.5" /> Edit
-          </button>
-          <button className="h-9 px-3 rounded-full border border-border/60 hover:bg-muted text-xs font-semibold flex items-center gap-1.5 transition-colors">
+          </Button>
+          <Button
+            variant="outline"
+            onClick={() => {
+              if (typeof navigator !== "undefined" && navigator.clipboard) {
+                navigator.clipboard.writeText(window.location.href);
+              }
+              toast.add({ title: "Link copied", description: "Collection link copied to clipboard.", type: "success" });
+            }}
+            className="h-9 px-3 rounded-full text-xs font-semibold"
+          >
             <Share2 className="h-3.5 w-3.5" /> Share
-          </button>
-          <button className="h-9 w-9 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground">
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
+          </Button>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-muted-foreground">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => toast.add({ title: "Collection duplicated", type: "success" })}>
+                <Copy className="h-3.5 w-3.5" /> Duplicate
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                <Trash2 className="h-3.5 w-3.5" /> Delete collection
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete this collection?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Memories inside won't be deleted, only unlinked from this collection.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-red-500 hover:bg-red-600 text-white"
+                  onClick={() => {
+                    toast.add({ title: "Collection deleted", type: "success" });
+                    router.push("/app/collections");
+                  }}
+                >
+                  Delete
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
         </div>
       </div>
 
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div className="relative flex items-center max-w-xs w-full">
-          <Search className="absolute left-3.5 h-4 w-4 text-primary stroke-[2.5]" />
-          <input
+          <Search className="absolute left-3.5 h-4 w-4 text-primary stroke-[2.5] z-10" />
+          <Input
             type="text"
             placeholder="Search this collection..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-muted/20 border border-border text-foreground rounded-xl pl-9 pr-4 py-2 text-xs focus:outline-none focus:border-primary/80"
+            className="h-9 pl-9 rounded-xl text-xs"
           />
         </div>
 
         <div className="flex items-center gap-3 text-xs">
-          <button className="h-9 px-4 rounded-full bg-primary text-white text-xs font-bold flex items-center gap-1 shadow-sm">
+          <Button
+            onClick={() => router.push("/app/capture")}
+            className="h-9 px-4 rounded-full bg-primary text-white text-xs font-bold shadow-sm"
+          >
             <Plus className="h-4 w-4" /> Add memory
-          </button>
+          </Button>
 
           <div className="flex items-center border border-border/60 rounded-lg bg-card overflow-hidden">
             <button 
@@ -215,8 +291,8 @@ export default function CollectionDetailPage() {
               <h4>Raycast Store Extension Layout</h4>
               <p className="text-[9px] text-muted-foreground font-mono mt-0.5">Design &middot; Productivity</p>
             </div>
-            <button 
-              onClick={() => alert("Added to collection.")}
+            <button
+              onClick={() => toast.add({ title: "Added to collection", description: "Raycast Store Extension Layout", type: "success" })}
               className="text-[10px] text-primary hover:underline"
             >
               Add to collection &rarr;

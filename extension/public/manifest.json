@@ -7,7 +7,8 @@
     "activeTab",
     "storage",
     "contextMenus",
-    "clipboardRead"
+    "clipboardRead",
+    "notifications"
   ],
   "action": {
     "default_popup": "src/popup/popup.html"
@@ -21,5 +22,14 @@
       "matches": ["<all_urls>"],
       "js": ["content.js"]
     }
-  ]
+  ],
+  "commands": {
+    "quick-save-page": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+S",
+        "mac": "Command+Shift+S"
+      },
+      "description": "Quick save the current page to Memora"
+    }
+  }
 }
