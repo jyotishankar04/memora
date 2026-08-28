@@ -3,14 +3,32 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { 
-  Sparkles, Globe, Video, Image as ImageIcon, Code, FileText, StickyNote, Plus, Search, 
-  Settings, HelpCircle, Bell, ArrowRight, X, Trash2, FolderOpen, ChevronRight, ChevronDown, 
+import {
+  Sparkles, Globe, Video, Image as ImageIcon, Code, FileText, StickyNote, Plus, Search,
+  Settings, HelpCircle, Bell, ArrowRight, X, Trash2, FolderOpen, ChevronRight, ChevronDown,
   MoreHorizontal, Star, Grid, List, Copy, Archive, Edit, ExternalLink, ArrowLeft, FolderPlus,
   Heart, Check
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { toast } from "@/components/ui/toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function MemoryDetailPage() {
   const params = useParams();
@@ -21,6 +39,7 @@ export default function MemoryDetailPage() {
   const [userNote, setUserNote] = useState("I liked the clean side navigation, minimal metrics grids, and keyboard shortcut helpers of the Linear settings page.");
   const [isEditing, setIsEditing] = useState(false);
   const [starred, setStarred] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   // Mock retrieve data based on id
   const memoryInfo = {
@@ -52,11 +71,55 @@ export default function MemoryDetailPage() {
             <Star className={cn("h-4 w-4", starred ? "fill-amber-500 text-amber-500" : "")} />
           </button>
 
-          <button className="h-9 w-9 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground">
-            <MoreHorizontal className="h-4 w-4" />
-          </button>
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button className="h-9 w-9 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground">
+                  <MoreHorizontal className="h-4 w-4" />
+                </button>
+              }
+            />
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => router.push("/app/collections")}>
+                <FolderOpen className="h-3.5 w-3.5" /> Move to collection
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => {
+                toast.add({ title: "Moved to archive", description: memoryInfo.title, type: "success" });
+                router.push("/app/archive");
+              }}>
+                <Archive className="h-3.5 w-3.5" /> Archive
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
+                <Trash2 className="h-3.5 w-3.5" /> Move to trash
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </div>
+
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Move "{memoryInfo.title}" to trash?</AlertDialogTitle>
+            <AlertDialogDescription>
+              You can restore it from Trash within 30 days.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-500 hover:bg-red-600 text-white"
+              onClick={() => {
+                toast.add({ title: "Moved to trash", description: memoryInfo.title, type: "success" });
+                router.push("/app/memories");
+              }}
+            >
+              Move to trash
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Main Split grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">

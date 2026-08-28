@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import { 
-  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, SafeAreaView 
+import {
+  View, Text, StyleSheet, ScrollView, TextInput, TouchableOpacity, SafeAreaView, Alert
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
@@ -9,18 +9,20 @@ import { useMemories, Memory } from "../../context/MemoryContext";
 export default function MobileMemoriesScreen() {
   const [filter, setFilter] = useState("all");
   const [showCollections, setShowCollections] = useState(false);
+  const [tagFilter, setTagFilter] = useState<string[] | null>(null);
   const { memories } = useMemories();
 
   const collections = [
-    { label: "Design", icon: "color-palette-outline", count: memories.filter(m => m.tags.includes("Design")).length + 40 },
-    { label: "Development", icon: "code-slash-outline", count: memories.filter(m => m.tags.includes("Dev")).length + 36 },
-    { label: "AI", icon: "logo-android", count: memories.filter(m => m.tags.includes("AI") || m.tags.includes("Database")).length + 24 },
-    { label: "Ideas", icon: "bulb-outline", count: memories.filter(m => m.tags.includes("Ideas")).length + 18 },
-    { label: "Learning", icon: "book-outline", count: memories.filter(m => m.tags.includes("Learning")).length + 50 }
+    { label: "Design", icon: "color-palette-outline", tags: ["Design"], count: memories.filter(m => m.tags.includes("Design")).length + 40 },
+    { label: "Development", icon: "code-slash-outline", tags: ["Dev"], count: memories.filter(m => m.tags.includes("Dev")).length + 36 },
+    { label: "AI", icon: "logo-android", tags: ["AI", "Database"], count: memories.filter(m => m.tags.includes("AI") || m.tags.includes("Database")).length + 24 },
+    { label: "Ideas", icon: "bulb-outline", tags: ["Ideas"], count: memories.filter(m => m.tags.includes("Ideas")).length + 18 },
+    { label: "Learning", icon: "book-outline", tags: ["Learning"], count: memories.filter(m => m.tags.includes("Learning")).length + 50 }
   ];
 
   // Dynamic filter application
   const filteredMemories = memories.filter((m) => {
+    if (tagFilter && !m.tags.some(t => tagFilter.includes(t))) return false;
     if (filter === "links") return m.type === "web";
     if (filter === "videos") return m.type === "video";
     if (filter === "notes") return m.type === "note" || m.type === "voice";
@@ -76,6 +78,13 @@ export default function MobileMemoriesScreen() {
           ))}
         </View>
 
+        {tagFilter && (
+          <TouchableOpacity style={styles.activeTagFilter} onPress={() => setTagFilter(null)}>
+            <Text style={styles.activeTagFilterText}>Filtering: {tagFilter.join(", ")}</Text>
+            <Ionicons name="close-circle" size={16} color="#1447E6" />
+          </TouchableOpacity>
+        )}
+
         <ScrollView contentContainerStyle={styles.scrollContent}>
           {showCollections ? (
             /* COLLECTIONS PANEL VIEW */
@@ -87,7 +96,11 @@ export default function MobileMemoriesScreen() {
                   <TouchableOpacity 
                     key={idx} 
                     style={styles.colRow}
-                    onPress={() => alert(`${col.label} folder opened.`)}
+                    onPress={() => {
+                      setTagFilter(col.tags);
+                      setFilter("all");
+                      setShowCollections(false);
+                    }}
                   >
                     <View style={styles.colIconBox}>
                       <Ionicons name={col.icon as any} size={18} color="#1447E6" />
@@ -101,8 +114,8 @@ export default function MobileMemoriesScreen() {
                 ))}
               </View>
 
-              <TouchableOpacity style={styles.newColButton} onPress={() => alert("Create collection model...")}>
-                <Ionicons name="plus" size={16} color="#1447E6" />
+              <TouchableOpacity style={styles.newColButton} onPress={() => Alert.alert("New collection", "Creating collections isn't available yet.")}>
+                <Ionicons name="add" size={16} color="#1447E6" />
                 <Text style={styles.newColText}>New collection</Text>
               </TouchableOpacity>
             </View>
@@ -231,6 +244,23 @@ const styles = StyleSheet.create({
     gap: 8,
     marginBottom: 20,
   },
+  activeTagFilter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    backgroundColor: "rgba(20,71,230,0.06)",
+    borderWidth: 1,
+    borderColor: "rgba(20,71,230,0.15)",
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    marginBottom: 16,
+  },
+  activeTagFilterText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#1447E6",
+  },
   pill: {
     paddingHorizontal: 16,
     paddingVertical: 8,
@@ -315,6 +345,12 @@ const styles = StyleSheet.create({
   },
   timelineSection: {
     gap: 20,
+  },
+  emptyFeed: {
+    fontSize: 12,
+    color: "#8e8e93",
+    textAlign: "center",
+    paddingVertical: 40,
   },
   timeGroup: {
     gap: 12,

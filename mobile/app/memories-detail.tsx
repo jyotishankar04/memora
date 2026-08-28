@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { 
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Dimensions 
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, TextInput, Dimensions, Linking, Alert
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router, useLocalSearchParams } from "expo-router";
@@ -10,10 +10,36 @@ const { width } = Dimensions.get("window");
 
 export default function MobileMemoryDetailPage() {
   const { id } = useLocalSearchParams();
-  const { memories, toggleFavorite } = useMemories();
-  
+  const { memories, toggleFavorite, deleteMemory } = useMemories();
+
   // Find current memory or default to first
   const item = memories.find(m => m.id === id) || memories[0];
+
+  const handleMoreOptions = () => {
+    if (!item) return;
+    Alert.alert(item.title, undefined, [
+      { text: "Move to collection", onPress: () => router.push("/(tabs)/memories") },
+      {
+        text: "Delete",
+        style: "destructive",
+        onPress: () => {
+          deleteMemory(item.id);
+          router.back();
+        },
+      },
+      { text: "Cancel", style: "cancel" },
+    ]);
+  };
+
+  const handleOpenOriginal = () => {
+    if (!item) return;
+    if (item.type === "web" || item.type === "video") {
+      const url = item.source.startsWith("http") ? item.source : `https://${item.source}`;
+      Linking.openURL(url).catch(() => Alert.alert("Couldn't open link", url));
+    } else {
+      Alert.alert("Nothing to open", "This memory doesn't have an external link.");
+    }
+  };
 
   const [note, setNote] = useState("Good reference for Memora");
   const [isEditing, setIsEditing] = useState(false);
@@ -54,7 +80,7 @@ export default function MobileMemoryDetailPage() {
               color={item.isFavorite ? "#1447E6" : "#1c1c1e"} 
             />
           </TouchableOpacity>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleMoreOptions}>
             <Ionicons name="ellipsis-horizontal" size={20} color="#1c1c1e" />
           </TouchableOpacity>
         </View>
@@ -130,7 +156,7 @@ export default function MobileMemoryDetailPage() {
         </View>
 
         {/* Open original button */}
-        <TouchableOpacity style={styles.openButton} onPress={() => alert("Redirecting to original URL...")}>
+        <TouchableOpacity style={styles.openButton} onPress={handleOpenOriginal}>
           <Text style={styles.openText}>Open original &rarr;</Text>
         </TouchableOpacity>
 

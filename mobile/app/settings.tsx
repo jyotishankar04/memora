@@ -1,11 +1,25 @@
-import React from "react";
-import { 
-  View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView 
+import React, { useState } from "react";
+import {
+  View, Text, StyleSheet, ScrollView, TouchableOpacity, SafeAreaView, Alert, Switch
 } from "react-native";
 import { Ionicons } from "@expo/vector-icons";
 import { router } from "expo-router";
+import { useAuth } from "../context/AuthContext";
 
 export default function MobileSettingsPage() {
+  const { logout } = useAuth();
+  const [aiToggles, setAiToggles] = useState({
+    "AI organization": true,
+    "AI summaries": true,
+    "Search settings": true,
+  });
+  const [theme, setTheme] = useState("System Default");
+
+  const handleLogout = () => {
+    logout();
+    router.replace("/login");
+  };
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContent}>
@@ -41,7 +55,11 @@ export default function MobileSettingsPage() {
               { label: "Connected apps", state: "Notion, YouTube" },
               { label: "Keyboard shortcuts", state: "⌘K Configured" }
             ].map((item, idx) => (
-              <TouchableOpacity key={idx} style={styles.settingsItem}>
+              <TouchableOpacity
+                key={idx}
+                style={styles.settingsItem}
+                onPress={() => Alert.alert(item.label, `Current status: ${item.state}`)}
+              >
                 <Text style={styles.itemLabel}>{item.label}</Text>
                 <Text style={styles.itemState}>{item.state}</Text>
               </TouchableOpacity>
@@ -53,15 +71,15 @@ export default function MobileSettingsPage() {
         <View style={styles.section}>
           <Text style={styles.sectionLabel}>AI Features</Text>
           <View style={styles.settingsGroup}>
-            {[
-              { label: "AI organization", enabled: true },
-              { label: "AI summaries", enabled: true },
-              { label: "Search settings", enabled: true }
-            ].map((item, idx) => (
-              <TouchableOpacity key={idx} style={styles.settingsItem}>
-                <Text style={styles.itemLabel}>{item.label}</Text>
-                <Text style={styles.itemState}>{item.enabled ? "Enabled" : "Disabled"}</Text>
-              </TouchableOpacity>
+            {Object.entries(aiToggles).map(([label, enabled], idx) => (
+              <View key={idx} style={styles.settingsItem}>
+                <Text style={styles.itemLabel}>{label}</Text>
+                <Switch
+                  value={enabled}
+                  onValueChange={(value) => setAiToggles((prev) => ({ ...prev, [label]: value }))}
+                  trackColor={{ true: "#1447E6" }}
+                />
+              </View>
             ))}
           </View>
         </View>
@@ -75,7 +93,11 @@ export default function MobileSettingsPage() {
               { label: "Export Library" },
               { label: "Local storage limit" }
             ].map((item, idx) => (
-              <TouchableOpacity key={idx} style={styles.settingsItem}>
+              <TouchableOpacity
+                key={idx}
+                style={styles.settingsItem}
+                onPress={() => Alert.alert(item.label, "This isn't available yet.")}
+              >
                 <Text style={styles.itemLabel}>{item.label}</Text>
                 <Ionicons name="chevron-forward" size={14} color="#8e8e93" />
               </TouchableOpacity>
@@ -88,9 +110,13 @@ export default function MobileSettingsPage() {
           <Text style={styles.sectionLabel}>Appearance</Text>
           <View style={styles.settingsGroup}>
             {["System Default", "Light theme", "Dark theme"].map((themeOpt, idx) => (
-              <TouchableOpacity key={idx} style={styles.settingsItem}>
+              <TouchableOpacity
+                key={idx}
+                style={styles.settingsItem}
+                onPress={() => setTheme(themeOpt)}
+              >
                 <Text style={styles.itemLabel}>{themeOpt}</Text>
-                {idx === 0 && <Ionicons name="checkmark" size={16} color="#1447E6" />}
+                {theme === themeOpt && <Ionicons name="checkmark" size={16} color="#1447E6" />}
               </TouchableOpacity>
             ))}
           </View>
@@ -98,7 +124,7 @@ export default function MobileSettingsPage() {
 
         {/* Privacy options / Logout */}
         <View style={styles.section}>
-          <TouchableOpacity style={styles.logoutRow} onPress={() => router.replace("/login")}>
+          <TouchableOpacity style={styles.logoutRow} onPress={handleLogout}>
             <Ionicons name="log-out-outline" size={18} color="#ff3b30" />
             <Text style={styles.logoutText}>Log out</Text>
           </TouchableOpacity>

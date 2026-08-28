@@ -61,10 +61,10 @@ export default function MobileSearchModal() {
               <Text style={styles.matchesTitle}>MEMORA FOUND {results.length} MEMORIES</Text>
 
               {results.map((item, idx) => (
-                <TouchableOpacity 
-                  key={idx} 
+                <TouchableOpacity
+                  key={idx}
                   style={styles.resultCard}
-                  onPress={() => router.push("/memories-detail")}
+                  onPress={() => router.push({ pathname: "/memories-detail", params: { id: item.id } })}
                 >
                   <View style={styles.cardInfo}>
                     <Text style={styles.cardTitle}>{item.title}</Text>

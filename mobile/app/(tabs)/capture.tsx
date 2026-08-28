@@ -7,12 +7,12 @@ import { router } from "expo-router";
 
 export default function MobileCaptureBottomSheetScreen() {
   const options = [
-    { label: "Save a link", icon: "link-outline", action: () => alert("Link capture opened.") },
+    { label: "Save a link", icon: "link-outline", action: () => router.push("/quick-note") },
     { label: "Quick note", icon: "create-outline", action: () => router.push("/quick-note") },
-    { label: "Take a photo", icon: "camera-outline", action: () => alert("Camera opened.") },
-    { label: "From gallery", icon: "image-outline", action: () => alert("Gallery opened.") },
+    { label: "Take a photo", icon: "camera-outline", action: () => Alert.alert("Camera", "Camera capture isn't available yet.") },
+    { label: "From gallery", icon: "image-outline", action: () => Alert.alert("Gallery", "Gallery import isn't available yet.") },
     { label: "Voice note", icon: "mic-outline", action: () => router.push("/voice-capture") },
-    { label: "Paste from clipboard", icon: "clipboard-outline", action: () => alert("Pasted from clipboard conceptually.") }
+    { label: "Paste from clipboard", icon: "clipboard-outline", action: () => Alert.alert("Clipboard", "Clipboard paste isn't available yet.") }
   ];
 
   return (

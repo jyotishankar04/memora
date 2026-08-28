@@ -1,11 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import { Upload, Link as LinkIcon, StickyNote, Globe } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Upload, Link as LinkIcon, StickyNote, Globe, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { toast } from "@/components/ui/toast";
 
 export default function CapturePage() {
+  const router = useRouter();
   const [dragActive, setDragActive] = useState(false);
+
+  const [linkUrl, setLinkUrl] = useState("");
+  const [isSavingLink, setIsSavingLink] = useState(false);
+  const [linkSaved, setLinkSaved] = useState(false);
+
+  const [noteText, setNoteText] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
+  const [noteSaved, setNoteSaved] = useState(false);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();
@@ -22,8 +35,38 @@ export default function CapturePage() {
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      alert(`Dropped file: ${e.dataTransfer.files[0].name}. Memora is parsing contents.`);
+      toast.add({
+        title: "File received",
+        description: `${e.dataTransfer.files[0].name} — Memora is parsing contents.`,
+        type: "success",
+      });
     }
+  };
+
+  const handleSaveLink = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!linkUrl.trim()) return;
+    setIsSavingLink(true);
+    setTimeout(() => {
+      setIsSavingLink(false);
+      setLinkSaved(true);
+      toast.add({ title: "Link saved", description: linkUrl, type: "success" });
+      setLinkUrl("");
+      setTimeout(() => setLinkSaved(false), 2000);
+    }, 800);
+  };
+
+  const handleSaveNote = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!noteText.trim()) return;
+    setIsSavingNote(true);
+    setTimeout(() => {
+      setIsSavingNote(false);
+      setNoteSaved(true);
+      toast.add({ title: "Note saved", description: noteText.slice(0, 60), type: "success" });
+      setNoteText("");
+      setTimeout(() => setNoteSaved(false), 2000);
+    }, 800);
   };
 
   return (
@@ -58,28 +101,40 @@ export default function CapturePage() {
 
         {/* Links / Notes capture panel */}
         <div className="space-y-6 text-xs font-semibold text-foreground/80">
-          <div className="p-5 border border-border/60 bg-card rounded-2xl space-y-4">
+          <form onSubmit={handleSaveLink} className="p-5 border border-border/60 bg-card rounded-2xl space-y-4">
             <h3 className="text-xs font-bold text-foreground">Save URL Link</h3>
             <div className="relative flex items-center">
               <LinkIcon className="absolute left-3 h-4 w-4 text-muted-foreground" />
-              <input 
-                type="text" 
-                placeholder="https://example.com" 
-                className="w-full bg-background border border-input rounded-xl pl-9 pr-3 py-2 text-xs text-foreground focus:outline-none"
+              <Input
+                type="text"
+                placeholder="https://example.com"
+                value={linkUrl}
+                onChange={(e) => setLinkUrl(e.target.value)}
+                className="h-10 pl-9 rounded-xl text-xs"
               />
             </div>
-            <Button className="w-full h-9 rounded-full bg-primary text-white text-[10px] font-bold">Save Link</Button>
-          </div>
+            <Button type="submit" disabled={isSavingLink || !linkUrl.trim()} className="w-full h-9 rounded-full bg-primary text-white text-[10px] font-bold">
+              {isSavingLink ? "Saving..." : linkSaved ? (
+                <span className="flex items-center justify-center gap-1"><Check className="h-3.5 w-3.5" /> Saved</span>
+              ) : "Save Link"}
+            </Button>
+          </form>
 
-          <div className="p-5 border border-border/60 bg-card rounded-2xl space-y-4">
+          <form onSubmit={handleSaveNote} className="p-5 border border-border/60 bg-card rounded-2xl space-y-4">
             <h3 className="text-xs font-bold text-foreground">Quick Text Note</h3>
-            <textarea 
-              placeholder="Write a thought down..." 
+            <Textarea
+              placeholder="Write a thought down..."
               rows={3}
-              className="w-full bg-background border border-input rounded-xl px-3 py-2 text-xs text-foreground focus:outline-none resize-none"
+              value={noteText}
+              onChange={(e) => setNoteText(e.target.value)}
+              className="rounded-xl text-xs resize-none"
             />
-            <Button className="w-full h-9 rounded-full bg-primary text-white text-[10px] font-bold">Save Note</Button>
-          </div>
+            <Button type="submit" disabled={isSavingNote || !noteText.trim()} className="w-full h-9 rounded-full bg-primary text-white text-[10px] font-bold">
+              {isSavingNote ? "Saving..." : noteSaved ? (
+                <span className="flex items-center justify-center gap-1"><Check className="h-3.5 w-3.5" /> Saved</span>
+              ) : "Save Note"}
+            </Button>
+          </form>
         </div>
 
       </div>

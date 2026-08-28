@@ -133,14 +133,16 @@ export default function HomePage() {
         <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Save something</h3>
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-2xl">
           {[
-            { label: "Save Link", sub: "Paste a URL", icon: LinkIcon },
-            { label: "Quick Note", sub: "Capture a thought", icon: StickyNote },
-            { label: "Upload", sub: "Image or file", icon: Upload },
-            { label: "Save Anything", sub: "From extension", icon: ArrowUpRight }
+            { label: "Save Link", sub: "Paste a URL", icon: LinkIcon, href: "/app/capture" },
+            { label: "Quick Note", sub: "Capture a thought", icon: StickyNote, href: "/app/capture" },
+            { label: "Upload", sub: "Image or file", icon: Upload, href: "/app/capture" },
+            { label: "Save Anything", sub: "From extension", icon: ArrowUpRight, href: "/app/integrations" }
           ].map((cap, idx) => (
-            <div 
+            <button
               key={idx}
-              className="rounded-xl border border-border/45 bg-muted/75 p-0.5 shadow-xs hover:border-primary/20 transition-all duration-300 group cursor-pointer"
+              type="button"
+              onClick={() => router.push(cap.href)}
+              className="text-left rounded-xl border border-border/45 bg-muted/75 p-0.5 shadow-xs hover:border-primary/20 transition-all duration-300 group cursor-pointer"
             >
               <div className="p-4 rounded-lg border border-border/75 bg-card flex flex-col justify-between min-h-[110px] select-none">
                 <div className="p-2 rounded-lg bg-primary/10 text-primary w-fit group-hover:bg-primary group-hover:text-white transition-colors">
@@ -151,7 +153,7 @@ export default function HomePage() {
                   <p className="text-[9px] text-muted-foreground mt-0.5">{cap.sub}</p>
                 </div>
               </div>
-            </div>
+            </button>
           ))}
         </div>
       </div>

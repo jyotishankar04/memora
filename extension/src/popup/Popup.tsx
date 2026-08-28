@@ -9,6 +9,7 @@ interface PageInfo {
   url: string;
   title: string;
   favIconUrl?: string;
+  description?: string;
 }
 
 export default function Popup() {
@@ -44,12 +45,26 @@ export default function Popup() {
   const captureCurrentTab = () => {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const activeTab = tabs[0];
-      if (activeTab && activeTab.url) {
+      if (activeTab && activeTab.url && activeTab.id) {
         const info: PageInfo = {
           url: activeTab.url,
           title: activeTab.title || "Untitled Webpage",
           favIconUrl: activeTab.favIconUrl
         };
+
+        // Ask the content script for page metadata (og:description etc.) it already scrapes.
+        chrome.tabs.sendMessage(
+          activeTab.id,
+          { action: "GET_METADATA" },
+          (response) => {
+            // Content script may not be injected on this page (e.g. chrome:// URLs) — ignore silently.
+            if (chrome.runtime.lastError) return;
+            if (response?.description) {
+              setPageInfo((prev) => (prev ? { ...prev, description: response.description } : prev));
+            }
+          }
+        );
+
         setPageInfo(info);
 
         // Check duplicates mock/simulated check
@@ -146,29 +161,33 @@ export default function Popup() {
           <button style={styles.primaryButton} onClick={handleSignIn}>
             Sign in
           </button>
-          <button 
-            style={{ ...styles.linkButton, marginTop: 12, color: "#1447E6" }} 
-            onClick={() => {
-              const mockToken = "mock-secret-session-token";
-              if (typeof chrome !== "undefined" && chrome.storage) {
-                chrome.storage.local.set({ memora_token: mockToken }, () => {
+          {/* import.meta.env.DEV is stripped to `false` by Vite in production builds,
+              so this branch — and the mock-token bypass — never ships to users. */}
+          {import.meta.env.DEV && (
+            <button
+              style={{ ...styles.linkButton, marginTop: 12, color: "#1447E6" }}
+              onClick={() => {
+                const mockToken = "mock-secret-session-token";
+                if (typeof chrome !== "undefined" && chrome.storage) {
+                  chrome.storage.local.set({ memora_token: mockToken }, () => {
+                    setToken(mockToken);
+                    captureCurrentTab();
+                  });
+                } else {
                   setToken(mockToken);
-                  captureCurrentTab();
-                });
-              } else {
-                setToken(mockToken);
-                setPageInfo({
-                  url: "https://linear.app",
-                  title: "Linear — Issue Tracking for Teams",
-                  favIconUrl: "https://linear.app/favicon.ico"
-                });
-                setState("saving");
-                setTimeout(() => setState("saved"), 1000);
-              }
-            }}
-          >
-            Use Mock Token (Dev Mode)
-          </button>
+                  setPageInfo({
+                    url: "https://linear.app",
+                    title: "Linear — Issue Tracking for Teams",
+                    favIconUrl: "https://linear.app/favicon.ico"
+                  });
+                  setState("saving");
+                  setTimeout(() => setState("saved"), 1000);
+                }
+              }}
+            >
+              Use Mock Token (Dev Mode)
+            </button>
+          )}
         </div>
       )}
 
@@ -230,6 +249,9 @@ export default function Popup() {
           <div style={styles.previewBox}>
             <TextTruncate text={pageInfo?.title || "Untitled"} lines={2} style={styles.previewTitle} />
             <span style={styles.previewDomain}>{getDomain(pageInfo?.url)}</span>
+            {pageInfo?.description && (
+              <TextTruncate text={pageInfo.description} lines={2} style={styles.previewDescription} />
+            )}
           </div>
 
           {/* Context note input */}
@@ -459,6 +481,12 @@ const styles = {
     fontSize: "10px",
     color: "#8e8e93",
     fontFamily: "monospace",
+  },
+  previewDescription: {
+    fontSize: "10px",
+    color: "#8e8e93",
+    lineHeight: "14px",
+    marginTop: "2px",
   },
   actionsColumn: {
     display: "flex",
