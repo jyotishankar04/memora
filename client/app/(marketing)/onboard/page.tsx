@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { getAccessToken } from "@/lib/auth";
+import { getCurrentUser } from "@/lib/auth";
 import { completeOnboarding } from "@/lib/user";
 
 // Step 2 Interests
@@ -48,11 +48,14 @@ export default function OnboardingPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
-  // Auth guard: onboarding answers are saved to the signed-in user's account,
-  // so this page requires a token — anyone without one is sent to sign in.
+  // Auth guard: onboarding answers are saved to the signed-in user's account.
+  // The access token lives in an httpOnly cookie, so this asks /auth/me
+  // rather than checking local storage — anyone not signed in gets sent to login.
   useEffect(() => {
-    function checkAuth() {
-      if (!getAccessToken()) {
+    async function checkAuth() {
+      try {
+        await getCurrentUser();
+      } catch {
         router.replace("/auth/login");
       }
     }

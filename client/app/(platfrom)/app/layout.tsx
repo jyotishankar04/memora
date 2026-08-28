@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { clearTokens, getAccessToken, getCurrentUser, logout } from "@/lib/auth";
+import { getCurrentUser, logout } from "@/lib/auth";
 import {
   CommandDialog,
   CommandInput,
@@ -46,19 +46,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  // Auth gate: redirects to login if no access token is stored, and to /onboard
-  // if the signed-in user hasn't finished the onboarding questionnaire yet
-  // (covers direct navigation to /app, not just the post-OAuth callback path).
+  // Auth gate: the access token lives in an httpOnly cookie the backend set,
+  // so this client can't check for it locally — it asks /auth/me instead.
+  // Redirects to login if that fails, or to /onboard if the signed-in user
+  // hasn't finished the onboarding questionnaire yet (covers direct
+  // navigation to /app, not just the post-OAuth-login redirect).
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
     async function checkAuth() {
-      const token = typeof window !== "undefined" ? getAccessToken() : null;
-      if (!token) {
-        router.replace("/auth/login");
-        return;
-      }
-
       try {
         const user = await getCurrentUser();
         if (!user.onboardingCompleted) {
@@ -67,7 +63,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         }
         setAuthChecked(true);
       } catch {
-        clearTokens();
         router.replace("/auth/login");
       }
     }

@@ -3,7 +3,7 @@
 import React from "react";
 import Link from "next/link";
 import { Sparkles, ArrowLeft } from "lucide-react";
-import { getGithubAuthUrl, getGoogleAuthUrl } from "@/lib/auth";
+import { getProviderLoginUrl } from "@/lib/auth";
 
 const GoogleIcon = () => (
   <svg className="h-4 w-4 mr-2 shrink-0" viewBox="0 0 24 24" fill="none">
@@ -89,7 +89,7 @@ export default function SignupPage() {
           <div className="space-y-3">
             <button
               onClick={() => {
-                window.location.href = getGoogleAuthUrl();
+                window.location.href = getProviderLoginUrl("google");
               }}
               className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
             >
@@ -98,7 +98,7 @@ export default function SignupPage() {
             </button>
             <button
               onClick={() => {
-                window.location.href = getGithubAuthUrl();
+                window.location.href = getProviderLoginUrl("github");
               }}
               className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
             >
