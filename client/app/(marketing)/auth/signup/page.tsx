@@ -2,8 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Sparkles, ArrowLeft } from "lucide-react";
+import { getProviderLoginUrl } from "@/lib/auth";
 
 const GoogleIcon = () => (
   <svg className="h-4 w-4 mr-2 shrink-0" viewBox="0 0 24 24" fill="none">
@@ -21,7 +21,6 @@ const GithubIcon = () => (
 );
 
 export default function SignupPage() {
-  const router = useRouter();
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans p-4 lg:p-6 gap-6">
       
@@ -88,20 +87,18 @@ export default function SignupPage() {
 
           {/* Social Sign Up Buttons (Only Google & GitHub OAuth) */}
           <div className="space-y-3">
-            <button 
+            <button
               onClick={() => {
-                localStorage.setItem("memora_token", "mock-secret-session-token");
-                router.push("/app");
+                window.location.href = getProviderLoginUrl("google");
               }}
               className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
             >
               <GoogleIcon />
               Create account with Google
             </button>
-            <button 
+            <button
               onClick={() => {
-                localStorage.setItem("memora_token", "mock-secret-session-token");
-                router.push("/app");
+                window.location.href = getProviderLoginUrl("github");
               }}
               className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
             >

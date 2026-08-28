@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -13,6 +13,9 @@ import {
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { getCurrentUser, logout, type AuthUser } from "@/lib/auth";
+import { UserAvatar, UserProvider, formatPlan } from "@/context/UserContext";
+import { UpgradeCard } from "@/components/upgrade-card";
 import {
   CommandDialog,
   CommandInput,
@@ -45,25 +48,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  // Auth gate: this app currently only has a mock token written by the login/signup
-  // pages (localStorage key "memora_token"). Until a real backend session exists,
-  // this is the only signal we have for "logged in" — but it's enough to stop the
-  // dashboard from being fully open to anyone who navigates to /app directly.
+  // Auth gate: the access token lives in an httpOnly cookie the backend set,
+  // so this client can't check for it locally — it asks /auth/me instead.
+  // Redirects to login if that fails, or to /onboard if the signed-in user
+  // hasn't finished the onboarding questionnaire yet (covers direct
+  // navigation to /app, not just the post-OAuth-login redirect).
   const [authChecked, setAuthChecked] = useState(false);
+  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
-    const token = typeof window !== "undefined" ? localStorage.getItem("memora_token") : null;
-    if (!token) {
-      router.replace("/auth/login");
-      return;
+    async function checkAuth() {
+      try {
+        const user = await getCurrentUser();
+        if (!user.onboardingCompleted) {
+          router.replace("/onboard");
+          return;
+        }
+        setCurrentUser(user);
+        setAuthChecked(true);
+      } catch {
+        router.replace("/auth/login");
+      }
     }
-    setAuthChecked(true);
+    checkAuth();
   }, [router]);
 
   const handleLogout = () => {
-    localStorage.removeItem("memora_token");
-    setUserDropdownOpen(false);
-    router.push("/");
+    logout().finally(() => {
+      setUserDropdownOpen(false);
+      router.push("/");
+    });
   };
 
   // Modals
@@ -76,6 +90,40 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [suggestedTags, setSuggestedTags] = useState<string[]>(["Design", "SaaS", "Inspiration"]);
   const [isSaving, setIsSaving] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  // Upgrade popup: dismissing it shrinks the card down into the user button,
+  // which picks up a highlighted border + badge right as the card fades out.
+  // Once dismissed, hovering that badge (or the reopened card) brings the
+  // card back; moving off either closes it again after a short debounce so
+  // crossing the gap between badge and card doesn't flicker it shut.
+  const [showUpgradeCard, setShowUpgradeCard] = useState(true);
+  const [isUpgradeCardClosing, setIsUpgradeCardClosing] = useState(false);
+  const [upgradeCardDismissed, setUpgradeCardDismissed] = useState(false);
+  const upgradeHoverCloseTimeout = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const dismissUpgradeCard = () => {
+    setIsUpgradeCardClosing(true);
+    setUpgradeCardDismissed(true);
+    setTimeout(() => setShowUpgradeCard(false), 350);
+  };
+
+  const openUpgradeCardOnHover = () => {
+    if (!upgradeCardDismissed) return;
+    if (upgradeHoverCloseTimeout.current) {
+      clearTimeout(upgradeHoverCloseTimeout.current);
+      upgradeHoverCloseTimeout.current = null;
+    }
+    setIsUpgradeCardClosing(false);
+    setShowUpgradeCard(true);
+  };
+
+  const scheduleUpgradeCardHoverClose = () => {
+    if (!upgradeCardDismissed) return;
+    upgradeHoverCloseTimeout.current = setTimeout(() => {
+      setIsUpgradeCardClosing(true);
+      setTimeout(() => setShowUpgradeCard(false), 350);
+    }, 150);
+  };
 
   // Command palette search query
   const [commandQuery, setCommandQuery] = useState("");
@@ -92,13 +140,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  if (!authChecked) {
+  if (!authChecked || !currentUser) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Sparkles className="h-5 w-5 text-primary animate-pulse" />
       </div>
     );
   }
+
+  const isFreeUser = !currentUser.roles.includes("pro_user") && !currentUser.roles.includes("admin");
 
   const handleInputSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,18 +174,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   };
 
   return (
+    <UserProvider user={currentUser} setUser={setCurrentUser}>
     <div className="flex h-screen w-screen bg-background text-foreground font-sans overflow-hidden transition-colors duration-300">
-      
+
       {/* 1. DESKTOP SIDEBAR */}
       <aside className="w-60 border-r border-border/60 bg-muted/15 flex flex-col justify-between shrink-0 hidden md:flex">
-        <div className="p-5 space-y-6 overflow-y-auto flex-1">
+        <div className="p-5 space-y-6 overflow-y-auto flex-1 min-h-0">
           
           {/* Header */}
           <Link href="/app" className="flex items-center gap-2 px-1 hover:opacity-85 transition-opacity">
-            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary text-white font-semibold">
-              <Sparkles className="h-4 w-4 fill-current" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-foreground text-background font-semibold text-xs shrink-0">
+              M
             </div>
-            <span className="text-sm font-semibold tracking-[-0.03em] uppercase">memora</span>
+            <span className="text-sm font-semibold tracking-[-0.03em]">memora</span>
           </Link>
 
           {/* Quick Capture CTA */}
@@ -232,42 +283,59 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         </div>
 
-        {/* Sidebar Bottom settings/user profile */}
-        <div className="p-4 border-t border-border/40 space-y-1.5 relative">
-          <Link 
-            href="/app/settings"
-            className={cn(
-              "w-full px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-2.5 transition-colors",
-              pathname.startsWith("/app/settings") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            )}
-          >
-            <Settings className="h-4 w-4" />
-            <span>Settings</span>
-          </Link>
+        {/* Sidebar Bottom user profile */}
+        <div className="p-4 border-t border-border/40 relative">
+
+          {showUpgradeCard && isFreeUser && (
+            <div
+              onMouseEnter={openUpgradeCardOnHover}
+              onMouseLeave={scheduleUpgradeCardHoverClose}
+              className={cn(
+                "absolute inset-x-4 bottom-full mb-3 origin-bottom transition-all duration-[350ms] ease-in-out",
+                isUpgradeCardClosing ? "opacity-0 scale-75 translate-y-3" : "opacity-100 scale-100 translate-y-0"
+              )}
+            >
+              <UpgradeCard onDismiss={dismissUpgradeCard} />
+            </div>
+          )}
 
           {/* User initials block */}
-          <button 
-            onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-            className="w-full pt-3 flex items-center justify-between px-3 border-t border-border/20 mt-2 text-left hover:opacity-85"
-          >
-            <div className="flex items-center gap-2.5">
-              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold text-xs select-none">
-                JD
+          <div className="relative">
+            <button
+              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 -mx-1 rounded-xl text-left hover:opacity-85 transition-all duration-500",
+                upgradeCardDismissed && isFreeUser && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background"
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <UserAvatar user={currentUser} className="h-8 w-8 text-xs" />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate">{currentUser.name ?? currentUser.email}</p>
+                  <p className="text-[9px] text-muted-foreground font-mono leading-none">{formatPlan(currentUser.roles)}</p>
+                </div>
               </div>
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground truncate">Subham Jyoti</p>
-                <p className="text-[9px] text-muted-foreground font-mono leading-none">FREE PLAN</p>
-              </div>
-            </div>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
-          </button>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+            </button>
+
+            {upgradeCardDismissed && isFreeUser && (
+              <Link
+                href="/app/settings/billing"
+                onMouseEnter={openUpgradeCardOnHover}
+                onMouseLeave={scheduleUpgradeCardHoverClose}
+                className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary text-white text-[8px] font-bold uppercase tracking-wide shadow-sm z-10 animate-in fade-in slide-in-from-top-1 duration-500 hover:bg-primary/90"
+              >
+                Upgrade
+              </Link>
+            )}
+          </div>
 
           {/* User profile popup menu */}
           {userDropdownOpen && (
             <div className="absolute left-4 right-4 bottom-16 bg-card border border-border rounded-xl shadow-xl py-1 z-50 text-[10px] font-bold text-foreground">
               <div className="px-3 py-2 border-b border-border/20">
-                <p className="text-[10px] text-foreground">Subham Jyoti</p>
-                <p className="text-[9px] text-muted-foreground font-mono font-medium">Free Plan</p>
+                <p className="text-[10px] text-foreground">{currentUser.name ?? currentUser.email}</p>
+                <p className="text-[9px] text-muted-foreground font-mono font-medium">{formatPlan(currentUser.roles)}</p>
               </div>
               
               <Link href="/app/settings" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
@@ -329,9 +397,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </button>
 
             <Link href="/app/settings">
-              <div className="h-8 w-8 rounded-full bg-primary/10 text-primary border border-primary/20 flex items-center justify-center font-bold text-xs select-none">
-                SJ
-              </div>
+              <UserAvatar user={currentUser} className="h-8 w-8 text-xs border border-primary/20" />
             </Link>
           </div>
 
@@ -547,5 +613,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       `}</style>
 
     </div>
+    </UserProvider>
   );
 }
