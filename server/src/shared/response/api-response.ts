@@ -1,22 +1,32 @@
-export interface ApiResponseBody<T> {
-  success: boolean;
-  message: string;
-  data?: T;
+export interface ApiSuccessBody<T> {
+  success: true;
+  data: T;
+  meta: Record<string, unknown>;
+  error: null;
+}
+
+export interface ApiErrorBody {
+  success: false;
+  data: null;
+  meta: Record<string, unknown>;
+  error: {
+    code: string;
+    message: string;
+    details?: unknown;
+  };
 }
 
 export const ApiResponse = {
-  success<T>(message: string, data?: T): ApiResponseBody<T> {
-    return {
-      success: true,
-      message,
-      data,
-    };
+  success<T>(data: T, meta: Record<string, unknown> = {}): ApiSuccessBody<T> {
+    return { success: true, data, meta, error: null };
   },
 
-  error(message: string): ApiResponseBody<never> {
+  error(code: string, message: string, details?: unknown): ApiErrorBody {
     return {
       success: false,
-      message,
+      data: null,
+      meta: {},
+      error: { code, message, details },
     };
   },
 };
