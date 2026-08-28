@@ -11,7 +11,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { defineRelations } from "drizzle-orm";
-import { OrganizeMode, Provider, UserStatus } from "./enums";
+import { AccentColor, OrganizeMode, Provider, SettingsTheme, UserStatus } from "./enums";
 
 export const userStatusEnum = pgEnum("user_status", [
   UserStatus.ACTIVE,
@@ -24,6 +24,19 @@ export const userStatusEnum = pgEnum("user_status", [
 export const providerEnum = pgEnum("provider", [
   Provider.GOOGLE,
   Provider.GITHUB,
+]);
+
+export const settingsThemeEnum = pgEnum("settings_theme", [
+  SettingsTheme.SYSTEM,
+  SettingsTheme.LIGHT,
+  SettingsTheme.DARK,
+]);
+
+export const accentColorEnum = pgEnum("accent_color", [
+  AccentColor.BLUE,
+  AccentColor.PURPLE,
+  AccentColor.GREEN,
+  AccentColor.ORANGE,
 ]);
 
 export const organizeModeEnum = pgEnum("organize_mode", [
@@ -267,7 +280,38 @@ export const userOnboarding = pgTable("user_onboarding", {
 });
 
 // -----------------------------------------------------------------------------
-// 11. Relations
+// 11. User Settings Table (ai / capture / notifications / appearance toggles)
+// -----------------------------------------------------------------------------
+// No `default_collection_id` column yet — the `collections` table doesn't
+// exist in this schema yet (memory-capture layer, not built). The settings
+// API reports it as always null until that lands.
+export const userSettings = pgTable("user_settings", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  aiAutoOrganization: boolean("ai_auto_organization").notNull().default(true),
+  aiSummaries: boolean("ai_summaries").notNull().default(true),
+  aiRelatedMemories: boolean("ai_related_memories").notNull().default(true),
+  aiSemanticSearch: boolean("ai_semantic_search").notNull().default(true),
+  aiAskMemora: boolean("ai_ask_memora").notNull().default(true),
+  captureExtractContent: boolean("capture_extract_content").notNull().default(true),
+  captureGenerateTitle: boolean("capture_generate_title").notNull().default(true),
+  captureGenerateSummary: boolean("capture_generate_summary").notNull().default(true),
+  captureSuggestTags: boolean("capture_suggest_tags").notNull().default(true),
+  notifyWeeklySummary: boolean("notify_weekly_summary").notNull().default(true),
+  notifyForgottenMemories: boolean("notify_forgotten_memories").notNull().default(true),
+  notifyProductUpdates: boolean("notify_product_updates").notNull().default(false),
+  theme: settingsThemeEnum("theme").notNull().default(SettingsTheme.SYSTEM),
+  accentColor: accentColorEnum("accent_color").notNull().default(AccentColor.BLUE),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
+
+// -----------------------------------------------------------------------------
+// 12. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {
