@@ -15,6 +15,7 @@ const envSchema = z
     // SMTP_PASSWORD: z.string().optional(),
     // SMTP_FROM_ADDRESS: z.string().email().optional(),
     FRONTEND_URL: z.string().url().min(1, "FRONTEND_URL is required"),
+    SERVER_URL: z.string().url().min(1, "SERVER_URL is required"),
 
     JWT_ACCESS_SECRET: z.string().min(32, "JWT_ACCESS_SECRET must be at least 32 characters"),
     JWT_REFRESH_SECRET: z.string().min(32, "JWT_REFRESH_SECRET must be at least 32 characters"),

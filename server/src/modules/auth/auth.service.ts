@@ -39,7 +39,32 @@ interface TokenPair {
 
 const GITHUB_USER_AGENT = "memora-server";
 
-export async function exchangeGoogleCode(code: string, redirectUri: string): Promise<OAuthProfile> {
+const GOOGLE_CALLBACK_URL = `${env.SERVER_URL}/api/v1/auth/google/callback`;
+const GITHUB_CALLBACK_URL = `${env.SERVER_URL}/api/v1/auth/github/callback`;
+
+export function buildGoogleAuthUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: env.GOOGLE_CLIENT_ID,
+    redirect_uri: GOOGLE_CALLBACK_URL,
+    response_type: "code",
+    scope: "openid email profile",
+    state,
+    prompt: "select_account",
+  });
+  return `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+}
+
+export function buildGithubAuthUrl(state: string): string {
+  const params = new URLSearchParams({
+    client_id: env.GITHUB_CLIENT_ID,
+    redirect_uri: GITHUB_CALLBACK_URL,
+    scope: "read:user user:email",
+    state,
+  });
+  return `https://github.com/login/oauth/authorize?${params.toString()}`;
+}
+
+export async function exchangeGoogleCode(code: string): Promise<OAuthProfile> {
   const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -47,7 +72,7 @@ export async function exchangeGoogleCode(code: string, redirectUri: string): Pro
       code,
       client_id: env.GOOGLE_CLIENT_ID,
       client_secret: env.GOOGLE_CLIENT_SECRET,
-      redirect_uri: redirectUri,
+      redirect_uri: GOOGLE_CALLBACK_URL,
       grant_type: "authorization_code",
     }),
   });
@@ -85,7 +110,7 @@ export async function exchangeGoogleCode(code: string, redirectUri: string): Pro
   };
 }
 
-export async function exchangeGithubCode(code: string, redirectUri: string): Promise<OAuthProfile> {
+export async function exchangeGithubCode(code: string): Promise<OAuthProfile> {
   const tokenResponse = await fetch("https://github.com/login/oauth/access_token", {
     method: "POST",
     headers: { "Content-Type": "application/x-www-form-urlencoded", Accept: "application/json" },
@@ -93,7 +118,7 @@ export async function exchangeGithubCode(code: string, redirectUri: string): Pro
       code,
       client_id: env.GITHUB_CLIENT_ID,
       client_secret: env.GITHUB_CLIENT_SECRET,
-      redirect_uri: redirectUri,
+      redirect_uri: GITHUB_CALLBACK_URL,
     }),
   });
 
