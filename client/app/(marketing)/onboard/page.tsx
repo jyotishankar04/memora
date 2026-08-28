@@ -9,6 +9,8 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { getAccessToken } from "@/lib/auth";
+import { completeOnboarding } from "@/lib/user";
 
 // Step 2 Interests
 const interests = [
@@ -43,6 +45,19 @@ export default function OnboardingPage() {
   const [saveMost, setSaveMost] = useState<string[]>([]);
   const [orgMode, setOrgMode] = useState<"auto" | "manual">("auto");
   const [customLink, setCustomLink] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+
+  // Auth guard: onboarding answers are saved to the signed-in user's account,
+  // so this page requires a token — anyone without one is sent to sign in.
+  useEffect(() => {
+    function checkAuth() {
+      if (!getAccessToken()) {
+        router.replace("/auth/login");
+      }
+    }
+    checkAuth();
+  }, [router]);
 
   // Update progress bar
   useEffect(() => {
@@ -63,11 +78,25 @@ export default function OnboardingPage() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [step, name]);
 
-  const handleSaveMemory = (e: React.FormEvent) => {
+  const handleSaveMemory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customLink.trim()) return;
-    // Go directly to final step
-    setStep(7);
+    if (!customLink.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setSubmitError(null);
+    try {
+      await completeOnboarding({
+        name: name.trim(),
+        interests: useFor,
+        contentTypes: saveMost,
+        organizeMode: orgMode,
+      });
+      setStep(7);
+    } catch (err) {
+      setSubmitError(err instanceof Error ? err.message : "Couldn't save your preferences. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const nextStep = () => setStep((prev) => Math.min(prev + 1, 7));
@@ -465,11 +494,15 @@ export default function OnboardingPage() {
                 rows={2}
                 className="w-full bg-transparent text-foreground text-center text-2xl md:text-3xl font-medium border-none ring-0 outline-none focus:outline-none focus:ring-0 focus:border-none focus-visible:ring-0 focus-visible:ring-offset-0 placeholder:text-muted-foreground/20 resize-none leading-relaxed"
               />
-              <Button 
-                type="submit" 
+              {submitError && (
+                <p className="text-xs text-destructive">{submitError}</p>
+              )}
+              <Button
+                type="submit"
+                disabled={isSubmitting}
                 className="w-full h-12 rounded-full font-medium shadow-md"
               >
-                Save to Memora
+                {isSubmitting ? "Saving..." : "Save to Memora"}
               </Button>
             </form>
           </div>

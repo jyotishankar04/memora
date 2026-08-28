@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getAccessToken, logout } from "@/lib/auth";
+import { clearTokens, getAccessToken, getCurrentUser, logout } from "@/lib/auth";
 import {
   CommandDialog,
   CommandInput,
@@ -46,19 +46,30 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
 
-  // Auth gate: redirects to login if no access token is stored. Doesn't verify
-  // the token is still valid — an expired token surfaces as 401s from API calls
-  // once the dashboard talks to the real backend.
+  // Auth gate: redirects to login if no access token is stored, and to /onboard
+  // if the signed-in user hasn't finished the onboarding questionnaire yet
+  // (covers direct navigation to /app, not just the post-OAuth callback path).
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    function checkAuth() {
+    async function checkAuth() {
       const token = typeof window !== "undefined" ? getAccessToken() : null;
       if (!token) {
         router.replace("/auth/login");
         return;
       }
-      setAuthChecked(true);
+
+      try {
+        const user = await getCurrentUser();
+        if (!user.onboardingCompleted) {
+          router.replace("/onboard");
+          return;
+        }
+        setAuthChecked(true);
+      } catch {
+        clearTokens();
+        router.replace("/auth/login");
+      }
     }
     checkAuth();
   }, [router]);

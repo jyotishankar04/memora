@@ -14,6 +14,7 @@ export interface AuthUser {
   status: string;
   emailVerified: boolean;
   roles: string[];
+  onboardingCompleted: boolean;
 }
 
 export interface AuthTokens {
@@ -43,6 +44,28 @@ export function getRefreshToken(): string | null {
 export function clearTokens() {
   localStorage.removeItem(ACCESS_TOKEN_KEY);
   localStorage.removeItem(REFRESH_TOKEN_KEY);
+}
+
+/** Calls the Memora API, attaching the stored access token if present, and unwraps the {success,data,error} envelope. */
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const accessToken = getAccessToken();
+
+  const response = await fetch(`${API_URL}${path}`, {
+    ...options,
+    headers: {
+      "Content-Type": "application/json",
+      ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
+      ...options.headers,
+    },
+  });
+
+  const body = await response.json();
+
+  if (!response.ok || !body.success) {
+    throw new Error(body.error?.message ?? "Something went wrong. Please try again.");
+  }
+
+  return body.data as T;
 }
 
 function getRedirectUri(provider: OAuthProvider): string {
@@ -84,33 +107,24 @@ export function getGithubAuthUrl(): string {
 }
 
 export async function exchangeOAuthCode(provider: OAuthProvider, code: string): Promise<OAuthExchangeResult> {
-  const response = await fetch(`${API_URL}/auth/oauth/${provider}`, {
+  return apiFetch<OAuthExchangeResult>(`/auth/oauth/${provider}`, {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ code, redirectUri: getRedirectUri(provider) }),
   });
+}
 
-  const body = await response.json();
-
-  if (!response.ok || !body.success) {
-    throw new Error(body.error?.message ?? "Sign in failed. Please try again.");
-  }
-
-  return body.data as OAuthExchangeResult;
+export async function getCurrentUser(): Promise<AuthUser> {
+  const { user } = await apiFetch<{ user: AuthUser }>("/auth/me");
+  return user;
 }
 
 export async function logout() {
   const refreshToken = getRefreshToken();
-  const accessToken = getAccessToken();
 
-  if (refreshToken && accessToken) {
+  if (refreshToken) {
     try {
-      await fetch(`${API_URL}/auth/logout`, {
+      await apiFetch("/auth/logout", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${accessToken}`,
-        },
         body: JSON.stringify({ refreshToken }),
       });
     } catch {

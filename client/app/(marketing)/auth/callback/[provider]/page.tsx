@@ -39,10 +39,10 @@ export default function OAuthCallbackPage() {
       }
 
       try {
-        const { tokens, isNewUser } = await exchangeOAuthCode(provider as OAuthProvider, code);
+        const { tokens, user } = await exchangeOAuthCode(provider as OAuthProvider, code);
         if (cancelled) return;
         saveTokens(tokens);
-        router.replace(isNewUser ? "/onboard" : "/app");
+        router.replace(user.onboardingCompleted ? "/app" : "/onboard");
       } catch (err) {
         if (cancelled) return;
         setError(err instanceof Error ? err.message : "Sign in failed. Please try again.");
