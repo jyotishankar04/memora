@@ -11,7 +11,7 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { defineRelations } from "drizzle-orm";
-import { Provider, UserStatus } from "./enums";
+import { OrganizeMode, Provider, UserStatus } from "./enums";
 
 export const userStatusEnum = pgEnum("user_status", [
   UserStatus.ACTIVE,
@@ -24,6 +24,11 @@ export const userStatusEnum = pgEnum("user_status", [
 export const providerEnum = pgEnum("provider", [
   Provider.GOOGLE,
   Provider.GITHUB,
+]);
+
+export const organizeModeEnum = pgEnum("organize_mode", [
+  OrganizeMode.AUTO,
+  OrganizeMode.MANUAL,
 ]);
 
 // -----------------------------------------------------------------------------
@@ -241,9 +246,28 @@ export const devices = pgTable(
   ]
 );
 
+// -----------------------------------------------------------------------------
+// 10. User Onboarding Table (answers collected by the /onboard questionnaire)
+// -----------------------------------------------------------------------------
+export const userOnboarding = pgTable("user_onboarding", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  interests: jsonb("interests").$type<string[]>().notNull().default([]),
+  contentTypes: jsonb("content_types").$type<string[]>().notNull().default([]),
+  organizeMode: organizeModeEnum("organize_mode")
+    .notNull()
+    .default(OrganizeMode.AUTO),
+  completedAt: timestamp("completed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true })
+    .notNull()
+    .defaultNow()
+    .$onUpdate(() => new Date()),
+});
 
 // -----------------------------------------------------------------------------
-// 10. Relations
+// 11. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {

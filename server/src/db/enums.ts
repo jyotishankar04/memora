@@ -10,3 +10,8 @@ export enum Provider {
   GOOGLE = "google",
   GITHUB = "github",
 }
+
+export enum OrganizeMode {
+  AUTO = "auto",
+  MANUAL = "manual",
+}
