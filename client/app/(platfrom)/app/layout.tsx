@@ -91,6 +91,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isSaving, setIsSaving] = useState(false);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
 
+  // Upgrade popup: dismissing it shrinks the card down into the user button,
+  // which picks up a highlighted border right as the card fades out.
+  const [showUpgradeCard, setShowUpgradeCard] = useState(true);
+  const [isUpgradeCardClosing, setIsUpgradeCardClosing] = useState(false);
+  const [showUpgradeHint, setShowUpgradeHint] = useState(false);
+
+  const dismissUpgradeCard = () => {
+    setIsUpgradeCardClosing(true);
+    setShowUpgradeHint(true);
+    setTimeout(() => setShowUpgradeCard(false), 350);
+  };
+
   // Command palette search query
   const [commandQuery, setCommandQuery] = useState("");
 
@@ -143,14 +155,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* 1. DESKTOP SIDEBAR */}
       <aside className="w-60 border-r border-border/60 bg-muted/15 flex flex-col justify-between shrink-0 hidden md:flex">
-        <div className="p-5 space-y-6 overflow-y-auto flex-1">
+        <div className="p-5 space-y-6 overflow-y-auto flex-1 min-h-0">
           
           {/* Header */}
           <Link href="/app" className="flex items-center gap-2 px-1 hover:opacity-85 transition-opacity">
-            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-primary text-white font-semibold">
-              <Sparkles className="h-4 w-4 fill-current" />
+            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-foreground text-background font-semibold text-xs shrink-0">
+              M
             </div>
-            <span className="text-sm font-semibold tracking-[-0.03em] uppercase">memora</span>
+            <span className="text-sm font-semibold tracking-[-0.03em]">memora</span>
           </Link>
 
           {/* Quick Capture CTA */}
@@ -247,39 +259,48 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
         </div>
 
-        {!currentUser.roles.includes("pro_user") && !currentUser.roles.includes("admin") && (
-          <div className="px-4">
-            <UpgradeCard />
-          </div>
-        )}
+        {/* Sidebar Bottom user profile */}
+        <div className="p-4 border-t border-border/40 relative">
 
-        {/* Sidebar Bottom settings/user profile */}
-        <div className="p-4 border-t border-border/40 space-y-1.5 relative">
-          <Link 
-            href="/app/settings"
-            className={cn(
-              "w-full px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-2.5 transition-colors",
-              pathname.startsWith("/app/settings") ? "bg-primary/10 text-primary" : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            )}
-          >
-            <Settings className="h-4 w-4" />
-            <span>Settings</span>
-          </Link>
+          {showUpgradeCard && !currentUser.roles.includes("pro_user") && !currentUser.roles.includes("admin") && (
+            <div
+              className={cn(
+                "absolute inset-x-4 bottom-full mb-3 origin-bottom transition-all duration-[350ms] ease-in-out",
+                isUpgradeCardClosing ? "opacity-0 scale-75 translate-y-3" : "opacity-100 scale-100 translate-y-0"
+              )}
+            >
+              <UpgradeCard onDismiss={dismissUpgradeCard} />
+            </div>
+          )}
 
           {/* User initials block */}
-          <button 
-            onClick={() => setUserDropdownOpen(!userDropdownOpen)}
-            className="w-full pt-3 flex items-center justify-between px-3 border-t border-border/20 mt-2 text-left hover:opacity-85"
-          >
-            <div className="flex items-center gap-2.5">
-              <UserAvatar user={currentUser} className="h-8 w-8 text-xs" />
-              <div className="min-w-0">
-                <p className="text-xs font-bold text-foreground truncate">{currentUser.name ?? currentUser.email}</p>
-                <p className="text-[9px] text-muted-foreground font-mono leading-none">{formatPlan(currentUser.roles)}</p>
+          <div className="relative">
+            <button
+              onClick={() => setUserDropdownOpen(!userDropdownOpen)}
+              className={cn(
+                "w-full flex items-center justify-between px-3 py-2 -mx-1 rounded-xl text-left hover:opacity-85 transition-all duration-500",
+                showUpgradeHint && "ring-2 ring-primary/50 ring-offset-2 ring-offset-background"
+              )}
+            >
+              <div className="flex items-center gap-2.5">
+                <UserAvatar user={currentUser} className="h-8 w-8 text-xs" />
+                <div className="min-w-0">
+                  <p className="text-xs font-bold text-foreground truncate">{currentUser.name ?? currentUser.email}</p>
+                  <p className="text-[9px] text-muted-foreground font-mono leading-none">{formatPlan(currentUser.roles)}</p>
+                </div>
               </div>
-            </div>
-            <ChevronDown className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
-          </button>
+              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+            </button>
+
+            {showUpgradeHint && (
+              <Link
+                href="/app/settings/billing"
+                className="absolute -top-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded-full bg-primary text-white text-[8px] font-bold uppercase tracking-wide shadow-sm z-10 animate-in fade-in slide-in-from-top-1 duration-500 hover:bg-primary/90"
+              >
+                Upgrade
+              </Link>
+            )}
+          </div>
 
           {/* User profile popup menu */}
           {userDropdownOpen && (
