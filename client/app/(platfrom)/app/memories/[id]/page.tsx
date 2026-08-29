@@ -64,10 +64,13 @@ export default function MemoryDetailPage() {
   const moveToTrashMutation = useMoveToTrashMutation();
   const updateMutation = useUpdateMemoryMutation();
 
-  // No annotation column exists on memories yet (the schema's `content` field is the
-  // memory's own body for note-type saves, not a freeform comment on any memory type) —
-  // this stays local-only until that's an explicit product decision.
-  const [userNote, setUserNote] = useState("");
+  // For a "note" memory, `content` IS the memory body and already renders in
+  // the preview above. For every other type, `content` is whatever caption
+  // the user typed alongside a link/attachment at capture time — that's what
+  // this "Your Note" box edits and persists back to the same field. Editing
+  // works off a local draft seeded from memory.content when edit mode opens,
+  // rather than mirroring memory.content into state on every load.
+  const [draftNote, setDraftNote] = useState("");
   const [isEditing, setIsEditing] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
@@ -87,6 +90,16 @@ export default function MemoryDetailPage() {
   }
 
   const TypeIcon = TYPE_ICONS[memory.type];
+
+  const handleToggleEditing = () => {
+    if (isEditing) {
+      updateMutation.mutate({ id: memory.id, patch: { content: draftNote.trim() } });
+      setIsEditing(false);
+    } else {
+      setDraftNote(memory.content ?? "");
+      setIsEditing(true);
+    }
+  };
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-8 animate-fade-in">
@@ -215,35 +228,38 @@ export default function MemoryDetailPage() {
             )}
           </div>
 
-          {/* User Notes editor */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
-                Your Note
-              </span>
-              <button
-                onClick={() => setIsEditing(!isEditing)}
-                className="text-xs font-bold text-primary hover:underline"
-              >
-                {isEditing ? "Done" : "Edit note"}
-              </button>
-            </div>
+          {/* User Notes editor — not shown for "note" memories, whose body already is memory.content */}
+          {memory.type !== "note" && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest">
+                  Your Note
+                </span>
+                <button
+                  onClick={handleToggleEditing}
+                  className="text-xs font-bold text-primary hover:underline"
+                >
+                  {isEditing ? "Done" : "Edit note"}
+                </button>
+              </div>
 
-            <div className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs">
-              <div className="p-4 rounded-lg border border-border/75 bg-card min-h-[100px] text-xs leading-relaxed text-foreground">
-                {isEditing ? (
-                  <textarea
-                    value={userNote}
-                    onChange={(e) => setUserNote(e.target.value)}
-                    className="w-full bg-transparent resize-none focus:outline-none"
-                    rows={4}
-                  />
-                ) : (
-                  <p>{userNote || "No custom note added. Click edit to save context reasons."}</p>
-                )}
+              <div className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs">
+                <div className="p-4 rounded-lg border border-border/75 bg-card min-h-[100px] text-xs leading-relaxed text-foreground">
+                  {isEditing ? (
+                    <textarea
+                      value={draftNote}
+                      onChange={(e) => setDraftNote(e.target.value)}
+                      className="w-full bg-transparent resize-none focus:outline-none"
+                      rows={4}
+                      autoFocus
+                    />
+                  ) : (
+                    <p>{memory.content || "No custom note added. Click edit to save context reasons."}</p>
+                  )}
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
           {/* Attachments */}
           {memory.attachments.length > 0 && (

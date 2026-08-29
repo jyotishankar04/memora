@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
 import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { cn } from "@/lib/utils";
+import { FolderCard } from "@/components/ui/folder-card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { useCollectionsQuery, useCreateCollectionMutation } from "@/context/MemoryContext";
 
 const COLOR_PALETTE = [
@@ -23,15 +26,6 @@ function colorFor(id: string): string {
   return COLOR_PALETTE[hash % COLOR_PALETTE.length];
 }
 
-function updatedAgo(iso: string): string {
-  const diffMs = Date.now() - new Date(iso).getTime();
-  const hours = Math.floor(diffMs / (60 * 60 * 1000));
-  if (hours < 1) return "Updated just now";
-  if (hours < 24) return `Updated ${hours} hour${hours === 1 ? "" : "s"} ago`;
-  const days = Math.floor(hours / 24);
-  return `Updated ${days} day${days === 1 ? "" : "s"} ago`;
-}
-
 export default function CollectionsPage() {
   const { data: collections = [], isLoading } = useCollectionsQuery();
   const createMutation = useCreateCollectionMutation();
@@ -40,6 +34,7 @@ export default function CollectionsPage() {
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newEmoji, setNewEmoji] = useState("📁");
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
   const handleCreateCollection = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -101,35 +96,16 @@ export default function CollectionsPage() {
           <p className="text-xs text-muted-foreground">Create one to start organizing your memories.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
           {collections.map((col) => (
-            <Link
+            <FolderCard
               key={col.id}
               href={`/app/collections/${col.id}`}
-              className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs hover:border-primary/20 transition-all duration-300 block group"
-            >
-              <div className="p-5 rounded-lg border border-border/75 bg-card flex flex-col justify-between min-h-[150px] space-y-4">
-                <div>
-                  <div className="flex items-center gap-3">
-                    <div className={cn("h-10 w-10 border rounded-xl flex items-center justify-center text-lg select-none", colorFor(col.id))}>
-                      {col.icon}
-                    </div>
-                    <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                      {col.name}
-                    </h3>
-                  </div>
-
-                  <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
-                    {col.description}
-                  </p>
-                </div>
-
-                <div className="flex items-center justify-between pt-3 border-t border-border/20 text-[9px] font-mono text-muted-foreground">
-                  <span className="font-bold text-foreground bg-muted px-2 py-0.5 rounded">{col.memoryCount} memories</span>
-                  <span>{updatedAgo(col.updatedAt)}</span>
-                </div>
-              </div>
-            </Link>
+              count={col.memoryCount}
+              label={col.name}
+              badge={col.icon}
+              badgeClassName={colorFor(col.id)}
+            />
           ))}
         </div>
       )}
@@ -150,37 +126,49 @@ export default function CollectionsPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Icon / Emoji</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="E.g., 🚀"
-                    value={newEmoji}
-                    onChange={(e) => setNewEmoji(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl px-3 py-2.5 text-foreground text-center"
-                  />
+                  <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+                    <PopoverTrigger
+                      render={
+                        <button
+                          type="button"
+                          className="flex h-[42px] w-full items-center justify-center rounded-xl border border-input bg-background text-xl transition-colors hover:bg-muted"
+                        >
+                          {newEmoji}
+                        </button>
+                      }
+                    />
+                    <PopoverContent align="start" className="w-72 p-0">
+                      <EmojiPicker
+                        onEmojiSelect={(emoji) => {
+                          setNewEmoji(emoji);
+                          setEmojiPickerOpen(false);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="col-span-2 space-y-1">
                   <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Collection name</label>
-                  <input
+                  <Input
                     type="text"
                     required
                     placeholder="E.g., Projects"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl px-3 py-2.5 text-foreground"
+                    className="h-[42px] w-full rounded-xl border-input bg-background px-3 text-xs text-foreground"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
                 <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Description</label>
-                <textarea
+                <Textarea
                   placeholder="What is this collection for?"
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   rows={3}
-                  className="w-full bg-background border border-input rounded-xl px-3 py-2.5 text-foreground resize-none"
+                  className="w-full rounded-xl border-input bg-background px-3 py-2.5 text-xs text-foreground"
                 />
               </div>
 
