@@ -15,10 +15,13 @@ export interface AuthUser {
 
 /**
  * Calls the Memora API with the httpOnly auth cookies attached, and unwraps
- * the {success,data,error} envelope. The backend owns the access/refresh
+ * the {success,data,meta,error} envelope. The backend owns the access/refresh
  * tokens entirely — this client never reads or stores them itself.
  */
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function apiFetchRaw<T>(
+  path: string,
+  options: RequestInit = {},
+): Promise<{ data: T; meta: Record<string, unknown> }> {
   const response = await fetch(`${API_URL}${path}`, {
     ...options,
     credentials: "include",
@@ -28,13 +31,23 @@ export async function apiFetch<T>(path: string, options: RequestInit = {}): Prom
     },
   });
 
+  if (response.status === 204) {
+    return { data: undefined as T, meta: {} };
+  }
+
   const body = await response.json();
 
   if (!response.ok || !body.success) {
     throw new Error(body.error?.message ?? "Something went wrong. Please try again.");
   }
 
-  return body.data as T;
+  return { data: body.data as T, meta: body.meta ?? {} };
+}
+
+/** Same as {@link apiFetchRaw}, but discards `meta` for callers that only need the payload. */
+export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const { data } = await apiFetchRaw<T>(path, options);
+  return data;
 }
 
 /** Full-page redirect to the backend, which handles the entire OAuth round trip and redirects back with cookies set. */
