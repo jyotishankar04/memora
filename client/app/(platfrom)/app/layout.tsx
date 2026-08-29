@@ -4,18 +4,19 @@ import React, { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
-import { 
-  Sparkles, Globe, Video, Image as ImageIcon, Code, FileText, StickyNote, Plus, Search, 
-  Settings, HelpCircle, Bell, ArrowRight, X, Moon, Sun, Trash2, FolderOpen, 
-  Compass, Check, Link as LinkIcon, Upload, ArrowUpRight, ChevronRight, ChevronDown, 
-  MoreHorizontal, Star, MessageSquare, Grid, List, Copy, Archive, Edit, ExternalLink, ArrowLeft,
-  FolderPlus, Heart, Clock, Compass as CompassIcon, BarChart2, ShieldAlert
+import {
+  Sparkles, Plus, Search,
+  Settings, HelpCircle, Bell, X, Moon, Sun, FolderOpen,
+  Compass, Check, Link as LinkIcon, ChevronRight, ChevronDown,
+  FolderPlus, Heart, Clock, Compass as CompassIcon, BarChart2
 } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { getCurrentUser, logout, type AuthUser } from "@/lib/auth";
-import { UserAvatar, UserProvider, formatPlan } from "@/context/UserContext";
+import { UserAvatar, UserProvider, useUser, formatPlan } from "@/context/UserContext";
+import { useMemories } from "@/context/MemoryContext";
 import { UpgradeCard } from "@/components/upgrade-card";
+import type { MemoryType } from "@/types/memory";
 import {
   CommandDialog,
   CommandInput,
@@ -26,27 +27,8 @@ import {
   CommandSeparator,
 } from "@/components/ui/command";
 
-// Memory Data Type
-export interface Memory {
-  id: string;
-  type: "web" | "video" | "image" | "note" | "document";
-  title: string;
-  description: string;
-  source: string;
-  timeAgo: string;
-  tags: string[];
-  duration?: string;
-  platform?: string;
-  favicon?: string;
-  fileType?: string;
-  group: "Today" | "Yesterday" | "Earlier this week" | "August 2026";
-  starred?: boolean;
-}
-
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const pathname = usePathname();
   const router = useRouter();
-  const { theme, setTheme } = useTheme();
 
   // Auth gate: the access token lives in an httpOnly cookie the backend set,
   // so this client can't check for it locally — it asks /auth/me instead.
@@ -73,6 +55,28 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     checkAuth();
   }, [router]);
 
+  if (!authChecked || !currentUser) {
+    return (
+      <div className="flex h-screen w-screen items-center justify-center bg-background">
+        <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+      </div>
+    );
+  }
+
+  return (
+    <UserProvider user={currentUser} setUser={setCurrentUser}>
+      <AppShell>{children}</AppShell>
+    </UserProvider>
+  );
+}
+
+function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { theme, setTheme } = useTheme();
+  const { user: currentUser } = useUser();
+  const { collections, create } = useMemories();
+
   const handleLogout = () => {
     logout().finally(() => {
       setUserDropdownOpen(false);
@@ -83,13 +87,49 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Modals
   const [searchModalOpen, setSearchModalOpen] = useState(false);
   const [saveModalOpen, setSaveModalOpen] = useState(false);
-  const [saveStep, setSaveStep] = useState<1 | 2 | 3>(1);
-  const [inputUrl, setInputUrl] = useState("");
-  const [savingType, setSavingType] = useState<"web" | "note" | "video" | "idea">("web");
-  const [detectedTitle, setDetectedTitle] = useState("");
-  const [suggestedTags, setSuggestedTags] = useState<string[]>(["Design", "SaaS", "Inspiration"]);
+  const [saveStep, setSaveStep] = useState<1 | "done">(1);
+  const [captureTitle, setCaptureTitle] = useState("");
+  const [captureUrl, setCaptureUrl] = useState("");
+  const [captureContent, setCaptureContent] = useState("");
+  const [captureType, setCaptureType] = useState<MemoryType>("web");
+  const [captureCollectionId, setCaptureCollectionId] = useState("");
+  const [savedTitle, setSavedTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+
+  const openCaptureModal = () => {
+    setSaveStep(1);
+    setCaptureTitle("");
+    setCaptureUrl("");
+    setCaptureContent("");
+    setCaptureType("web");
+    setCaptureCollectionId("");
+    setSaveError(null);
+    setSaveModalOpen(true);
+  };
+
+  const handleCaptureSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!captureTitle.trim()) return;
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      const memory = await create({
+        type: captureType,
+        title: captureTitle.trim(),
+        url: captureUrl.trim() || undefined,
+        content: captureType === "note" ? captureContent.trim() || undefined : undefined,
+        collectionIds: captureCollectionId ? [captureCollectionId] : undefined,
+      });
+      setSavedTitle(memory.title);
+      setSaveStep("done");
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : "Couldn't save that memory.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
 
   // Upgrade popup: dismissing it shrinks the card down into the user button,
   // which picks up a highlighted border + badge right as the card fades out.
@@ -140,47 +180,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  if (!authChecked || !currentUser) {
-    return (
-      <div className="flex h-screen w-screen items-center justify-center bg-background">
-        <Sparkles className="h-5 w-5 text-primary animate-pulse" />
-      </div>
-    );
-  }
-
   const isFreeUser = !currentUser.roles.includes("pro_user") && !currentUser.roles.includes("admin");
 
-  const handleInputSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!inputUrl.trim()) return;
-    setIsSaving(true);
-    setTimeout(() => {
-      if (inputUrl.includes("example.com") || inputUrl.startsWith("http")) {
-        setDetectedTitle("Beautiful SaaS Landing Page");
-      } else {
-        setDetectedTitle(inputUrl);
-      }
-      setIsSaving(false);
-      setSaveStep(2);
-    }, 1000);
-  };
-
-  const handleConfirmSave = () => {
-    setIsSaving(true);
-    setTimeout(() => {
-      setIsSaving(false);
-      setSaveStep(3);
-    }, 800);
-  };
-
   return (
-    <UserProvider user={currentUser} setUser={setCurrentUser}>
     <div className="flex h-screen w-screen bg-background text-foreground font-sans overflow-hidden transition-colors duration-300">
 
       {/* 1. DESKTOP SIDEBAR */}
       <aside className="w-60 border-r border-border/60 bg-muted/15 flex flex-col justify-between shrink-0 hidden md:flex">
         <div className="p-5 space-y-6 overflow-y-auto flex-1 min-h-0">
-          
+
           {/* Header */}
           <Link href="/app" className="flex items-center gap-2 px-1 hover:opacity-85 transition-opacity">
             <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-foreground text-background font-semibold text-xs shrink-0">
@@ -190,8 +198,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
 
           {/* Quick Capture CTA */}
-          <Button 
-            onClick={() => { setSaveStep(1); setSaveModalOpen(true); }}
+          <Button
+            onClick={openCaptureModal}
             className="w-full h-10 rounded-full font-bold text-xs bg-primary text-white flex items-center justify-center gap-1.5 shadow-sm"
           >
             <Plus className="h-4 w-4" /> Quick Capture
@@ -228,26 +236,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <h4 className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest px-3 mb-2">
               Collections
             </h4>
-            {[
-              { label: "SaaS Inspiration", href: "/app/collections/saas" },
-              { label: "AI Research", href: "/app/collections/ai" },
-              { label: "Design", href: "/app/collections/design" },
-              { label: "Learning", href: "/app/collections/learning" }
-            ].map((col) => (
-              <Link
-                key={col.href}
-                href={col.href}
-                className={cn(
-                  "px-3 py-1.5 text-xs font-medium rounded-lg flex items-center justify-between transition-colors text-muted-foreground hover:text-foreground hover:bg-muted",
-                  pathname === col.href ? "text-primary bg-primary/5 font-semibold" : ""
-                )}
-              >
-                <span className="truncate pr-2">{col.label}</span>
-                <ChevronRight className="h-3 w-3 opacity-30" />
-              </Link>
-            ))}
-            
-            <Link 
+            {collections.map((col) => {
+              const href = `/app/collections/${col.id}`;
+              return (
+                <Link
+                  key={col.id}
+                  href={href}
+                  className={cn(
+                    "px-3 py-1.5 text-xs font-medium rounded-lg flex items-center justify-between transition-colors text-muted-foreground hover:text-foreground hover:bg-muted",
+                    pathname === href ? "text-primary bg-primary/5 font-semibold" : ""
+                  )}
+                >
+                  <span className="truncate pr-2 flex items-center gap-1.5">
+                    <span>{col.icon}</span>
+                    {col.name}
+                  </span>
+                  <ChevronRight className="h-3 w-3 opacity-30" />
+                </Link>
+              );
+            })}
+
+            <Link
               href="/app/collections"
               className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-2 text-primary hover:underline"
             >
@@ -337,17 +346,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 <p className="text-[10px] text-foreground">{currentUser.name ?? currentUser.email}</p>
                 <p className="text-[9px] text-muted-foreground font-mono font-medium">{formatPlan(currentUser.roles)}</p>
               </div>
-              
+
               <Link href="/app/settings" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
                 <Settings className="h-3.5 w-3.5 opacity-60" />
                 <span>Settings</span>
               </Link>
-              
+
               <Link href="/app/settings/billing" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
                 <BarChart2 className="h-3.5 w-3.5 opacity-60" />
                 <span>Keyboard shortcuts</span>
               </Link>
-              
+
               <Link href="/app/help" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
                 <HelpCircle className="h-3.5 w-3.5 opacity-60" />
                 <span>Help & Docs</span>
@@ -366,12 +375,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* 2. TOPBAR AND MAIN WORKSPACE */}
       <div className="flex-1 flex flex-col overflow-hidden relative">
-        
+
         {/* Topbar Header */}
         <header className="h-16 border-b border-border/40 px-6 flex items-center justify-between shrink-0 hidden md:flex">
-          
+
           {/* Global search trigger */}
-          <button 
+          <button
             onClick={() => setSearchModalOpen(true)}
             className="w-80 h-9 px-3 rounded-full border border-border/60 bg-muted/20 text-xs text-muted-foreground flex items-center justify-between hover:bg-muted transition-all select-none"
           >
@@ -388,8 +397,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <Bell className="h-4 w-4" />
               <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-primary rounded-full" />
             </Link>
-            
-            <button 
+
+            <button
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground"
             >
@@ -421,8 +430,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </Link>
 
           {/* Quick Capture Button (Prominent!) */}
-          <button 
-            onClick={() => { setSaveStep(1); setSaveModalOpen(true); }}
+          <button
+            onClick={openCaptureModal}
             className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg -translate-y-2 select-none"
           >
             <Plus className="h-6 w-6 stroke-[2.5]" />
@@ -445,7 +454,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       {saveModalOpen && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-xl space-y-6 animate-scale-up">
-            
+
             <div className="flex items-center justify-between border-b border-border/20 pb-2">
               <span className="text-xs font-bold text-foreground">Save something</span>
               <button onClick={() => setSaveModalOpen(false)} className="text-muted-foreground hover:text-foreground">
@@ -454,83 +463,83 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             </div>
 
             {saveStep === 1 && (
-              <form onSubmit={handleInputSubmit} className="space-y-4">
-                <div className="relative flex items-center">
-                  <LinkIcon className="absolute left-4 h-4.5 w-4.5 text-muted-foreground" />
-                  <input
-                    type="text"
-                    required
-                    placeholder="Paste URL or write something..."
-                    value={inputUrl}
-                    onChange={(e) => setInputUrl(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl pl-11 pr-4 py-3.5 text-xs text-foreground focus:outline-none focus:border-primary/80"
-                  />
-                </div>
-
+              <form onSubmit={handleCaptureSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <span className="text-[9px] uppercase tracking-wider text-muted-foreground block font-bold">What are you saving?</span>
                   <div className="flex gap-1.5 flex-wrap">
-                    {["Website", "Note", "Video", "Idea"].map((t) => (
+                    {(["web", "note", "video"] as MemoryType[]).map((t) => (
                       <button
                         key={t}
                         type="button"
-                        onClick={() => setSavingType(t.toLowerCase() as any)}
+                        onClick={() => setCaptureType(t)}
                         className={cn(
                           "px-3 py-1.5 rounded-full text-[9px] font-bold uppercase border transition-all",
-                          savingType === t.toLowerCase()
+                          captureType === t
                             ? "bg-primary/10 border-primary/30 text-primary"
                             : "bg-muted/40 border-border/60 text-muted-foreground"
                         )}
                       >
-                        {t}
+                        {t === "web" ? "Website" : t}
                       </button>
                     ))}
                   </div>
                 </div>
 
+                {captureType !== "note" && (
+                  <div className="relative flex items-center">
+                    <LinkIcon className="absolute left-4 h-4.5 w-4.5 text-muted-foreground" />
+                    <input
+                      type="url"
+                      placeholder="Paste a URL..."
+                      value={captureUrl}
+                      onChange={(e) => setCaptureUrl(e.target.value)}
+                      className="w-full bg-background border border-input rounded-xl pl-11 pr-4 py-3.5 text-xs text-foreground focus:outline-none focus:border-primary/80"
+                    />
+                  </div>
+                )}
+
+                <input
+                  type="text"
+                  required
+                  placeholder="Give it a title"
+                  value={captureTitle}
+                  onChange={(e) => setCaptureTitle(e.target.value)}
+                  className="w-full bg-background border border-input rounded-xl px-4 py-3.5 text-xs text-foreground focus:outline-none focus:border-primary/80"
+                />
+
+                {captureType === "note" && (
+                  <textarea
+                    placeholder="Write your note..."
+                    value={captureContent}
+                    onChange={(e) => setCaptureContent(e.target.value)}
+                    rows={4}
+                    className="w-full bg-background border border-input rounded-xl px-4 py-3 text-xs text-foreground focus:outline-none focus:border-primary/80 resize-none"
+                  />
+                )}
+
                 <div className="space-y-2">
                   <span className="text-[9px] uppercase tracking-wider text-muted-foreground block font-bold">Collection</span>
-                  <select className="w-full bg-background border border-input rounded-xl px-3 py-2.5 text-xs text-foreground focus:outline-none">
-                    <option>None</option>
-                    <option>SaaS Inspiration</option>
-                    <option>AI Research</option>
-                    <option>Design</option>
-                    <option>Learning</option>
+                  <select
+                    value={captureCollectionId}
+                    onChange={(e) => setCaptureCollectionId(e.target.value)}
+                    className="w-full bg-background border border-input rounded-xl px-3 py-2.5 text-xs text-foreground focus:outline-none"
+                  >
+                    <option value="">None</option>
+                    {collections.map((col) => (
+                      <option key={col.id} value={col.id}>{col.name}</option>
+                    ))}
                   </select>
                 </div>
 
+                {saveError && <p className="text-[10px] text-red-500">{saveError}</p>}
+
                 <Button type="submit" disabled={isSaving} className="w-full h-11 rounded-full font-bold text-xs bg-primary text-white">
-                  {isSaving ? "Analyzing..." : "Save Memory"}
+                  {isSaving ? "Saving..." : "Save Memory"}
                 </Button>
               </form>
             )}
 
-            {saveStep === 2 && (
-              <div className="space-y-4">
-                <span className="text-[10px] text-emerald-600 font-bold flex items-center gap-1">✓ Preview found</span>
-                <div className="p-4 rounded-xl border border-border bg-muted/30 space-y-2">
-                  <h4 className="text-xs font-bold text-foreground">{detectedTitle}</h4>
-                  <span className="text-[9px] text-muted-foreground font-mono truncate block">{inputUrl}</span>
-                </div>
-
-                <div className="space-y-2">
-                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground block font-bold">Suggested topics</span>
-                  <div className="flex gap-1.5 flex-wrap">
-                    {suggestedTags.map((tag) => (
-                      <span key={tag} className="px-2.5 py-1 bg-primary/10 border border-primary/20 text-primary rounded-full text-[8.5px] font-bold uppercase">
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-
-                <Button onClick={handleConfirmSave} disabled={isSaving} className="w-full h-11 rounded-full font-bold text-xs bg-primary text-white">
-                  {isSaving ? "Saving..." : "Save"}
-                </Button>
-              </div>
-            )}
-
-            {saveStep === 3 && (
+            {saveStep === "done" && (
               <div className="text-center py-6 space-y-4">
                 <div className="h-10 w-10 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto shadow-xs">
                   <Check className="h-5 w-5 stroke-[3]" />
@@ -538,7 +547,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
                 <div className="space-y-1">
                   <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest block">Saved to Memora</span>
-                  <h4 className="text-xs font-bold text-foreground">{detectedTitle}</h4>
+                  <h4 className="text-xs font-bold text-foreground">{savedTitle}</h4>
                 </div>
 
                 <div className="pt-4 flex gap-2">
@@ -555,16 +564,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
       {/* GLOBAL SEARCH COMMAND PALETTE (⌘K) */}
       <CommandDialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>
-        <CommandInput 
-          placeholder="Search or jump to..." 
+        <CommandInput
+          placeholder="Search or jump to..."
           value={commandQuery}
           onValueChange={setCommandQuery}
         />
         <CommandList>
           <CommandEmpty>No results found.</CommandEmpty>
-          
+
           <CommandGroup heading="Quick Actions">
-            <CommandItem onSelect={() => { setSearchModalOpen(false); setSaveStep(1); setSaveModalOpen(true); }}>
+            <CommandItem onSelect={() => { setSearchModalOpen(false); openCaptureModal(); }}>
               <Plus className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Save a memory</span>
             </CommandItem>
@@ -577,9 +586,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <span>Create collection</span>
             </CommandItem>
           </CommandGroup>
-          
+
           <CommandSeparator />
-          
+
           <CommandGroup heading="Go to">
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app"); }}>
               <Compass className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
@@ -613,6 +622,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       `}</style>
 
     </div>
-    </UserProvider>
   );
 }
