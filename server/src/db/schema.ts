@@ -1,6 +1,7 @@
 import {
   boolean,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -438,7 +439,25 @@ export const memoryTags = pgTable(
 );
 
 // -----------------------------------------------------------------------------
-// 17. Relations
+// 17. Attachments Table (files uploaded to R2 and linked to a memory)
+// -----------------------------------------------------------------------------
+export const attachments = pgTable(
+  "attachments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    memoryId: uuid("memory_id")
+      .notNull()
+      .references(() => memories.id, { onDelete: "cascade" }),
+    fileUrl: text("file_url").notNull(),
+    fileSize: integer("file_size"),
+    mimeType: varchar("mime_type", { length: 100 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("idx_attachments_memory_id").on(table.memoryId)]
+);
+
+// -----------------------------------------------------------------------------
+// 18. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {
