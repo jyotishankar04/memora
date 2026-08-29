@@ -1,9 +1,9 @@
 import { and, count, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
 import { db } from "../../db";
-import { collectionMemories, collections, memories, memoryTags, tags } from "../../db/schema";
+import { attachments, collectionMemories, collections, memories, memoryTags, tags } from "../../db/schema";
 import type { MemoryType } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
-import type { CreateMemoryInput, ListMemoriesQuery, UpdateMemoryInput } from "./memory.schema";
+import type { AttachmentInput, CreateMemoryInput, ListMemoriesQuery, UpdateMemoryInput } from "./memory.schema";
 
 export interface MemoryListItem {
   id: string;
@@ -22,11 +22,19 @@ export interface MemoryListItem {
   updatedAt: Date;
 }
 
+export interface AttachmentResponse {
+  id: string;
+  fileUrl: string;
+  fileSize: number | null;
+  mimeType: string | null;
+  createdAt: Date;
+}
+
 export interface MemoryDetail extends MemoryListItem {
   content: string | null;
   keywords: string[] | null;
   collections: { id: string; name: string }[];
-  attachments: never[];
+  attachments: AttachmentResponse[];
 }
 
 type Tx = Parameters<Parameters<typeof db.transaction>[0]>[0];
@@ -160,17 +168,47 @@ export async function getMemoryById(userId: string, id: string): Promise<MemoryD
     .innerJoin(collections, eq(collectionMemories.collectionId, collections.id))
     .where(eq(collectionMemories.memoryId, row.id));
 
+  const attachmentRows = await db
+    .select({
+      id: attachments.id,
+      fileUrl: attachments.fileUrl,
+      fileSize: attachments.fileSize,
+      mimeType: attachments.mimeType,
+      createdAt: attachments.createdAt,
+    })
+    .from(attachments)
+    .where(eq(attachments.memoryId, row.id));
+
   return {
     ...toListItem(row, tagsByMemory.get(row.id) ?? []),
     content: row.content,
     keywords: row.keywords,
     collections: collectionRows,
-    attachments: [], // TODO: attachments table, once file storage exists
+    attachments: attachmentRows,
   };
+}
+
+async function insertAttachments(tx: Tx, memoryId: string, input: AttachmentInput[]): Promise<void> {
+  if (input.length === 0) return;
+  await tx.insert(attachments).values(
+    input.map((attachment) => ({
+      memoryId,
+      fileUrl: attachment.fileUrl,
+      fileSize: attachment.fileSize,
+      mimeType: attachment.mimeType,
+    })),
+  );
 }
 
 export async function createMemory(userId: string, input: CreateMemoryInput): Promise<MemoryDetail> {
   const memoryId = await db.transaction(async (tx) => {
+    // An image memory with an uploaded attachment but no explicit preview gets
+    // one for free — this is what makes the list-view thumbnail show the real
+    // uploaded image without any client-side change.
+    const previewImageUrl =
+      input.previewImageUrl ??
+      (input.type === "image" ? input.attachments?.[0]?.fileUrl : undefined);
+
     const values: typeof memories.$inferInsert = {
       userId,
       type: input.type as MemoryType,
@@ -179,10 +217,14 @@ export async function createMemory(userId: string, input: CreateMemoryInput): Pr
       content: input.content,
       description: input.description,
       faviconUrl: input.faviconUrl,
-      previewImageUrl: input.previewImageUrl,
+      previewImageUrl,
       keywords: input.keywords,
     };
     const [row] = await tx.insert(memories).values(values).returning({ id: memories.id });
+
+    if (input.attachments?.length) {
+      await insertAttachments(tx, row.id, input.attachments);
+    }
 
     if (input.collectionIds?.length) {
       const owned = await tx
@@ -256,6 +298,11 @@ export async function updateMemory(
           await tx.insert(memoryTags).values(tagIds.map((tagId) => ({ memoryId: id, tagId })));
         }
       }
+    }
+
+    if (input.attachments !== undefined) {
+      await tx.delete(attachments).where(eq(attachments.memoryId, id));
+      await insertAttachments(tx, id, input.attachments);
     }
   });
 

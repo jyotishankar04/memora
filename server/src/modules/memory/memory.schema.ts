@@ -2,6 +2,12 @@ import { z } from "zod";
 
 export const memoryTypeSchema = z.enum(["web", "video", "note", "image", "document", "voice"]);
 
+export const attachmentInputSchema = z.object({
+  fileUrl: z.string().url(),
+  fileSize: z.number().int().positive().optional(),
+  mimeType: z.string().max(100).optional(),
+});
+
 export const createMemorySchema = z.object({
   type: memoryTypeSchema,
   url: z.string().url().optional(),
@@ -13,6 +19,7 @@ export const createMemorySchema = z.object({
   keywords: z.array(z.string().max(50)).max(20).optional(),
   collectionIds: z.array(z.string().uuid()).max(50).optional(),
   tags: z.array(z.string().min(1).max(50)).max(30).optional(),
+  attachments: z.array(attachmentInputSchema).max(10).optional(),
 });
 
 export const updateMemorySchema = z.object({
@@ -24,6 +31,7 @@ export const updateMemorySchema = z.object({
   inTrash: z.boolean().optional(),
   collectionIds: z.array(z.string().uuid()).max(50).optional(),
   tags: z.array(z.string().min(1).max(50)).max(30).optional(),
+  attachments: z.array(attachmentInputSchema).max(10).optional(),
 });
 
 export const listMemoriesQuerySchema = z.object({
@@ -39,6 +47,7 @@ export const listMemoriesQuerySchema = z.object({
 });
 
 export type MemoryTypeInput = z.infer<typeof memoryTypeSchema>;
+export type AttachmentInput = z.infer<typeof attachmentInputSchema>;
 export type CreateMemoryInput = z.infer<typeof createMemorySchema>;
 export type UpdateMemoryInput = z.infer<typeof updateMemorySchema>;
 export type ListMemoriesQuery = z.infer<typeof listMemoriesQuerySchema>;
