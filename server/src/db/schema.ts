@@ -4,6 +4,7 @@ import {
   jsonb,
   pgEnum,
   pgTable,
+  primaryKey,
   text,
   timestamp,
   uniqueIndex,
@@ -11,7 +12,14 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { defineRelations } from "drizzle-orm";
-import { AccentColor, OrganizeMode, Provider, SettingsTheme, UserStatus } from "./enums";
+import {
+  AccentColor,
+  MemoryType,
+  OrganizeMode,
+  Provider,
+  SettingsTheme,
+  UserStatus,
+} from "./enums";
 
 export const userStatusEnum = pgEnum("user_status", [
   UserStatus.ACTIVE,
@@ -42,6 +50,15 @@ export const accentColorEnum = pgEnum("accent_color", [
 export const organizeModeEnum = pgEnum("organize_mode", [
   OrganizeMode.AUTO,
   OrganizeMode.MANUAL,
+]);
+
+export const memoryTypeEnum = pgEnum("memory_type", [
+  MemoryType.WEB,
+  MemoryType.VIDEO,
+  MemoryType.NOTE,
+  MemoryType.IMAGE,
+  MemoryType.DOCUMENT,
+  MemoryType.VOICE,
 ]);
 
 // -----------------------------------------------------------------------------
@@ -311,7 +328,117 @@ export const userSettings = pgTable("user_settings", {
 });
 
 // -----------------------------------------------------------------------------
-// 12. Relations
+// 12. Collections Table
+// -----------------------------------------------------------------------------
+export const collections = pgTable(
+  "collections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 100 }).notNull(),
+    icon: varchar("icon", { length: 50 }).notNull().default("folder-outline"),
+    description: text("description"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index("idx_collections_user_id").on(table.userId)]
+);
+
+// -----------------------------------------------------------------------------
+// 13. Memories Table
+// -----------------------------------------------------------------------------
+export const memories = pgTable(
+  "memories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    type: memoryTypeEnum("type").notNull(),
+    title: text("title").notNull().default("Untitled"),
+    url: text("url"),
+    content: text("content"),
+    description: text("description"),
+    source: varchar("source", { length: 100 }),
+    faviconUrl: text("favicon_url"),
+    previewImageUrl: text("preview_image_url"),
+    keywords: text("keywords").array(),
+    isFavorite: boolean("is_favorite").notNull().default(false),
+    isArchived: boolean("is_archived").notNull().default(false),
+    inTrash: boolean("in_trash").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("idx_memories_user_id").on(table.userId),
+    index("idx_memories_user_created").on(table.userId, table.createdAt),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 14. Collection <-> Memory Junction Table
+// -----------------------------------------------------------------------------
+export const collectionMemories = pgTable(
+  "collection_memories",
+  {
+    collectionId: uuid("collection_id")
+      .notNull()
+      .references(() => collections.id, { onDelete: "cascade" }),
+    memoryId: uuid("memory_id")
+      .notNull()
+      .references(() => memories.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.collectionId, table.memoryId] }),
+    index("idx_collection_memories_memory_id").on(table.memoryId),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 15. Tags Table (scoped per-user — a tag name is only unique within its owner)
+// -----------------------------------------------------------------------------
+export const tags = pgTable(
+  "tags",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    name: varchar("name", { length: 50 }).notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("uq_tags_user_name").on(table.userId, table.name)]
+);
+
+// -----------------------------------------------------------------------------
+// 16. Memory <-> Tag Junction Table
+// -----------------------------------------------------------------------------
+export const memoryTags = pgTable(
+  "memory_tags",
+  {
+    memoryId: uuid("memory_id")
+      .notNull()
+      .references(() => memories.id, { onDelete: "cascade" }),
+    tagId: uuid("tag_id")
+      .notNull()
+      .references(() => tags.id, { onDelete: "cascade" }),
+  },
+  (table) => [
+    primaryKey({ columns: [table.memoryId, table.tagId] }),
+    index("idx_memory_tags_tag_id").on(table.tagId),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 17. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {
