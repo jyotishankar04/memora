@@ -2,157 +2,109 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { 
-  Sparkles, Globe, Video, Image as ImageIcon, Code, FileText, StickyNote, Plus, Search, 
-  Settings, HelpCircle, Bell, ArrowRight, X, Trash2, FolderOpen, ChevronRight, ChevronDown, 
-  MoreHorizontal, Star, Grid, List, Copy, Archive, Edit, ExternalLink, ArrowLeft, FolderPlus,
-  Heart, Check
+import {
+  Sparkles, Plus, Search,
+  X, Trash2,
+  MoreHorizontal, Star, Grid, List, Copy
 } from "lucide-react";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import type { Memory, MemoryType } from "@/types/memory";
+import { useMemoriesQuery, useToggleFavoriteMutation, useDeleteMemoryMutation } from "@/context/MemoryContext";
+import { timeAgo, timelineGroup } from "@/lib/time";
+import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 
-// Memory local schema
-interface Memory {
-  id: string;
-  type: "web" | "video" | "image" | "note" | "document";
-  title: string;
-  description: string;
-  source: string;
-  timeAgo: string;
-  tags: string[];
-  duration?: string;
-  platform?: string;
-  favicon?: string;
-  fileType?: string;
-  group: "Today" | "Yesterday" | "Earlier this week" | "August 2026";
-  starred?: boolean;
+/** Shows the memory's saved preview image; falls back to a type icon if there's none or it fails to load. */
+function MemoryThumbnail({ item }: { item: Memory }) {
+  const [failed, setFailed] = useState(false);
+  const TypeIcon = MEMORY_TYPE_ICONS[item.type];
+
+  if (item.previewImageUrl && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain preview images
+      <img
+        src={item.previewImageUrl}
+        alt=""
+        onError={() => setFailed(true)}
+        className="aspect-video w-full rounded-md object-cover border border-border/30"
+      />
+    );
+  }
+
+  return (
+    <div className="aspect-video w-full rounded-md bg-muted border border-border/30 overflow-hidden flex items-center justify-center gap-1 text-[8px] text-muted-foreground font-semibold select-none">
+      <TypeIcon className={cn("h-3.5 w-3.5", item.type === "video" ? "text-red-500" : "text-primary")} />
+      <span>{item.type === "web" ? "No preview" : item.type}</span>
+    </div>
+  );
 }
 
-const initialMemories: Memory[] = [
-  {
-    id: "mem-1",
-    type: "web",
-    title: "Linear Dashboard",
-    description: "SaaS Dashboard inspiration. Clean sidebar navigation, custom dark colors, shortcuts helper.",
-    source: "linear.app/features",
-    timeAgo: "2 hours ago",
-    tags: ["Design", "SaaS"],
-    favicon: "L",
-    group: "Today",
-    starred: true
-  },
-  {
-    id: "mem-2",
-    type: "video",
-    title: "Building a SaaS in 2026",
-    description: "Under the hood of monorepos, vector indexers, and local-first billing configurations.",
-    source: "youtube.com/watch?v=saas2026",
-    timeAgo: "4 hours ago",
-    tags: ["Development", "SaaS"],
-    duration: "12:42",
-    platform: "YouTube",
-    group: "Today"
-  },
-  {
-    id: "mem-3",
-    type: "note",
-    title: "Memora duplicate saves idea",
-    description: "What if Memora could automatically detect duplicate saves and merge summaries together?",
-    source: "Personal Note",
-    timeAgo: "Saved yesterday",
-    tags: ["Product idea", "AI"],
-    group: "Yesterday"
-  },
-  {
-    id: "mem-4",
-    type: "image",
-    title: "SaaS Pricing UI Reference",
-    description: "Screenshot showing clean card grids, pricing models in local currency, and subtle border dividers.",
-    source: "screenshot_pricing.png",
-    timeAgo: "Saved 2 days ago",
-    tags: ["Design", "SaaS"],
-    group: "Earlier this week"
-  },
-  {
-    id: "mem-5",
-    type: "document",
-    title: "Vector DB Performance Comparison",
-    description: "Research summary logging latency checks of pgvector vs Pinecone vs Qdrant.",
-    source: "vector_db_sheet.pdf",
-    timeAgo: "Saved 4 days ago",
-    tags: ["AI", "Research"],
-    fileType: "PDF",
-    group: "Earlier this week"
-  },
-  {
-    id: "mem-6",
-    type: "web",
-    title: "Raycast Store",
-    description: "Clean layout of extension grid, detailed sidebar specifications, and keyboard navigation.",
-    source: "raycast.com/store",
-    timeAgo: "Saved 2 weeks ago",
-    tags: ["Design", "Productivity"],
-    favicon: "R",
-    group: "August 2026"
-  }
-];
+const FILTER_TYPE: Record<string, MemoryType | undefined> = {
+  all: undefined,
+  links: "web",
+  notes: "note",
+  videos: "video",
+  images: "image",
+  files: "document",
+};
 
 export default function MemoriesPage() {
-  const [memories, setMemories] = useState<Memory[]>(initialMemories);
   const [searchQuery, setSearchQuery] = useState("");
   const [currentFilter, setCurrentFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedMemory, setSelectedMemory] = useState<Memory | null>(null);
   const [activeCardMenu, setActiveCardMenu] = useState<string | null>(null);
 
+  const { data, isLoading } = useMemoriesQuery({
+    type: FILTER_TYPE[currentFilter],
+    q: searchQuery.trim() || undefined,
+    limit: 100,
+  });
+  const memories = data?.items ?? [];
+
+  const toggleFavoriteMutation = useToggleFavoriteMutation();
+  const deleteMutation = useDeleteMemoryMutation();
+
   const handleDelete = (id: string) => {
-    setMemories(prev => prev.filter(m => m.id !== id));
+    deleteMutation.mutate(id);
     if (selectedMemory?.id === id) setSelectedMemory(null);
   };
 
-  const toggleStar = (id: string, e: React.MouseEvent) => {
+  const toggleStar = (item: Memory, e: React.MouseEvent) => {
     e.stopPropagation();
-    setMemories(prev => prev.map(m => m.id === id ? { ...m, starred: !m.starred } : m));
+    toggleFavoriteMutation.mutate({ id: item.id, isFavorite: !item.isFavorite });
   };
 
-  const filteredMemories = memories.filter((mem) => {
-    if (currentFilter !== "all") {
-      if (currentFilter === "links" && mem.type !== "web") return false;
-      if (currentFilter === "notes" && mem.type !== "note") return false;
-      if (currentFilter === "videos" && mem.type !== "video") return false;
-      if (currentFilter === "images" && mem.type !== "image") return false;
-      if (currentFilter === "files" && mem.type !== "document") return false;
+  // Group into timeline buckets in the order items already arrive (createdAt desc from the API).
+  const groupedEntries: { group: string; items: Memory[] }[] = [];
+  for (const item of memories) {
+    const group = timelineGroup(item.createdAt);
+    let bucket = groupedEntries.find((g) => g.group === group);
+    if (!bucket) {
+      bucket = { group, items: [] };
+      groupedEntries.push(bucket);
     }
-    if (searchQuery) {
-      const matchText = 
-        mem.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        mem.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        mem.tags.some(t => t.toLowerCase().includes(searchQuery.toLowerCase()));
-      if (!matchText) return false;
-    }
-    return true;
-  });
-
-  const timelineGroups: Array<"Today" | "Yesterday" | "Earlier this week" | "August 2026"> = [
-    "Today", "Yesterday", "Earlier this week", "August 2026"
-  ];
+    bucket.items.push(item);
+  }
 
   return (
     <div className="flex h-full w-full overflow-hidden relative">
-      
+
       {/* Memories content list */}
       <div className="flex-1 overflow-y-auto px-6 py-10 space-y-8">
-        
+
         {/* Header Title */}
         <div className="flex items-center justify-between border-b border-border/20 pb-4">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Memories</h1>
             <p className="text-xs text-muted-foreground mt-1">
-              Browse your digital memory timeline &middot; <span className="font-semibold text-foreground">{filteredMemories.length} Saves</span>
+              Browse your digital memory timeline &middot; <span className="font-semibold text-foreground">{memories.length} Saves</span>
             </p>
           </div>
-          
-          <Link 
+
+          <Link
             href="/app"
             className={cn(
               buttonVariants({ variant: "default", size: "sm" }),
@@ -164,8 +116,20 @@ export default function MemoriesPage() {
         </div>
 
         {/* Toolbar */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
-          
+        <div className="flex flex-col gap-4 pt-2">
+          <div className="relative flex items-center max-w-xs w-full">
+            <Search className="absolute left-3.5 h-4 w-4 text-primary stroke-[2.5] z-10" />
+            <Input
+              type="text"
+              placeholder="Search your memories..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 pl-9 rounded-xl text-xs"
+            />
+          </div>
+
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+
           {/* Filters pills */}
           <div className="flex gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
             {[
@@ -193,16 +157,16 @@ export default function MemoriesPage() {
 
           {/* Controls view togglers */}
           <div className="flex items-center gap-2 text-xs">
-            
+
             {/* View selectors */}
             <div className="flex items-center border border-border/60 rounded-lg bg-card overflow-hidden">
-              <button 
+              <button
                 onClick={() => setViewMode("grid")}
                 className={cn("p-1.5 hover:bg-muted transition-colors", viewMode === "grid" ? "text-primary bg-primary/5" : "text-muted-foreground")}
               >
                 <Grid className="h-3.5 w-3.5" />
               </button>
-              <button 
+              <button
                 onClick={() => setViewMode("list")}
                 className={cn("p-1.5 hover:bg-muted transition-colors", viewMode === "list" ? "text-primary bg-primary/5" : "text-muted-foreground")}
               >
@@ -211,169 +175,182 @@ export default function MemoriesPage() {
             </div>
 
           </div>
+          </div>
         </div>
 
         {/* Timeline body items */}
-        {filteredMemories.length > 0 ? (
+        {isLoading ? (
           <div className="space-y-10 pt-2">
-            {timelineGroups.map((group) => {
-              const groupItems = filteredMemories.filter(m => m.group === group);
-              if (groupItems.length === 0) return null;
-
-              return (
-                <div key={group} className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground font-mono">
-                      {group}
-                    </h3>
-                    <div className="flex-1 h-px bg-border/40" />
+            <div className="space-y-4">
+              <Skeleton className="h-3 w-20" />
+              <div className={cn(
+                viewMode === "grid"
+                  ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
+                  : "flex flex-col gap-3"
+              )}>
+                {Array.from({ length: 10 }).map((_, i) => (
+                  <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">
+                    {viewMode === "grid" ? (
+                      <div className="rounded-lg border border-border/75 bg-card p-2.5 min-h-[128px] space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Skeleton className="h-3.5 w-10 rounded" />
+                          <Skeleton className="h-3.5 w-3.5 rounded-full" />
+                        </div>
+                        <Skeleton className="aspect-video w-full rounded-md" />
+                        <Skeleton className="h-2.5 w-4/5" />
+                        <Skeleton className="h-2 w-2/5" />
+                      </div>
+                    ) : (
+                      <div className="rounded-lg border border-border/75 bg-card p-3.5 flex items-center gap-4">
+                        <Skeleton className="h-8 w-8 rounded-lg shrink-0" />
+                        <div className="flex-1 space-y-1.5">
+                          <Skeleton className="h-3 w-1/3" />
+                          <Skeleton className="h-2.5 w-1/2" />
+                        </div>
+                      </div>
+                    )}
                   </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        ) : memories.length > 0 ? (
+          <div className="space-y-10 pt-2">
+            {groupedEntries.map(({ group, items: groupItems }) => (
+              <div key={group} className="space-y-4">
+                <div className="flex items-center gap-3">
+                  <h3 className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground font-mono">
+                    {group}
+                  </h3>
+                  <div className="flex-1 h-px bg-border/40" />
+                </div>
 
-                  <div className={cn(
-                    viewMode === "grid" 
-                      ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"
-                      : "flex flex-col gap-3"
-                  )}>
-                    {groupItems.map((item) => {
-                      let TypeIcon = Globe;
-                      if (item.type === "video") TypeIcon = Video;
-                      if (item.type === "note") TypeIcon = StickyNote;
-                      if (item.type === "image") TypeIcon = ImageIcon;
-                      if (item.type === "document") TypeIcon = FileText;
+                <div className={cn(
+                  viewMode === "grid"
+                    ? "grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3"
+                    : "flex flex-col gap-3"
+                )}>
+                  {groupItems.map((item) => {
+                    const TypeIcon = MEMORY_TYPE_ICONS[item.type];
 
-                      return (
-                        <div
-                          key={item.id}
-                          onClick={() => setSelectedMemory(item)}
-                          className={cn(
-                            "rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs hover:border-primary/20 transition-all duration-300 relative group cursor-pointer"
-                          )}
-                        >
-                          <div className={cn(
-                            "rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full transition-colors",
-                            viewMode === "grid" ? "p-5 min-h-[190px] space-y-4" : "p-3.5 flex-row items-center gap-4"
-                          )}>
-                            
-                            {viewMode === "grid" && (
-                              <>
-                                <div className="flex items-center justify-between text-[8px] font-mono text-muted-foreground relative">
-                                  <span className="bg-primary/5 border border-primary/15 px-2 py-0.5 rounded text-primary uppercase font-bold flex items-center gap-1">
-                                    <TypeIcon className="h-2.5 w-2.5" /> {item.type}
-                                  </span>
-                                  
-                                  <div className="flex items-center gap-1.5">
-                                    <button 
-                                      onClick={(e) => toggleStar(item.id, e)}
-                                      className="text-muted-foreground hover:text-amber-500 transition-colors"
-                                    >
-                                      <Star className={cn("h-3.5 w-3.5", item.starred ? "fill-amber-500 text-amber-500" : "")} />
-                                    </button>
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={() => setSelectedMemory(item)}
+                        className={cn(
+                          "rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs hover:border-primary/20 transition-all duration-300 relative group cursor-pointer"
+                        )}
+                      >
+                        <div className={cn(
+                          "rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full transition-colors",
+                          viewMode === "grid" ? "p-2.5 min-h-[128px] space-y-2" : "p-3.5 flex-row items-center gap-4"
+                        )}>
 
-                                    <button 
-                                      onClick={(e) => { e.stopPropagation(); setActiveCardMenu(activeCardMenu === item.id ? null : item.id); }}
-                                      className="text-muted-foreground hover:text-foreground h-6 w-6 rounded-full flex items-center justify-center hover:bg-muted"
-                                    >
-                                      <MoreHorizontal className="h-3.5 w-3.5" />
-                                    </button>
-                                  </div>
+                          {viewMode === "grid" && (
+                            <>
+                              <div className="flex items-center justify-between text-[7px] font-mono text-muted-foreground relative">
+                                <span className="bg-primary/5 border border-primary/15 px-1.5 py-0.5 rounded text-primary uppercase font-bold flex items-center gap-1">
+                                  <TypeIcon className="h-2 w-2" /> {item.type}
+                                </span>
 
-                                  {activeCardMenu === item.id && (
-                                    <div className="absolute right-0 top-7 w-36 bg-card border border-border rounded-lg shadow-lg py-1 z-30 text-[10px] font-bold text-foreground">
-                                      {[
-                                        { label: "Copy link", icon: Copy, action: () => navigator.clipboard.writeText(item.source) },
-                                        { label: "Delete", icon: Trash2, action: () => handleDelete(item.id) }
-                                      ].map((m) => (
-                                        <button
-                                          key={m.label}
-                                          onClick={(e) => { e.stopPropagation(); m.action(); setActiveCardMenu(null); }}
-                                          className="w-full px-3 py-1.5 hover:bg-muted text-left flex items-center gap-2"
-                                        >
-                                          <m.icon className="h-3 w-3 opacity-60" />
-                                          <span>{m.label}</span>
-                                        </button>
-                                      ))}
-                                    </div>
-                                  )}
-                                </div>
-
-                                {item.type !== "note" && (
-                                  <div className="aspect-video w-full rounded-lg bg-muted border border-border/30 overflow-hidden flex items-center justify-center text-[10px] text-muted-foreground font-semibold select-none">
-                                    {item.type === "video" ? (
-                                      <div className="flex flex-col items-center gap-1">
-                                        <Video className="h-5 w-5 text-red-500" />
-                                        <span>YouTube Video ({item.duration})</span>
-                                      </div>
-                                    ) : (
-                                      <div className="flex flex-col items-center gap-1">
-                                        <Globe className="h-5 w-5 text-primary" />
-                                        <span>Website Preview</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )}
-
-                                {item.type === "note" && (
-                                  <div className="p-3 border border-border/60 bg-muted/20 rounded-lg text-[10px] text-muted-foreground leading-relaxed font-mono">
-                                    {item.description}
-                                  </div>
-                                )}
-
-                                <div className="space-y-1">
-                                  <h4 className="text-xs font-bold text-foreground leading-snug group-hover:text-primary transition-colors leading-snug line-clamp-1">
-                                    {item.title}
-                                  </h4>
-                                  <span className="text-[9px] text-muted-foreground truncate block font-mono">
-                                    {item.source}
-                                  </span>
-                                </div>
-
-                                <div className="flex items-center justify-between pt-3 border-t border-border/20">
-                                  <div className="flex flex-wrap gap-1">
-                                    {item.tags.map(t => (
-                                      <span key={t} className="text-[7.5px] font-bold uppercase tracking-wider bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
-                                        {t}
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <span className="text-[9px] text-muted-foreground font-mono">{item.timeAgo}</span>
-                                </div>
-                              </>
-                            )}
-
-                            {viewMode === "list" && (
-                              <div className="flex-1 flex items-center justify-between gap-4">
-                                <div className="flex items-center gap-3 min-w-0">
-                                  <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                                    <TypeIcon className="h-4 w-4" />
-                                  </div>
-                                  <div className="min-w-0">
-                                    <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
-                                      {item.title}
-                                    </h4>
-                                    <p className="text-[10px] text-muted-foreground truncate font-mono mt-0.5">{item.source}</p>
-                                  </div>
-                                </div>
-                                <div className="flex items-center gap-4 shrink-0 font-mono text-[9px] text-muted-foreground">
-                                  <span className="hidden sm:inline">{item.timeAgo}</span>
-                                  <button 
-                                    onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
-                                    className="h-8 w-8 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-500 flex items-center justify-center transition-colors"
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={(e) => toggleStar(item, e)}
+                                    className="text-muted-foreground hover:text-amber-500 transition-colors"
                                   >
-                                    <Trash2 className="h-3.5 w-3.5" />
+                                    <Star className={cn("h-3 w-3", item.isFavorite ? "fill-amber-500 text-amber-500" : "")} />
+                                  </button>
+
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); setActiveCardMenu(activeCardMenu === item.id ? null : item.id); }}
+                                    className="text-muted-foreground hover:text-foreground h-5 w-5 rounded-full flex items-center justify-center hover:bg-muted"
+                                  >
+                                    <MoreHorizontal className="h-3 w-3" />
                                   </button>
                                 </div>
+
+                                {activeCardMenu === item.id && (
+                                  <div className="absolute right-0 top-6 w-32 bg-card border border-border rounded-lg shadow-lg py-1 z-30 text-[10px] font-bold text-foreground">
+                                    {[
+                                      { label: "Copy link", icon: Copy, action: () => navigator.clipboard.writeText(item.url ?? item.source ?? "") },
+                                      { label: "Delete", icon: Trash2, action: () => handleDelete(item.id) }
+                                    ].map((m) => (
+                                      <button
+                                        key={m.label}
+                                        onClick={(e) => { e.stopPropagation(); m.action(); setActiveCardMenu(null); }}
+                                        className="w-full px-3 py-1.5 hover:bg-muted text-left flex items-center gap-2"
+                                      >
+                                        <m.icon className="h-3 w-3 opacity-60" />
+                                        <span>{m.label}</span>
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
                               </div>
-                            )}
 
-                          </div>
+                              {item.type !== "note" && <MemoryThumbnail item={item} />}
+
+                              {item.type === "note" && (
+                                <div className="p-2 border border-border/60 bg-muted/20 rounded-md text-[9px] text-muted-foreground leading-relaxed font-mono line-clamp-3">
+                                  {item.description}
+                                </div>
+                              )}
+
+                              <div className="space-y-0.5">
+                                <h4 className="text-[11px] font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-1">
+                                  {item.title}
+                                </h4>
+                                <span className="text-[8px] text-muted-foreground truncate block font-mono">
+                                  {item.source}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center justify-between pt-1.5 border-t border-border/20">
+                                <div className="flex flex-wrap gap-1 min-w-0">
+                                  {item.tags.slice(0, 2).map(t => (
+                                    <span key={t} className="text-[6.5px] font-bold uppercase tracking-wider bg-muted text-muted-foreground px-1 py-0.5 rounded truncate max-w-[52px]">
+                                      {t}
+                                    </span>
+                                  ))}
+                                </div>
+                                <span className="text-[7.5px] text-muted-foreground font-mono shrink-0 ml-1">{timeAgo(item.createdAt)}</span>
+                              </div>
+                            </>
+                          )}
+
+                          {viewMode === "list" && (
+                            <div className="flex-1 flex items-center justify-between gap-4">
+                              <div className="flex items-center gap-3 min-w-0">
+                                <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                  <TypeIcon className="h-4 w-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
+                                    {item.title}
+                                  </h4>
+                                  <p className="text-[10px] text-muted-foreground truncate font-mono mt-0.5">{item.source}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-4 shrink-0 font-mono text-[9px] text-muted-foreground">
+                                <span className="hidden sm:inline">{timeAgo(item.createdAt)}</span>
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                                  className="h-8 w-8 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-500 flex items-center justify-center transition-colors"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </div>
+                            </div>
+                          )}
+
                         </div>
-                      );
-                    })}
-                  </div>
-
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
+
+              </div>
+            ))}
           </div>
         ) : (
           <div className="text-center py-20 max-w-sm mx-auto space-y-4">
@@ -387,13 +364,13 @@ export default function MemoriesPage() {
       {/* DETAIL SLIDE DRAWER */}
       {selectedMemory && (
         <div className="w-80 border-l border-border bg-card flex flex-col shrink-0 z-40 relative animate-slide-left">
-          
+
           <div className="p-5 border-b border-border/20 flex items-center justify-between shrink-0">
             <div className="min-w-0">
               <h3 className="text-xs font-bold text-foreground truncate">{selectedMemory.title}</h3>
               <span className="text-[9px] font-mono text-muted-foreground truncate block">{selectedMemory.source}</span>
             </div>
-            <button 
+            <button
               onClick={() => setSelectedMemory(null)}
               className="h-7 w-7 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center"
             >
@@ -402,7 +379,7 @@ export default function MemoriesPage() {
           </div>
 
           <div className="flex-1 overflow-y-auto p-5 space-y-6 text-xs leading-relaxed">
-            
+
             <div className="aspect-video w-full rounded-lg bg-muted border border-border/45 flex items-center justify-center text-[10px] text-muted-foreground font-bold">
               Website Preview
             </div>
@@ -434,7 +411,7 @@ export default function MemoriesPage() {
             </div>
 
             <div className="pt-4">
-              <Link 
+              <Link
                 href={`/app/memories/${selectedMemory.id}`}
                 className="w-full h-10 rounded-full border border-border text-foreground text-xs font-semibold flex items-center justify-center hover:bg-muted"
               >

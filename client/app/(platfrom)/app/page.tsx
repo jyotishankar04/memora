@@ -1,71 +1,33 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { 
-  Sparkles, Globe, Video, Image as ImageIcon, Code, FileText, StickyNote, Plus, Search, 
-  ArrowRight, X, Clock, Compass, Heart, ArrowUpRight, ChevronRight, Check, Link as LinkIcon, Upload
+import {
+  Globe, Video, StickyNote, Search,
+  ArrowRight, X, ArrowUpRight, ChevronRight, Link as LinkIcon, Upload
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { useUser } from "@/context/UserContext";
+import { useMemoriesQuery, useCollectionsQuery } from "@/context/MemoryContext";
+import { Skeleton } from "@/components/ui/skeleton";
+import { timeAgo } from "@/lib/time";
 
-// Memory local schema
-interface Memory {
-  id: string;
-  type: "web" | "video" | "image" | "note" | "document";
-  title: string;
-  description: string;
-  source: string;
-  timeAgo: string;
-  tags: string[];
-  duration?: string;
+function greetingForHour(hour: number): string {
+  if (hour < 12) return "Good morning";
+  if (hour < 18) return "Good afternoon";
+  return "Good evening";
 }
 
 export default function HomePage() {
   const router = useRouter();
   const [searchQuery, setSearchQuery] = useState("");
-  const [greeting, setGreeting] = useState("Good morning, Subham");
+  const { user } = useUser();
+  const firstName = (user.name ?? user.email).split(/\s+/)[0];
+  const greeting = greetingForHour(new Date().getHours());
 
-  // Dynamic greeting based on hours
-  useEffect(() => {
-    const hr = new Date().getHours();
-    if (hr < 12) setGreeting("Good morning, Subham");
-    else if (hr < 18) setGreeting("Good afternoon, Subham");
-    else setGreeting("Good evening, Subham");
-  }, []);
-
-  // Mock memories for home preview
-  const recentMemories: Memory[] = [
-    {
-      id: "mem-1",
-      type: "web",
-      title: "Linear",
-      description: "SaaS Dashboard inspiration. Clean side navigation, custom dark colors, keyboard shortcuts.",
-      source: "linear.app",
-      timeAgo: "2 min ago",
-      tags: ["Design", "SaaS"]
-    },
-    {
-      id: "mem-2",
-      type: "video",
-      title: "Building a SaaS in 2026",
-      description: "Under the hood of monorepos, vector indexers, and local-first configurations.",
-      source: "youtube.com/watch?v=saas2026",
-      timeAgo: "Yesterday",
-      tags: ["Development", "SaaS"],
-      duration: "12:42"
-    },
-    {
-      id: "mem-3",
-      type: "note",
-      title: "Memora duplicate saves idea",
-      description: "Ask the user what they save most during signup and match related pages.",
-      source: "Personal Note",
-      timeAgo: "2 days ago",
-      tags: ["Product idea", "AI"]
-    }
-  ];
+  const { data: memoriesResult, isLoading: memoriesLoading } = useMemoriesQuery({ limit: 3 });
+  const { data: collections = [], isLoading: collectionsLoading } = useCollectionsQuery();
+  const recentMemories = memoriesResult?.items ?? [];
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-12 animate-fade-in">
@@ -73,10 +35,10 @@ export default function HomePage() {
       {/* Dynamic Greeting */}
       <div className="space-y-1">
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
-          {greeting}.
+          {greeting}, {firstName}.
         </h1>
         <p className="text-sm text-muted-foreground font-medium">
-          What's on your mind?
+          What&apos;s on your mind?
         </p>
       </div>
 
@@ -168,7 +130,21 @@ export default function HomePage() {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-          {recentMemories.map((item) => (
+          {memoriesLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">
+                <div className="p-4 rounded-lg border border-border/75 bg-card min-h-[170px] space-y-3">
+                  <Skeleton className="aspect-video w-full rounded-lg" />
+                  <Skeleton className="h-3.5 w-4/5" />
+                  <Skeleton className="h-2.5 w-full" />
+                  <div className="flex items-center justify-between pt-2.5 border-t border-border/20">
+                    <Skeleton className="h-2.5 w-16" />
+                    <Skeleton className="h-2.5 w-10" />
+                  </div>
+                </div>
+              </div>
+            ))
+          ) : recentMemories.map((item) => (
             <Link 
               key={item.id} 
               href={`/app/memories/${item.id}`}
@@ -181,7 +157,7 @@ export default function HomePage() {
                   {item.type === "video" ? (
                     <div className="flex flex-col items-center gap-1">
                       <Video className="h-5 w-5 text-red-500" />
-                      <span>YouTube Video ({item.duration})</span>
+                      <span>Video</span>
                     </div>
                   ) : (
                     <div className="flex flex-col items-center gap-1">
@@ -208,7 +184,7 @@ export default function HomePage() {
                       </span>
                     ))}
                   </div>
-                  <span className="text-[9px] text-muted-foreground font-mono">{item.timeAgo}</span>
+                  <span className="text-[9px] text-muted-foreground font-mono">{timeAgo(item.createdAt)}</span>
                 </div>
 
               </div>
@@ -232,7 +208,7 @@ export default function HomePage() {
             <div className="space-y-1">
               <h4 className="text-xs font-bold text-foreground">You saved 5 resources about AI agents this week</h4>
               <p className="text-[10px] text-muted-foreground leading-relaxed">
-                Explore similar materials on tool calling, RAG patterns, and memory configurations from Tiago Forte's archives.
+                Explore similar materials on tool calling, RAG patterns, and memory configurations from Tiago Forte&apos;s archives.
               </p>
             </div>
             <Link 
@@ -250,19 +226,23 @@ export default function HomePage() {
         <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Your collections</h3>
         
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-2xl text-xs">
-          {[
-            { label: "SaaS Inspiration", count: 128 },
-            { label: "AI Research", count: 42 },
-            { label: "Things to Build", count: 31 }
-          ].map((col, idx) => (
-            <Link 
-              key={idx}
-              href={`/app/collections/${col.label.toLowerCase().replace(/\s+/g, "-")}`}
+          {collectionsLoading ? (
+            Array.from({ length: 3 }).map((_, i) => (
+              <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">
+                <div className="p-4 rounded-lg border border-border/75 bg-card">
+                  <Skeleton className="h-4 w-full" />
+                </div>
+              </div>
+            ))
+          ) : collections.map((col) => (
+            <Link
+              key={col.id}
+              href={`/app/collections/${col.id}`}
               className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs hover:border-primary/20 transition-all duration-300 block"
             >
               <div className="p-4 rounded-lg border border-border/75 bg-card flex justify-between items-center font-bold">
-                <span className="truncate pr-2">{col.label}</span>
-                <span className="text-[9px] font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded">{col.count}</span>
+                <span className="truncate pr-2">{col.icon} {col.name}</span>
+                <span className="text-[9px] font-mono bg-muted text-muted-foreground px-2 py-0.5 rounded">{col.memoryCount}</span>
               </div>
             </Link>
           ))}
