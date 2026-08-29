@@ -1,16 +1,24 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
-import { Upload, Link as LinkIcon, StickyNote, Globe, Check } from "lucide-react";
+import { Upload, Link as LinkIcon, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/components/ui/toast";
+import { useMemories } from "@/context/MemoryContext";
+import { uploadFile } from "@/lib/uploads";
+import type { MemoryType } from "@/types/memory";
+
+function typeFromMime(mimeType: string): MemoryType {
+  if (mimeType.startsWith("image/")) return "image";
+  return "document";
+}
 
 export default function CapturePage() {
-  const router = useRouter();
+  const { create } = useMemories();
   const [dragActive, setDragActive] = useState(false);
+  const [isSavingFile, setIsSavingFile] = useState(false);
 
   const [linkUrl, setLinkUrl] = useState("");
   const [isSavingLink, setIsSavingLink] = useState(false);
@@ -30,43 +38,80 @@ export default function CapturePage() {
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      toast.add({
-        title: "File received",
-        description: `${e.dataTransfer.files[0].name} — Memora is parsing contents.`,
-        type: "success",
+    const file = e.dataTransfer.files?.[0];
+    if (!file) return;
+
+    setIsSavingFile(true);
+    try {
+      const uploaded = await uploadFile(file);
+      await create({
+        type: typeFromMime(uploaded.mimeType),
+        title: file.name.replace(/\.[^/.]+$/, ""),
+        attachments: [uploaded],
       });
+      toast.add({ title: "File saved", description: file.name, type: "success" });
+    } catch (err) {
+      toast.add({
+        title: "Upload failed",
+        description: err instanceof Error ? err.message : "Please try again.",
+        type: "error",
+      });
+    } finally {
+      setIsSavingFile(false);
     }
   };
 
-  const handleSaveLink = (e: React.FormEvent) => {
+  const handleSaveLink = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!linkUrl.trim()) return;
     setIsSavingLink(true);
-    setTimeout(() => {
-      setIsSavingLink(false);
+    try {
+      const title = (() => {
+        try {
+          return new URL(linkUrl).hostname;
+        } catch {
+          return linkUrl;
+        }
+      })();
+      await create({ type: "web", title, url: linkUrl.trim() });
       setLinkSaved(true);
       toast.add({ title: "Link saved", description: linkUrl, type: "success" });
       setLinkUrl("");
       setTimeout(() => setLinkSaved(false), 2000);
-    }, 800);
+    } catch (err) {
+      toast.add({
+        title: "Couldn't save link",
+        description: err instanceof Error ? err.message : "Please try again.",
+        type: "error",
+      });
+    } finally {
+      setIsSavingLink(false);
+    }
   };
 
-  const handleSaveNote = (e: React.FormEvent) => {
+  const handleSaveNote = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!noteText.trim()) return;
     setIsSavingNote(true);
-    setTimeout(() => {
-      setIsSavingNote(false);
+    try {
+      await create({ type: "note", title: noteText.slice(0, 60), content: noteText });
       setNoteSaved(true);
       toast.add({ title: "Note saved", description: noteText.slice(0, 60), type: "success" });
       setNoteText("");
       setTimeout(() => setNoteSaved(false), 2000);
-    }, 800);
+    } catch (err) {
+      toast.add({
+        title: "Couldn't save note",
+        description: err instanceof Error ? err.message : "Please try again.",
+        type: "error",
+      });
+    } finally {
+      setIsSavingNote(false);
+    }
   };
 
   return (
@@ -79,10 +124,10 @@ export default function CapturePage() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-        
+
         {/* Drag and Drop Zone */}
         <div className="md:col-span-2">
-          <div 
+          <div
             onDragEnter={handleDrag}
             onDragOver={handleDrag}
             onDragLeave={handleDrag}
@@ -92,9 +137,11 @@ export default function CapturePage() {
             }`}
           >
             <Upload className="h-10 w-10 mb-4 stroke-[1.5]" />
-            <h3 className="text-sm font-bold text-foreground">Drag and drop screenshots or files here</h3>
+            <h3 className="text-sm font-bold text-foreground">
+              {isSavingFile ? "Uploading…" : "Drag and drop screenshots or files here"}
+            </h3>
             <p className="text-[10px] text-muted-foreground mt-1 max-w-xs leading-relaxed">
-              We extract text automatically from screenshots (OCR) and categorize pdf files under AI research topics.
+              Images and PDFs, up to 10MB.
             </p>
           </div>
         </div>

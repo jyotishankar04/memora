@@ -32,6 +32,25 @@ import {
   useUpdateMemoryMutation,
 } from "@/context/MemoryContext";
 import { timeAgo } from "@/lib/time";
+import {
+  Attachment,
+  AttachmentContent,
+  AttachmentDescription,
+  AttachmentGroup,
+  AttachmentMedia,
+  AttachmentTitle,
+  AttachmentTrigger,
+} from "@/components/ui/attachment";
+
+function attachmentFilename(fileUrl: string): string {
+  return fileUrl.split("/").pop() ?? fileUrl;
+}
+
+function formatFileSize(bytes: number | null): string {
+  if (!bytes) return "";
+  if (bytes < 1024) return `${bytes} B`;
+  return `${(bytes / 1024).toFixed(0)} KB`;
+}
 
 const TYPE_ICONS = { web: Globe, video: Video, note: StickyNote, image: ImageIcon, document: FileText, voice: StickyNote };
 
@@ -155,7 +174,10 @@ export default function MemoryDetailPage() {
 
             <div className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs">
               <div className="aspect-video w-full rounded-lg bg-muted border border-border/75 flex flex-col items-center justify-center gap-3 relative overflow-hidden text-xs text-muted-foreground font-bold">
-                {memory.type === "video" ? (
+                {memory.type === "image" && memory.previewImageUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain preview image
+                  <img src={memory.previewImageUrl} alt={memory.title} className="w-full h-full object-cover" />
+                ) : memory.type === "video" ? (
                   <>
                     <Video className="h-10 w-10 text-red-500" />
                     <span>Video preview</span>
@@ -222,6 +244,36 @@ export default function MemoryDetailPage() {
               </div>
             </div>
           </div>
+
+          {/* Attachments */}
+          {memory.attachments.length > 0 && (
+            <div className="space-y-3">
+              <span className="text-[9px] font-bold text-muted-foreground uppercase tracking-widest block">
+                Attachments
+              </span>
+              <AttachmentGroup>
+                {memory.attachments.map((attachment) => (
+                  <Attachment key={attachment.id} orientation="vertical">
+                    <AttachmentTrigger render={<a href={attachment.fileUrl} target="_blank" rel="noreferrer" />} />
+                    <AttachmentMedia variant={attachment.mimeType?.startsWith("image/") ? "image" : "icon"}>
+                      {attachment.mimeType?.startsWith("image/") ? (
+                        // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain attachment thumbnail
+                        <img src={attachment.fileUrl} alt="" />
+                      ) : (
+                        <FileText />
+                      )}
+                    </AttachmentMedia>
+                    <AttachmentContent>
+                      <AttachmentTitle>{attachmentFilename(attachment.fileUrl)}</AttachmentTitle>
+                      <AttachmentDescription>
+                        {[attachment.mimeType, formatFileSize(attachment.fileSize)].filter(Boolean).join(" · ")}
+                      </AttachmentDescription>
+                    </AttachmentContent>
+                  </Attachment>
+                ))}
+              </AttachmentGroup>
+            </div>
+          )}
 
         </div>
 

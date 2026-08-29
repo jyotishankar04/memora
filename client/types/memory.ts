@@ -17,11 +17,19 @@ export interface Memory {
   updatedAt: string;
 }
 
+export interface Attachment {
+  id: string;
+  fileUrl: string;
+  fileSize: number | null;
+  mimeType: string | null;
+  createdAt: string;
+}
+
 export interface MemoryDetail extends Memory {
   content: string | null;
   keywords: string[] | null;
   collections: { id: string; name: string }[];
-  attachments: unknown[];
+  attachments: Attachment[];
 }
 
 export interface Collection {

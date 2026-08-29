@@ -17,6 +17,7 @@ import { UserAvatar, UserProvider, useUser, formatPlan } from "@/context/UserCon
 import { useMemories } from "@/context/MemoryContext";
 import { UpgradeCard } from "@/components/upgrade-card";
 import type { MemoryType } from "@/types/memory";
+import { uploadFile, type UploadedFile } from "@/lib/uploads";
 import {
   CommandDialog,
   CommandInput,
@@ -93,6 +94,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [captureContent, setCaptureContent] = useState("");
   const [captureType, setCaptureType] = useState<MemoryType>("web");
   const [captureCollectionId, setCaptureCollectionId] = useState("");
+  const [captureAttachment, setCaptureAttachment] = useState<UploadedFile | null>(null);
+  const [isUploadingAttachment, setIsUploadingAttachment] = useState(false);
+  const [attachmentError, setAttachmentError] = useState<string | null>(null);
   const [savedTitle, setSavedTitle] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
@@ -105,8 +109,26 @@ function AppShell({ children }: { children: React.ReactNode }) {
     setCaptureContent("");
     setCaptureType("web");
     setCaptureCollectionId("");
+    setCaptureAttachment(null);
+    setAttachmentError(null);
     setSaveError(null);
     setSaveModalOpen(true);
+  };
+
+  const handleAttachmentSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setIsUploadingAttachment(true);
+    setAttachmentError(null);
+    try {
+      const uploaded = await uploadFile(file);
+      setCaptureAttachment(uploaded);
+      if (!captureTitle.trim()) setCaptureTitle(file.name.replace(/\.[^/.]+$/, ""));
+    } catch (err) {
+      setAttachmentError(err instanceof Error ? err.message : "Upload failed.");
+    } finally {
+      setIsUploadingAttachment(false);
+    }
   };
 
   const handleCaptureSubmit = async (e: React.FormEvent) => {
@@ -118,9 +140,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
       const memory = await create({
         type: captureType,
         title: captureTitle.trim(),
-        url: captureUrl.trim() || undefined,
+        url: captureType === "web" || captureType === "video" ? captureUrl.trim() || undefined : undefined,
         content: captureType === "note" ? captureContent.trim() || undefined : undefined,
         collectionIds: captureCollectionId ? [captureCollectionId] : undefined,
+        attachments: captureAttachment ? [captureAttachment] : undefined,
       });
       setSavedTitle(memory.title);
       setSaveStep("done");
@@ -467,11 +490,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="space-y-2">
                   <span className="text-[9px] uppercase tracking-wider text-muted-foreground block font-bold">What are you saving?</span>
                   <div className="flex gap-1.5 flex-wrap">
-                    {(["web", "note", "video"] as MemoryType[]).map((t) => (
+                    {(["web", "note", "video", "image", "document"] as MemoryType[]).map((t) => (
                       <button
                         key={t}
                         type="button"
-                        onClick={() => setCaptureType(t)}
+                        onClick={() => { setCaptureType(t); setCaptureAttachment(null); setAttachmentError(null); }}
                         className={cn(
                           "px-3 py-1.5 rounded-full text-[9px] font-bold uppercase border transition-all",
                           captureType === t
@@ -485,7 +508,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   </div>
                 </div>
 
-                {captureType !== "note" && (
+                {(captureType === "web" || captureType === "video") && (
                   <div className="relative flex items-center">
                     <LinkIcon className="absolute left-4 h-4.5 w-4.5 text-muted-foreground" />
                     <input
@@ -495,6 +518,22 @@ function AppShell({ children }: { children: React.ReactNode }) {
                       onChange={(e) => setCaptureUrl(e.target.value)}
                       className="w-full bg-background border border-input rounded-xl pl-11 pr-4 py-3.5 text-xs text-foreground focus:outline-none focus:border-primary/80"
                     />
+                  </div>
+                )}
+
+                {(captureType === "image" || captureType === "document") && (
+                  <div className="space-y-1.5">
+                    <input
+                      type="file"
+                      accept={captureType === "image" ? "image/png,image/jpeg,image/webp,image/gif" : "application/pdf"}
+                      onChange={handleAttachmentSelect}
+                      className="w-full bg-background border border-input rounded-xl px-4 py-3 text-xs text-foreground file:mr-3 file:rounded-full file:border-0 file:bg-primary/10 file:px-3 file:py-1.5 file:text-[9px] file:font-bold file:uppercase file:text-primary"
+                    />
+                    {isUploadingAttachment && <p className="text-[10px] text-muted-foreground">Uploading&hellip;</p>}
+                    {captureAttachment && !isUploadingAttachment && (
+                      <p className="text-[10px] text-emerald-600 font-semibold">Uploaded &middot; {(captureAttachment.fileSize / 1024).toFixed(0)} KB</p>
+                    )}
+                    {attachmentError && <p className="text-[10px] text-red-500">{attachmentError}</p>}
                   </div>
                 )}
 
@@ -533,7 +572,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
                 {saveError && <p className="text-[10px] text-red-500">{saveError}</p>}
 
-                <Button type="submit" disabled={isSaving} className="w-full h-11 rounded-full font-bold text-xs bg-primary text-white">
+                <Button type="submit" disabled={isSaving || isUploadingAttachment} className="w-full h-11 rounded-full font-bold text-xs bg-primary text-white">
                   {isSaving ? "Saving..." : "Save Memory"}
                 </Button>
               </form>

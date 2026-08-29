@@ -1,5 +1,8 @@
 import { apiFetch, apiFetchRaw } from "@/lib/auth";
 import type { Memory, MemoryDetail, MemoryType } from "@/types/memory";
+import type { UploadedFile } from "@/lib/uploads";
+
+export type AttachmentInput = UploadedFile;
 
 export interface ListMemoriesParams {
   type?: MemoryType;
@@ -31,10 +34,11 @@ export interface CreateMemoryInput {
   keywords?: string[];
   collectionIds?: string[];
   tags?: string[];
+  attachments?: AttachmentInput[];
 }
 
 export type UpdateMemoryInput = Partial<
-  Pick<CreateMemoryInput, "title" | "content" | "collectionIds" | "tags"> & {
+  Pick<CreateMemoryInput, "title" | "content" | "collectionIds" | "tags" | "attachments"> & {
     description: string;
     isFavorite: boolean;
     isArchived: boolean;
