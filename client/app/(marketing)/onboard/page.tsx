@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { getCurrentUser } from "@/lib/auth";
+import { ApiError, getCurrentUser } from "@/lib/auth";
 import { completeOnboarding } from "@/lib/user";
 
 // Step 2 Interests
@@ -51,15 +51,30 @@ export default function OnboardingPage() {
   // Auth guard: onboarding answers are saved to the signed-in user's account.
   // The access token lives in an httpOnly cookie, so this asks /auth/me
   // rather than checking local storage — anyone not signed in gets sent to login.
+  // Only a real 401 means that; a transient network/server hiccup (e.g. the
+  // dev server mid-restart) gets a few retries first instead of an instant
+  // redirect.
   useEffect(() => {
-    async function checkAuth() {
+    let cancelled = false;
+
+    async function checkAuth(attempt = 0) {
       try {
         await getCurrentUser();
-      } catch {
+      } catch (err) {
+        if (cancelled) return;
+        const isUnauthorized = err instanceof ApiError && err.status === 401;
+        if (!isUnauthorized && attempt < 3) {
+          setTimeout(() => checkAuth(attempt + 1), 800);
+          return;
+        }
         router.replace("/auth/login");
       }
     }
+
     checkAuth();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   // Update progress bar

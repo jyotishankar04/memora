@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { getCurrentUser, logout, type AuthUser } from "@/lib/auth";
+import { ApiError, getCurrentUser, logout, type AuthUser } from "@/lib/auth";
 import { UserAvatar, UserProvider, useUser, formatPlan } from "@/context/UserContext";
 import { useMemories } from "@/context/MemoryContext";
 import { UpgradeCard } from "@/components/upgrade-card";
@@ -40,20 +40,38 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
 
   useEffect(() => {
-    async function checkAuth() {
+    let cancelled = false;
+
+    // Transient failures (dev server mid-restart, a dropped connection) look
+    // identical to "not logged in" from a single failed fetch — only a real
+    // 401 from the server means the session is actually invalid. Anything
+    // else gets a few retries before giving up, so a routine `tsx watch`
+    // restart doesn't boot the user back to the login page.
+    async function checkAuth(attempt = 0) {
       try {
         const user = await getCurrentUser();
+        if (cancelled) return;
         if (!user.onboardingCompleted) {
           router.replace("/onboard");
           return;
         }
         setCurrentUser(user);
         setAuthChecked(true);
-      } catch {
+      } catch (err) {
+        if (cancelled) return;
+        const isUnauthorized = err instanceof ApiError && err.status === 401;
+        if (!isUnauthorized && attempt < 3) {
+          setTimeout(() => checkAuth(attempt + 1), 800);
+          return;
+        }
         router.replace("/auth/login");
       }
     }
+
     checkAuth();
+    return () => {
+      cancelled = true;
+    };
   }, [router]);
 
   if (!authChecked || !currentUser) {
