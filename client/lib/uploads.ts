@@ -1,4 +1,4 @@
-const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
+import { apiFetch } from "@/lib/auth";
 
 export interface UploadedFile {
   fileUrl: string;
@@ -6,26 +6,42 @@ export interface UploadedFile {
   fileSize: number;
 }
 
+interface PresignedUpload {
+  uploadUrl: string;
+  fileUrl: string;
+  key: string;
+}
+
 /**
- * Uploads a file to the backend's /uploads endpoint. Can't reuse apiFetch here:
- * it force-sets Content-Type: application/json, which breaks multipart's
- * auto-generated boundary header — the browser must set that itself.
+ * Uploads a file straight to R2 via a presigned URL — the bytes never pass
+ * through our server. Two steps: ask the API to sign a PUT URL for this
+ * exact filename/mimeType/size, then PUT the file directly to R2 with that
+ * URL. The presigned URL is signed for this exact Content-Type, so R2
+ * rejects the PUT if the browser sends anything else.
  */
 export async function uploadFile(file: File): Promise<UploadedFile> {
-  const formData = new FormData();
-  formData.append("file", file);
-
-  const response = await fetch(`${API_URL}/uploads`, {
+  const presigned = await apiFetch<PresignedUpload>("/uploads/presign", {
     method: "POST",
-    credentials: "include",
-    body: formData,
+    body: JSON.stringify({
+      filename: file.name,
+      mimeType: file.type,
+      fileSize: file.size,
+    }),
   });
 
-  const body = await response.json();
+  const response = await fetch(presigned.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": file.type },
+    body: file,
+  });
 
-  if (!response.ok || !body.success) {
-    throw new Error(body.error?.message ?? "Upload failed. Please try again.");
+  if (!response.ok) {
+    throw new Error("Upload failed. Please try again.");
   }
 
-  return body.data as UploadedFile;
+  return {
+    fileUrl: presigned.fileUrl,
+    mimeType: file.type,
+    fileSize: file.size,
+  };
 }
