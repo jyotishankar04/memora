@@ -8,7 +8,7 @@ import {
   Sparkles, Plus, Search,
   Settings, HelpCircle, Bell, X, Moon, Sun, FolderOpen,
   Compass, Check, Link as LinkIcon, ChevronRight, ChevronDown,
-  FolderPlus, Heart, Clock, Compass as CompassIcon, BarChart2
+  FolderPlus, Heart, Clock, Compass as CompassIcon, BarChart2, FileText
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -531,7 +531,23 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     />
                     {isUploadingAttachment && <p className="text-[10px] text-muted-foreground">Uploading&hellip;</p>}
                     {captureAttachment && !isUploadingAttachment && (
-                      <p className="text-[10px] text-emerald-600 font-semibold">Uploaded &middot; {(captureAttachment.fileSize / 1024).toFixed(0)} KB</p>
+                      <div className="flex items-center gap-2.5 p-2 rounded-lg border border-border/60 bg-muted/20">
+                        {captureType === "image" ? (
+                          // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain preview image
+                          <img
+                            src={captureAttachment.fileUrl}
+                            alt=""
+                            className="h-10 w-10 rounded-md object-cover border border-border/40 shrink-0"
+                          />
+                        ) : (
+                          <div className="h-10 w-10 rounded-md bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                            <FileText className="h-4 w-4" />
+                          </div>
+                        )}
+                        <p className="text-[10px] text-emerald-600 font-semibold">
+                          Uploaded &middot; {(captureAttachment.fileSize / 1024).toFixed(0)} KB
+                        </p>
+                      </div>
                     )}
                     {attachmentError && <p className="text-[10px] text-red-500">{attachmentError}</p>}
                   </div>
