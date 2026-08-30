@@ -1,6 +1,15 @@
 import type { Request, Response } from "express";
 import { ApiResponse } from "../../shared/response/api-response";
-import { createMemory, deleteMemory, getMemoryById, listMemories, updateMemory } from "./memory.service";
+import {
+  createMemory,
+  deleteMemory,
+  getMemoryById,
+  getProcessingStatus,
+  listMemories,
+  refreshPreview,
+  submitBrowserCapture,
+  updateMemory,
+} from "./memory.service";
 import type { ListMemoriesQuery } from "./memory.schema";
 
 export class MemoryController {
@@ -33,5 +42,20 @@ export class MemoryController {
   static async remove(req: Request, res: Response) {
     await deleteMemory(req.user!.id, req.params.id as string);
     res.status(204).send();
+  }
+
+  static async browserCapture(req: Request, res: Response) {
+    const memory = await submitBrowserCapture(req.user!.id, req.params.id as string, req.body);
+    res.status(200).json(ApiResponse.success(memory));
+  }
+
+  static async refreshPreview(req: Request, res: Response) {
+    const memory = await refreshPreview(req.user!.id, req.params.id as string);
+    res.status(200).json(ApiResponse.success(memory));
+  }
+
+  static async processingStatus(req: Request, res: Response) {
+    const status = await getProcessingStatus(req.user!.id, req.params.id as string);
+    res.status(200).json(ApiResponse.success(status));
   }
 }
