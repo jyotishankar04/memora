@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
@@ -10,16 +10,16 @@ import {
   Settings, HelpCircle, Bell, X, Moon, Sun, FolderOpen,
   Compass, Check, ChevronRight, ChevronDown,
   FolderPlus, Heart, Clock, Compass as CompassIcon, BarChart2, FileText,
-  Paperclip, UploadCloud, Layers
+  Paperclip, UploadCloud, Layers, PanelLeftClose, PanelLeftOpen, Menu
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { ApiError, getCurrentUser, logout, type AuthUser } from "@/lib/auth";
-import { UserAvatar, UserProvider, useUser, formatPlan } from "@/context/UserContext";
+import { logout } from "@/lib/auth";
+import { UserAvatar, UserProvider, useUser, formatPlan, useCurrentUserQuery, useSetCurrentUser } from "@/context/UserContext";
 import { useMemories } from "@/context/MemoryContext";
 import { UpgradeCard } from "@/components/upgrade-card";
 import { uploadFile, type UploadedFile } from "@/lib/uploads";
-import { detectMemoryType, deriveTitle } from "@/lib/detect-memory-type";
+import { detectMemoryType, deriveTitle, splitLinkAndCaption } from "@/lib/detect-memory-type";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 import {
   CommandDialog,
@@ -30,14 +30,9 @@ import {
   CommandItem,
   CommandSeparator,
 } from "@/components/ui/command";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { toast } from "@/components/ui/toast";
 import {
   InputGroup,
   InputGroupAddon,
@@ -63,45 +58,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   // Redirects to login if that fails, or to /onboard if the signed-in user
   // hasn't finished the onboarding questionnaire yet (covers direct
   // navigation to /app, not just the post-OAuth-login redirect).
-  const [authChecked, setAuthChecked] = useState(false);
-  const [currentUser, setCurrentUser] = useState<AuthUser | null>(null);
+  const { data: currentUser, isLoading, isError } = useCurrentUserQuery();
+  const setCurrentUser = useSetCurrentUser();
+  const needsOnboarding = Boolean(currentUser && !currentUser.onboardingCompleted);
 
   useEffect(() => {
-    let cancelled = false;
-
-    // Transient failures (dev server mid-restart, a dropped connection) look
-    // identical to "not logged in" from a single failed fetch — only a real
-    // 401 from the server means the session is actually invalid. Anything
-    // else gets a few retries before giving up, so a routine `tsx watch`
-    // restart doesn't boot the user back to the login page.
-    async function checkAuth(attempt = 0) {
-      try {
-        const user = await getCurrentUser();
-        if (cancelled) return;
-        if (!user.onboardingCompleted) {
-          router.replace("/onboard");
-          return;
-        }
-        setCurrentUser(user);
-        setAuthChecked(true);
-      } catch (err) {
-        if (cancelled) return;
-        const isUnauthorized = err instanceof ApiError && err.status === 401;
-        if (!isUnauthorized && attempt < 3) {
-          setTimeout(() => checkAuth(attempt + 1), 800);
-          return;
-        }
-        router.replace("/auth/login");
-      }
+    if (isLoading) return;
+    if (isError) {
+      router.replace("/auth/login");
+    } else if (needsOnboarding) {
+      router.replace("/onboard");
     }
+  }, [isLoading, isError, needsOnboarding, router]);
 
-    checkAuth();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
-
-  if (!authChecked || !currentUser) {
+  if (isLoading || isError || !currentUser || needsOnboarding) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
         <Sparkles className="h-5 w-5 text-primary animate-pulse" />
@@ -136,7 +106,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [saveStep, setSaveStep] = useState<1 | "done">(1);
   const [captureTitle, setCaptureTitle] = useState("");
   const [captureText, setCaptureText] = useState("");
-  const [captureCollectionId, setCaptureCollectionId] = useState("");
+  const [captureCollectionIds, setCaptureCollectionIds] = useState<string[]>([]);
   const [captureAttachment, setCaptureAttachment] = useState<UploadedFile | null>(null);
   const [captureAttachmentName, setCaptureAttachmentName] = useState<string | null>(null);
   const [captureAttachmentMimeType, setCaptureAttachmentMimeType] = useState<string | null>(null);
@@ -145,11 +115,49 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [isDraggingOver, setIsDraggingOver] = useState(false);
   const dragCounter = useRef(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const captureFormRef = useRef<HTMLFormElement>(null);
   const [savedTitle, setSavedTitle] = useState("");
+  const [savedCollections, setSavedCollections] = useState<{ id: string; name: string }[]>([]);
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
   const [collectionsOpen, setCollectionsOpen] = useState(true);
+  const [collectionsShowAll, setCollectionsShowAll] = useState(false);
+  const COLLECTIONS_PREVIEW_COUNT = 4;
+  // Sidebar collapse is a 3-stage sequence rather than one simultaneous
+  // toggle: the Quick Capture button morphs into a circle first (still
+  // docked, sidebar unchanged), then the sidebar hides, then the circle
+  // slides out to its floating dock below the menu button. Expanding runs
+  // the same sequence in reverse. Each named phase drives both the aside's
+  // width and which Quick Capture button variant is mounted; transitions
+  // between phases are chained off animation-completion callbacks so the
+  // stages never overlap.
+  type SidebarPhase = "expanded" | "toCircle" | "hiding" | "collapsed" | "showing" | "toDock";
+  const [sidebarPhase, setSidebarPhase] = useState<SidebarPhase>("expanded");
+  const sidebarCollapsed = sidebarPhase === "hiding" || sidebarPhase === "collapsed";
+  const sidebarFullyCollapsed = sidebarPhase === "collapsed";
+  const [sidebarFlyoutOpen, setSidebarFlyoutOpen] = useState(false);
+  const menuButtonRef = useRef<HTMLButtonElement>(null);
+  const [menuAnchor, setMenuAnchor] = useState({ x: 0, y: 0 });
+  const flyoutItemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+
+  const toggleFlyout = useCallback(() => {
+    setSidebarFlyoutOpen((open) => {
+      if (!open && menuButtonRef.current) {
+        const rect = menuButtonRef.current.getBoundingClientRect();
+        setMenuAnchor({ x: rect.left + rect.width / 2, y: rect.top + rect.height / 2 });
+      }
+      return !open;
+    });
+  }, []);
+
+  const toggleSidebar = () => {
+    setSidebarPhase((phase) => {
+      if (phase === "expanded") return "toCircle";
+      if (phase === "collapsed") return "showing";
+      return phase;
+    });
+  };
 
   // The single source of truth for "what kind of memory is this" — rule-based
   // for now, but isolated in lib/detect-memory-type.ts so it's a one-place
@@ -165,7 +173,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
     setSaveStep(1);
     setCaptureTitle("");
     setCaptureText("");
-    setCaptureCollectionId("");
+    setCaptureCollectionIds([]);
     setCaptureAttachment(null);
     setCaptureAttachmentName(null);
     setCaptureAttachmentMimeType(null);
@@ -247,20 +255,47 @@ function AppShell({ children }: { children: React.ReactNode }) {
     setSaveError(null);
     try {
       const title = captureTitle.trim() || deriveTitle(detectedType, captureText, captureAttachmentName);
-      const memory = await create({
+      // A pasted link often comes with commentary ("check this out
+      // https://... thoughts?") — split it so the URL lands in `url` and
+      // whatever's left becomes the caption, instead of the whole blob
+      // getting shoved into the url field.
+      const { url: extractedUrl, caption } = splitLinkAndCaption(captureText);
+      const isLink = detectedType === "web" || detectedType === "video";
+      const payload = {
         type: detectedType,
         title,
-        url: detectedType === "web" || detectedType === "video" ? captureText.trim() || undefined : undefined,
+        url: isLink ? extractedUrl?.href : undefined,
         // For a note, the whole field is the content. For an attachment
         // (image/document), the field is free for a caption instead — an
         // attachment never consumes captureText, so whatever's typed there
-        // should still be saved alongside the file rather than dropped.
-        content: detectedType === "note" || captureAttachment ? captureText.trim() || undefined : undefined,
-        collectionIds: captureCollectionId ? [captureCollectionId] : undefined,
+        // should still be saved alongside the file rather than dropped. For
+        // a link, whatever text was left after pulling the URL out becomes
+        // the caption.
+        content: detectedType === "note" || captureAttachment ? captureText.trim() || undefined : isLink ? caption || undefined : undefined,
+        collectionIds: captureCollectionIds.length > 0 ? captureCollectionIds : undefined,
         attachments: captureAttachment ? [captureAttachment] : undefined,
-      });
+      };
+      console.log("[capture] detected", { rawText: captureText, detectedType, extractedUrl: extractedUrl?.href ?? null, caption });
+      console.log("[capture] submitting", payload);
+      const memory = await create(payload);
+      console.log("[capture] saved", memory);
+      // AI ingestion runs async in the background from here — the modal
+      // doesn't wait for it. Once it finishes, the enrichment (corrected
+      // caption, real title, tags, collection) shows up wherever the memory
+      // is viewed next: the memories list, its detail page's "Memora
+      // Understood" panel, and the list's slide-in drawer.
       setSavedTitle(memory.title);
+      setSavedCollections(memory.collections);
       setSaveStep("done");
+      // Non-blocking duplicate hint (docs/URL_CAPTURE_AND_PREVIEW.md) — the
+      // memory above was saved either way, this is just a heads-up.
+      if (memory.duplicateOf) {
+        toast.add({
+          title: "You already saved a similar link",
+          description: memory.duplicateOf.title,
+          type: "info",
+        });
+      }
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Couldn't save that memory.");
     } finally {
@@ -305,19 +340,108 @@ function AppShell({ children }: { children: React.ReactNode }) {
   // Command palette search query
   const [commandQuery, setCommandQuery] = useState("");
 
-  // Keyboard shortcut listener
+  // Global keyboard shortcuts. Note: Ctrl/Cmd+N and Ctrl/Cmd+P are reserved
+  // by the browser itself (new window / print) in Chrome and Firefox — their
+  // preventDefault() is a no-op there, so these two only actually fire in
+  // browsers/contexts that don't intercept them first (still wired here on
+  // the chance they do, and so the binding is correct if that ever changes).
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
-        e.preventDefault();
-        setSearchModalOpen(true);
+      if (!(e.metaKey || e.ctrlKey)) return;
+
+      switch (e.key.toLowerCase()) {
+        case "k":
+          e.preventDefault();
+          setSearchModalOpen(true);
+          break;
+        case "q":
+          e.preventDefault();
+          openCaptureModal();
+          break;
+        case "enter":
+          if (saveModalOpen && saveStep === 1) {
+            e.preventDefault();
+            captureFormRef.current?.requestSubmit();
+          }
+          break;
+        case "b":
+          e.preventDefault();
+          toggleSidebar();
+          break;
+        case "n":
+          e.preventDefault();
+          router.push("/app/notifications");
+          break;
+        case "p":
+          e.preventDefault();
+          router.push("/app/settings");
+          break;
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [saveModalOpen, saveStep, router, openCaptureModal, toggleSidebar]);
+
+  // Collapsed-sidebar quick-nav menu keyboard control: Ctrl+M opens/closes
+  // it, Tab / Shift+Tab cycle its items, Escape closes it (Enter navigates
+  // via the focused link's own native behavior). Inert whenever the full
+  // sidebar is open — the floating menu doesn't exist in that state.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (!sidebarFullyCollapsed) return;
+
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
+        e.preventDefault();
+        toggleFlyout();
+        return;
+      }
+
+      if (!sidebarFlyoutOpen) return;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setSidebarFlyoutOpen(false);
+        menuButtonRef.current?.focus();
+        return;
+      }
+
+      if (e.key === "Tab") {
+        const items = flyoutItemRefs.current.filter((el): el is HTMLAnchorElement => el !== null);
+        if (items.length === 0) return;
+        e.preventDefault();
+        const currentIndex = items.indexOf(document.activeElement as HTMLAnchorElement);
+        const delta = e.shiftKey ? -1 : 1;
+        const nextIndex = (currentIndex + delta + items.length) % items.length;
+        items[nextIndex]?.focus();
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [sidebarFullyCollapsed, sidebarFlyoutOpen, toggleFlyout]);
+
+  // Focus the first item as soon as the menu opens, so Tab/Shift+Tab have
+  // somewhere to start cycling from.
+  useEffect(() => {
+    if (sidebarFlyoutOpen && sidebarFullyCollapsed) {
+      flyoutItemRefs.current[0]?.focus();
+    }
+  }, [sidebarFlyoutOpen, sidebarFullyCollapsed]);
 
   const isFreeUser = !currentUser.roles.includes("pro_user") && !currentUser.roles.includes("admin");
+
+  const primaryNavItems = [
+    { label: "Home", href: "/app", icon: Compass },
+    { label: "Memories", href: "/app/memories", icon: FolderOpen },
+    { label: "Collections", href: "/app/collections", icon: Layers },
+    { label: "Search", href: "/app/search", icon: Search },
+    { label: "Ask Memora", href: "/app/ask", icon: Sparkles },
+  ];
+  const secondaryNavItems = [
+    { label: "Favorites", href: "/app/favorites", icon: Heart },
+    { label: "Recent", href: "/app/recent", icon: Clock },
+    { label: "Explore", href: "/app/explore", icon: CompassIcon },
+    { label: "Memory Graph", href: "/app/graph", icon: BarChart2 },
+  ];
 
   return (
     <div className="flex h-screen w-screen bg-background text-foreground font-sans overflow-hidden transition-colors duration-300">
@@ -329,34 +453,74 @@ function AppShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* 1. DESKTOP SIDEBAR */}
-      <aside className="relative z-10 w-60 border-r border-border/60 bg-muted/15 flex flex-col justify-between shrink-0 hidden md:flex">
-        <div className="p-5 space-y-6 overflow-y-auto flex-1 min-h-0">
+      <motion.aside
+        initial={false}
+        animate={{ width: sidebarCollapsed ? 0 : 240 }}
+        transition={{ duration: 0.2, ease: "easeInOut" }}
+        onAnimationComplete={() => {
+          setSidebarPhase((phase) => {
+            if (phase === "hiding") return "collapsed";
+            if (phase === "showing") return "toDock";
+            return phase;
+          });
+        }}
+        className={cn(
+          "relative z-10 bg-muted/15 flex flex-col justify-between shrink-0 hidden md:flex overflow-hidden",
+          sidebarCollapsed ? "border-r-0" : "border-r border-border/60"
+        )}
+      >
+        <div className="flex flex-col min-h-0 flex-1 w-60">
 
-          {/* Header */}
-          <Link href="/app" className="flex items-center gap-2 px-1 hover:opacity-85 transition-opacity">
-            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-foreground text-background font-semibold text-xs shrink-0">
-              M
-            </div>
-            <span className="text-sm font-semibold tracking-[-0.03em]">memora</span>
-          </Link>
+          {/* Header + Quick Capture — fixed, never scrolls with the nav below */}
+          <div className="p-5 pb-4 space-y-4 shrink-0">
+            <Link href="/app" className="flex items-center gap-2 px-1 hover:opacity-85 transition-opacity">
+              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-foreground text-background font-semibold text-xs shrink-0">
+                M
+              </div>
+              <span className="text-sm font-semibold tracking-[-0.03em]">memora</span>
+            </Link>
 
-          {/* Quick Capture CTA */}
-          <Button
-            onClick={openCaptureModal}
-            className="w-full h-10 rounded-full font-bold text-xs bg-primary text-white flex items-center justify-center gap-1.5 shadow-sm"
-          >
-            <Plus className="h-4 w-4" /> Quick Capture
-          </Button>
+            {sidebarPhase === "expanded" && (
+              <motion.button
+                layoutId="quick-capture-fab"
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+                onClick={openCaptureModal}
+                className="w-full h-10 rounded-full font-bold text-xs bg-primary text-white flex items-center justify-center gap-1.5 shadow-sm"
+              >
+                <Plus className="h-4 w-4" /> Quick Capture
+              </motion.button>
+            )}
+
+            {/* Stage 1 (collapsing): morphs from the pill above into this
+                docked circle before the sidebar starts hiding. Stage 3
+                (expanding): this is where the floating circle slides back
+                to before morphing into the pill again. */}
+            {(sidebarPhase === "toCircle" || sidebarPhase === "hiding" || sidebarPhase === "toDock") && (
+              <motion.button
+                layoutId="quick-capture-fab"
+                transition={{ duration: 0.25, ease: "easeInOut" }}
+                onClick={openCaptureModal}
+                onLayoutAnimationComplete={() => {
+                  setSidebarPhase((phase) => {
+                    if (phase === "toCircle") return "hiding";
+                    if (phase === "toDock") return "expanded";
+                    return phase;
+                  });
+                }}
+                className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center shadow-sm shrink-0"
+                aria-label="Quick Capture (Ctrl+Q)"
+              >
+                <Plus className="h-4 w-4" />
+              </motion.button>
+            )}
+          </div>
+
+        <ScrollArea className="flex-1 min-h-0">
+        <div className="px-5 pb-5 space-y-6">
 
           {/* Primary Navigation */}
           <div className="space-y-0.5">
-            {[
-              { label: "Home", href: "/app", icon: Compass },
-              { label: "Memories", href: "/app/memories", icon: FolderOpen },
-              { label: "Collections", href: "/app/collections", icon: Layers },
-              { label: "Search", href: "/app/search", icon: Search },
-              { label: "Ask Memora", href: "/app/ask", icon: Sparkles }
-            ].map((item) => {
+            {primaryNavItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href;
               return (
@@ -395,7 +559,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   transition={{ duration: 0.2, ease: "easeInOut" }}
                   className="space-y-1.5 overflow-hidden"
                 >
-                  {collections.map((col) => {
+                  {(collectionsShowAll ? collections : collections.slice(0, COLLECTIONS_PREVIEW_COUNT)).map((col) => {
                     const href = `/app/collections/${col.id}`;
                     return (
                       <Link
@@ -415,6 +579,17 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     );
                   })}
 
+                  {collections.length > COLLECTIONS_PREVIEW_COUNT && (
+                    <button
+                      type="button"
+                      onClick={() => setCollectionsShowAll((show) => !show)}
+                      className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
+                    >
+                      <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", collectionsShowAll ? "rotate-180" : "")} />
+                      {collectionsShowAll ? "Show less" : `Show ${collections.length - COLLECTIONS_PREVIEW_COUNT} more`}
+                    </button>
+                  )}
+
                   <Link
                     href="/app/collections"
                     className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-2 text-primary hover:underline"
@@ -428,12 +603,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Secondary Navigation */}
           <div className="space-y-0.5 pt-4 border-t border-border/30">
-            {[
-              { label: "Favorites", href: "/app/favorites", icon: Heart },
-              { label: "Recent", href: "/app/recent", icon: Clock },
-              { label: "Explore", href: "/app/explore", icon: CompassIcon },
-              { label: "Memory Graph", href: "/app/graph", icon: BarChart2 }
-            ].map((item) => {
+            {secondaryNavItems.map((item) => {
               const Icon = item.icon;
               const active = pathname === item.href;
               return (
@@ -453,9 +623,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </div>
 
         </div>
+        </ScrollArea>
+
+        </div>
 
         {/* Sidebar Bottom user profile */}
-        <div className="p-4 border-t border-border/40 relative">
+        <div className="p-4 border-t border-border/40 relative w-60">
 
           {showUpgradeCard && isFreeUser && (
             <div
@@ -533,7 +706,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           )}
         </div>
 
-      </aside>
+      </motion.aside>
 
       {/* 2. TOPBAR AND MAIN WORKSPACE */}
       <div className="flex-1 flex flex-col overflow-hidden relative z-10">
@@ -541,21 +714,32 @@ function AppShell({ children }: { children: React.ReactNode }) {
         {/* Topbar Header */}
         <header className="h-16 border-b border-border/40 px-6 flex items-center justify-between shrink-0 hidden md:flex">
 
-          {/* Global search trigger */}
-          <button
-            onClick={() => setSearchModalOpen(true)}
-            className="w-80 h-9 px-3 rounded-full border border-border/60 bg-muted/20 text-xs text-muted-foreground flex items-center justify-between hover:bg-muted transition-all select-none"
-          >
-            <div className="flex items-center gap-2">
-              <Search className="h-3.5 w-3.5 text-primary" />
-              <span>Search your memory...</span>
-            </div>
-            <kbd className="px-1.5 py-0.5 border border-border bg-muted rounded text-[9px] font-mono">⌘K</kbd>
-          </button>
+          <div className="flex items-center gap-3">
+            {/* Sidebar collapse toggle */}
+            <button
+              onClick={toggleSidebar}
+              className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
+              aria-label={sidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+            </button>
+
+            {/* Global search trigger */}
+            <button
+              onClick={() => setSearchModalOpen(true)}
+              className="w-80 h-9 px-3 rounded-full border border-border/60 bg-muted/20 text-xs text-muted-foreground flex items-center justify-between hover:bg-muted transition-all select-none"
+            >
+              <div className="flex items-center gap-2">
+                <Search className="h-3.5 w-3.5 text-primary" />
+                <span>Search your memory...</span>
+              </div>
+              <kbd className="px-1.5 py-0.5 border border-border bg-muted rounded text-[9px] font-mono">⌘K</kbd>
+            </button>
+          </div>
 
           {/* Actions */}
           <div className="flex items-center gap-4">
-            <Link href="/app/notifications" className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
+            <Link href="/app/notifications" aria-label="Notifications (Ctrl+N)" className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
               <Bell className="h-4 w-4" />
               <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-primary rounded-full" />
             </Link>
@@ -567,7 +751,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
             </button>
 
-            <Link href="/app/settings">
+            <Link href="/app/settings" aria-label="Profile (Ctrl+P)">
               <UserAvatar user={currentUser} className="h-8 w-8 text-xs border border-primary/20" />
             </Link>
           </div>
@@ -575,8 +759,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
         </header>
 
         {/* Main nested content render */}
-        <main className="flex-1 overflow-y-auto pb-16 md:pb-0">
-          {children}
+        <main className="flex-1 min-h-0">
+          <ScrollArea className="h-full" viewportClassName="pb-16 md:pb-0">
+            {children}
+          </ScrollArea>
         </main>
 
         {/* 3. MOBILE BOTTOM NAVIGATION BAR */}
@@ -625,7 +811,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             </div>
 
             {saveStep === 1 && (
-              <form onSubmit={handleCaptureSubmit} className="space-y-4">
+              <form ref={captureFormRef} onSubmit={handleCaptureSubmit} className="space-y-4">
 
                 {/* Unified capture surface — paste a link, paste/drop a file, or just type */}
                 <div className="relative">
@@ -716,35 +902,39 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 />
 
                 <div className="space-y-2">
-                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground block font-bold">Collection</span>
-                  <Select value={captureCollectionId} onValueChange={(value) => setCaptureCollectionId((value as string) ?? "")}>
-                    <SelectTrigger className="w-full h-auto rounded-xl border-input bg-background px-3 py-2.5 text-xs text-foreground">
-                      <SelectValue placeholder="None">
-                        {() => {
-                          const selected = collections.find((col) => col.id === captureCollectionId);
-                          return selected ? (
-                            <span className="flex items-center gap-1.5">
-                              <span>{selected.icon}</span>
-                              {selected.name}
-                            </span>
-                          ) : (
-                            "None"
-                          );
-                        }}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="">None</SelectItem>
-                      {collections.map((col) => (
-                        <SelectItem key={col.id} value={col.id}>
-                          <span className="flex items-center gap-1.5">
+                  <span className="text-[9px] uppercase tracking-wider text-muted-foreground block font-bold">Collections</span>
+                  {collections.length > 0 ? (
+                    <div className="flex flex-wrap gap-1.5">
+                      {collections.map((col) => {
+                        const isSelected = captureCollectionIds.includes(col.id);
+                        return (
+                          <button
+                            key={col.id}
+                            type="button"
+                            onClick={() =>
+                              setCaptureCollectionIds((prev) =>
+                                prev.includes(col.id)
+                                  ? prev.filter((id) => id !== col.id)
+                                  : [...prev, col.id],
+                              )
+                            }
+                            className={cn(
+                              "flex items-center gap-1 text-[10px] font-semibold px-2.5 py-1 rounded-full border transition-colors",
+                              isSelected
+                                ? "bg-primary/10 border-primary/30 text-primary"
+                                : "bg-background border-input text-muted-foreground hover:border-primary/20",
+                            )}
+                          >
                             <span>{col.icon}</span>
                             {col.name}
-                          </span>
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                            {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <p className="text-[10px] text-muted-foreground">No collections yet.</p>
+                  )}
                 </div>
 
                 {saveError && <p className="text-[10px] text-red-500">{saveError}</p>}
@@ -770,6 +960,21 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   <h4 className="text-xs font-bold text-foreground">{savedTitle}</h4>
                 </div>
 
+                {savedCollections.length > 0 && (
+                  <div className="flex flex-wrap justify-center gap-1">
+                    {savedCollections.map((c) => (
+                      <Link
+                        key={c.id}
+                        href={`/app/collections/${c.id}`}
+                        onClick={() => setSaveModalOpen(false)}
+                        className="text-[8px] font-bold uppercase bg-primary/5 border border-primary/10 text-primary px-2 py-0.5 rounded hover:bg-primary/10 transition-colors"
+                      >
+                        {c.name}
+                      </Link>
+                    ))}
+                  </div>
+                )}
+
                 <div className="pt-4 flex gap-2">
                   <Button onClick={() => { setSaveModalOpen(false); router.push("/app/memories"); }} className="flex-1 h-10 rounded-full text-xs font-bold bg-primary text-white">
                     View memory &rarr;
@@ -781,6 +986,106 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       )}
+
+      {/* Floating dock — replaces the collapsed sidebar, docked at the
+          left-center of the screen like a desktop app dock. */}
+      {(sidebarFullyCollapsed || sidebarPhase === "showing") && (
+        <div className="fixed left-4 top-1/2 -translate-y-1/2 z-40 hidden md:flex flex-col items-center gap-1.5 p-1.5 rounded-full bg-card/95 border border-border/60 shadow-lg backdrop-blur-sm">
+          {sidebarFullyCollapsed && (
+            <button
+              ref={menuButtonRef}
+              type="button"
+              onClick={toggleFlyout}
+              className="h-10 w-10 rounded-full border border-primary/30 bg-primary/10 text-primary shadow-sm flex items-center justify-center hover:bg-primary/15 transition-colors shrink-0"
+              aria-label="Open sidebar menu (Ctrl+M)"
+            >
+              <Menu className="h-4 w-4" />
+            </button>
+          )}
+
+          {/* Shares layoutId with the sidebar's Quick Capture button so it
+              smoothly morphs between the two on collapse/expand. Stays
+              mounted through "showing" too so it's still there to slide
+              back to dock. */}
+          {(sidebarPhase === "collapsed" || sidebarPhase === "showing") && (
+            <motion.button
+              layoutId="quick-capture-fab"
+              transition={{ duration: 0.25, ease: "easeInOut" }}
+              type="button"
+              onClick={openCaptureModal}
+              className="h-10 w-10 rounded-full bg-primary text-white shadow-sm flex items-center justify-center hover:opacity-90 transition-opacity shrink-0"
+              aria-label="Quick Capture (Ctrl+Q)"
+            >
+              <Plus className="h-4 w-4" />
+            </motion.button>
+          )}
+        </div>
+      )}
+
+      {/* COLLAPSED SIDEBAR QUICK-NAV FLYOUT — pops off the menu button in a
+          half-circle arc instead of a straight list. */}
+      <AnimatePresence>
+        {sidebarFullyCollapsed && sidebarFlyoutOpen && (
+          <React.Fragment key="sidebar-flyout">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.15 }}
+              onClick={() => setSidebarFlyoutOpen(false)}
+              className="fixed inset-0 z-40 bg-background/60 backdrop-blur-sm hidden md:block"
+            />
+            <div
+              className="fixed z-50 hidden md:block"
+              style={{ left: menuAnchor.x, top: menuAnchor.y }}
+            >
+              {[...primaryNavItems, ...secondaryNavItems].map((item, idx, all) => {
+                const Icon = item.icon;
+                const active = pathname === item.href;
+                const itemSize = 48;
+                const radius = 150;
+                // Half-circle bulging to the right of the button (-90deg =
+                // straight up, 0deg = right, +90deg = straight down), since
+                // the dock is pinned to the left edge of the screen.
+                const angleDeg = all.length === 1 ? 0 : -90 + (180 / (all.length - 1)) * idx;
+                const angleRad = (angleDeg * Math.PI) / 180;
+                const targetX = radius * Math.cos(angleRad) - itemSize / 2;
+                const targetY = radius * Math.sin(angleRad) - itemSize / 2;
+                const originOffset = -itemSize / 2;
+                return (
+                  <motion.div
+                    key={item.href}
+                    className="absolute top-0 left-0"
+                    initial={{ x: originOffset, y: originOffset, opacity: 0, scale: 0.3 }}
+                    animate={{ x: targetX, y: targetY, opacity: 1, scale: 1 }}
+                    exit={{ x: originOffset, y: originOffset, opacity: 0, scale: 0.3 }}
+                    transition={{ duration: 0.25, delay: idx * 0.02, ease: "easeOut" }}
+                  >
+                    <Link
+                      ref={(el) => {
+                        flyoutItemRefs.current[idx] = el;
+                      }}
+                      href={item.href}
+                      onClick={() => setSidebarFlyoutOpen(false)}
+                      title={item.label}
+                      aria-label={item.label}
+                      style={{ height: itemSize, width: itemSize }}
+                      className={cn(
+                        "rounded-full border flex items-center justify-center shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                        active
+                          ? "bg-primary/15 border-primary/30 text-primary"
+                          : "bg-card border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+                      )}
+                    >
+                      <Icon className="h-5 w-5" />
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          </React.Fragment>
+        )}
+      </AnimatePresence>
 
       {/* GLOBAL SEARCH COMMAND PALETTE (⌘K) */}
       <CommandDialog open={searchModalOpen} onOpenChange={setSearchModalOpen}>

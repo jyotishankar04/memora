@@ -8,7 +8,7 @@ export function UpgradeCard({ onDismiss }: { onDismiss: () => void }) {
         className="p-4 space-y-3"
         style={{
           background:
-            "radial-gradient(circle at 25% 15%, rgba(139,92,246,0.55) 0%, rgba(20,71,230,0.55) 45%, rgba(10,10,14,0.95) 100%)",
+            "radial-gradient(circle at 25% 15%, rgba(139,92,246,1) 0%, rgba(20,71,230,1) 45%, rgba(10,10,14,1) 100%)",
         }}
       >
         <button
