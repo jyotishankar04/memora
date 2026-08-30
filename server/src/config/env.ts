@@ -35,10 +35,38 @@ const envSchema = z
     R2_SECRET_ACCESS_KEY: z.string().min(1, "R2_SECRET_ACCESS_KEY is required"),
     R2_BUCKET_NAME: z.string().min(1, "R2_BUCKET_NAME is required"),
     R2_PUBLIC_URL: z.string().url("R2_PUBLIC_URL must be a valid URL"),
+
+    // AI ingestion (docs/AI_REQUIREMENTS.md): Groq for the LLM steps, OpenAI
+    // for embeddings only (matches the schema's hardcoded vector(1536)).
+    GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
+    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
+
+    // Vector storage backend — local/dev uses the pgvector columns already
+    // on `memories`/`memory_chunks`; production points at Upstash Vector
+    // instead, so vector search load never competes with the primary DB.
+    VECTOR_STORE_PROVIDER: z.enum(["pgvector", "upstash"]).default("pgvector"),
+    UPSTASH_VECTOR_REST_URL: z.string().url().optional(),
+    UPSTASH_VECTOR_REST_TOKEN: z.string().optional(),
+
+    // Langfuse (self-hosted, see docker-compose.yml's langfuse-* services) —
+    // traces every node/LLM call in the ingestion pipeline. Optional: if
+    // unset, tracing is just skipped rather than failing the pipeline.
+    LANGFUSE_PUBLIC_KEY: z.string().optional(),
+    LANGFUSE_SECRET_KEY: z.string().optional(),
+    LANGFUSE_BASE_URL: z.string().url().default("http://localhost:3001"),
   })
   .refine((data) => data.JWT_ACCESS_SECRET !== data.JWT_REFRESH_SECRET, {
     message: "JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different",
     path: ["JWT_REFRESH_SECRET"],
-  });
+  })
+  .refine(
+    (data) =>
+      data.VECTOR_STORE_PROVIDER !== "upstash" ||
+      (data.UPSTASH_VECTOR_REST_URL && data.UPSTASH_VECTOR_REST_TOKEN),
+    {
+      message: "UPSTASH_VECTOR_REST_URL and UPSTASH_VECTOR_REST_TOKEN are required when VECTOR_STORE_PROVIDER=upstash",
+      path: ["UPSTASH_VECTOR_REST_TOKEN"],
+    }
+  );
 
 export const env = envSchema.parse(process.env);
