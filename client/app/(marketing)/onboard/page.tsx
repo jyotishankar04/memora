@@ -7,10 +7,11 @@ import {
   Sparkles, Check, ArrowRight, Globe, Laptop, Smartphone, 
   Video, Code, Image, FileText, StickyNote, Sliders, Plus
 } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { ApiError, getCurrentUser } from "@/lib/auth";
 import { completeOnboarding } from "@/lib/user";
+import { useCurrentUserQuery, useSetCurrentUser } from "@/context/UserContext";
 
 // Step 2 Interests
 const interests = [
@@ -45,37 +46,27 @@ export default function OnboardingPage() {
   const [saveMost, setSaveMost] = useState<string[]>([]);
   const [orgMode, setOrgMode] = useState<"auto" | "manual">("auto");
   const [customLink, setCustomLink] = useState("");
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
 
   // Auth guard: onboarding answers are saved to the signed-in user's account.
   // The access token lives in an httpOnly cookie, so this asks /auth/me
-  // rather than checking local storage — anyone not signed in gets sent to login.
-  // Only a real 401 means that; a transient network/server hiccup (e.g. the
-  // dev server mid-restart) gets a few retries first instead of an instant
-  // redirect.
+  // rather than checking local storage — anyone not signed in gets sent to
+  // login. useCurrentUserQuery only surfaces a real 401 as an error; a
+  // transient network/server hiccup (e.g. the dev server mid-restart) gets a
+  // few retries first instead of an instant redirect.
+  const { isLoading: isAuthLoading, isError: isAuthError } = useCurrentUserQuery();
+  const setCurrentUser = useSetCurrentUser();
+
   useEffect(() => {
-    let cancelled = false;
-
-    async function checkAuth(attempt = 0) {
-      try {
-        await getCurrentUser();
-      } catch (err) {
-        if (cancelled) return;
-        const isUnauthorized = err instanceof ApiError && err.status === 401;
-        if (!isUnauthorized && attempt < 3) {
-          setTimeout(() => checkAuth(attempt + 1), 800);
-          return;
-        }
-        router.replace("/auth/login");
-      }
+    if (!isAuthLoading && isAuthError) {
+      router.replace("/auth/login");
     }
+  }, [isAuthLoading, isAuthError, router]);
 
-    checkAuth();
-    return () => {
-      cancelled = true;
-    };
-  }, [router]);
+  const completeOnboardingMutation = useMutation({
+    mutationFn: completeOnboarding,
+    onSuccess: setCurrentUser,
+  });
 
   // Update progress bar
   useEffect(() => {
@@ -98,12 +89,11 @@ export default function OnboardingPage() {
 
   const handleSaveMemory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customLink.trim() || isSubmitting) return;
+    if (!customLink.trim() || completeOnboardingMutation.isPending) return;
 
-    setIsSubmitting(true);
     setSubmitError(null);
     try {
-      await completeOnboarding({
+      await completeOnboardingMutation.mutateAsync({
         name: name.trim(),
         interests: useFor,
         contentTypes: saveMost,
@@ -112,8 +102,6 @@ export default function OnboardingPage() {
       setStep(7);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Couldn't save your preferences. Please try again.");
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
@@ -517,10 +505,10 @@ export default function OnboardingPage() {
               )}
               <Button
                 type="submit"
-                disabled={isSubmitting}
+                disabled={completeOnboardingMutation.isPending}
                 className="w-full h-12 rounded-full font-medium shadow-md"
               >
-                {isSubmitting ? "Saving..." : "Save to Memora"}
+                {completeOnboardingMutation.isPending ? "Saving..." : "Save to Memora"}
               </Button>
             </form>
           </div>
