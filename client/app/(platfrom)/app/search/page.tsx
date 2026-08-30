@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { listMemories } from "@/lib/memories";
 import { memoriesQueryKey } from "@/context/MemoryContext";
 import { timeAgo } from "@/lib/time";
+import { MemoryThumbnail } from "@/components/memory-thumbnail";
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -142,6 +143,7 @@ export default function SearchPage() {
                   className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs hover:border-primary/20 transition-all duration-300 block group"
                 >
                   <div className="p-4 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full min-h-[170px] space-y-4">
+                    <MemoryThumbnail item={item} className="rounded-lg" />
                     <div className="space-y-2">
                       <span className="text-[8px] font-mono text-primary font-bold bg-primary/10 px-2 py-0.5 rounded uppercase">
                         {item.type}
