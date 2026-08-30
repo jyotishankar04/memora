@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
+import Link from "next/link";
 import {
   Sparkles, Globe, Video, FileText, StickyNote, Image as ImageIcon,
   Trash2, FolderOpen, MoreHorizontal, Star, Archive, ExternalLink, ArrowLeft,
@@ -32,6 +33,8 @@ import {
   useUpdateMemoryMutation,
 } from "@/context/MemoryContext";
 import { timeAgo } from "@/lib/time";
+import { isMemoryProcessing } from "@/lib/memory-processing";
+import { getPlatformFallback } from "@/lib/platform-fallback";
 import {
   Attachment,
   AttachmentContent,
@@ -187,9 +190,24 @@ export default function MemoryDetailPage() {
 
             <div className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs">
               <div className="aspect-video w-full rounded-lg bg-muted border border-border/75 flex flex-col items-center justify-center gap-3 relative overflow-hidden text-xs text-muted-foreground font-bold">
-                {memory.type === "image" && memory.previewImageUrl ? (
+                {isMemoryProcessing(memory) && (
+                  <div className="pointer-events-none absolute inset-0 overflow-hidden rounded-lg">
+                    <div className="absolute inset-y-0 left-0 w-1/3 animate-shine-sweep bg-gradient-to-r from-transparent via-white/60 to-transparent" />
+                  </div>
+                )}
+                {memory.previewImageUrl ? (
                   // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain preview image
                   <img src={memory.previewImageUrl} alt={memory.title} className="w-full h-full object-cover" />
+                ) : memory.platform && (memory.type === "web" || memory.type === "video") ? (
+                  (() => {
+                    const fallback = getPlatformFallback(memory.platform);
+                    return (
+                      <div className={cn("absolute inset-0 flex flex-col items-center justify-center gap-2 text-white", fallback.gradientClassName)}>
+                        <TypeIcon className="h-8 w-8" />
+                        <span className="text-xs font-bold tracking-wide">{fallback.label}</span>
+                      </div>
+                    );
+                  })()
                 ) : memory.type === "video" ? (
                   <>
                     <Video className="h-10 w-10 text-red-500" />
@@ -225,6 +243,15 @@ export default function MemoryDetailPage() {
                   </a>
                 )}
               </div>
+            )}
+
+            {/* Plain-language preview status — never the raw fetchStatus (see docs/URL_CAPTURE_AND_PREVIEW.md's UI copy guidance). */}
+            {!isMemoryProcessing(memory) && memory.previewStatus && memory.previewStatus !== "available" && (
+              <p className="text-[10px] text-muted-foreground pt-0.5">
+                {memory.previewSource === "browser"
+                  ? "Preview captured from your browser."
+                  : `Preview unavailable${memory.platform ? ` · ${getPlatformFallback(memory.platform).label}` : ""}.`}
+              </p>
             )}
           </div>
 
@@ -297,9 +324,17 @@ export default function MemoryDetailPage() {
         <div className="space-y-6">
 
           <div className="space-y-4">
-            <div className="flex items-center gap-1.5 text-primary">
-              <Sparkles className="h-4 w-4 fill-current" />
-              <h3 className="text-xs font-bold uppercase tracking-widest">Memora understood</h3>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-1.5 text-primary">
+                <Sparkles className="h-4 w-4 fill-current" />
+                <h3 className="text-xs font-bold uppercase tracking-widest">Memora understood</h3>
+              </div>
+              {isMemoryProcessing(memory) && (
+                <span className="flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[8px] font-bold text-primary">
+                  <Sparkles className="h-2.5 w-2.5 animate-pulse" />
+                  Processing
+                </span>
+              )}
             </div>
 
             <div className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs">
@@ -309,7 +344,10 @@ export default function MemoryDetailPage() {
                 <div className="space-y-1">
                   <span className="text-[8px] font-mono text-muted-foreground block">DESCRIPTION</span>
                   <p className="text-[10px] text-muted-foreground leading-relaxed">
-                    {memory.description || "No description saved for this memory yet."}
+                    {memory.description ||
+                      (isMemoryProcessing(memory)
+                        ? "Still processing — this updates automatically in a few seconds."
+                        : "No description saved for this memory yet.")}
                   </p>
                 </div>
 
@@ -331,11 +369,19 @@ export default function MemoryDetailPage() {
 
                 {/* Collections */}
                 {memory.collections.length > 0 && (
-                  <div className="space-y-1 pt-2 border-t border-border/20">
+                  <div className="space-y-1.5 pt-2 border-t border-border/20">
                     <span className="text-[8px] font-mono text-muted-foreground block">IN COLLECTIONS</span>
-                    <p className="text-[10px] text-foreground font-semibold">
-                      {memory.collections.map(c => c.name).join(", ")}
-                    </p>
+                    <div className="flex flex-wrap gap-1">
+                      {memory.collections.map(c => (
+                        <Link
+                          key={c.id}
+                          href={`/app/collections/${c.id}`}
+                          className="text-[8px] font-bold uppercase bg-primary/5 border border-primary/10 text-primary px-2 py-0.5 rounded hover:bg-primary/10 transition-colors"
+                        >
+                          {c.name}
+                        </Link>
+                      ))}
+                    </div>
                   </div>
                 )}
 

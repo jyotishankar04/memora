@@ -4,13 +4,14 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
-  Globe, Video, StickyNote, Search,
+  StickyNote, Search,
   ArrowRight, X, ArrowUpRight, ChevronRight, Link as LinkIcon, Upload
 } from "lucide-react";
 import { useUser } from "@/context/UserContext";
 import { useMemoriesQuery, useCollectionsQuery } from "@/context/MemoryContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { timeAgo } from "@/lib/time";
+import { MemoryThumbnail } from "@/components/memory-thumbnail";
 
 function greetingForHour(hour: number): string {
   if (hour < 12) return "Good morning";
@@ -152,20 +153,7 @@ export default function HomePage() {
             >
               <div className="p-4 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full min-h-[170px] space-y-4">
                 
-                {/* Visual placeholder */}
-                <div className="relative aspect-video w-full rounded-lg bg-muted border border-border/30 overflow-hidden flex items-center justify-center text-[10px] text-muted-foreground font-bold select-none">
-                  {item.type === "video" ? (
-                    <div className="flex flex-col items-center gap-1">
-                      <Video className="h-5 w-5 text-red-500" />
-                      <span>Video</span>
-                    </div>
-                  ) : (
-                    <div className="flex flex-col items-center gap-1">
-                      <Globe className="h-5 w-5 text-primary" />
-                      <span>Web Preview</span>
-                    </div>
-                  )}
-                </div>
+                <MemoryThumbnail item={item} className="rounded-lg" />
 
                 <div className="space-y-1">
                   <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-snug line-clamp-1">
@@ -175,6 +163,32 @@ export default function HomePage() {
                     {item.description}
                   </p>
                 </div>
+
+                {item.collections.length > 0 && (
+                  <div className="flex flex-wrap gap-1">
+                    {item.collections.map(c => (
+                      <span
+                        key={c.id}
+                        role="link"
+                        tabIndex={0}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/app/collections/${c.id}`);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key !== "Enter") return;
+                          e.preventDefault();
+                          e.stopPropagation();
+                          router.push(`/app/collections/${c.id}`);
+                        }}
+                        className="text-[7.5px] font-bold uppercase tracking-wider bg-primary/5 border border-primary/10 text-primary px-1.5 py-0.5 rounded hover:bg-primary/10 transition-colors cursor-pointer"
+                      >
+                        {c.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
 
                 <div className="flex items-center justify-between pt-2.5 border-t border-border/20">
                   <div className="flex gap-1">

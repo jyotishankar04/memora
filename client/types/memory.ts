@@ -15,6 +15,22 @@ export interface Memory {
   tags: string[];
   createdAt: string;
   updatedAt: string;
+  // AI ingestion output — null until the background pipeline finishes for this memory.
+  resourceCategory: string | null;
+  inferredIntent: string | null;
+  contentType: string | null;
+  extractedFields: Record<string, string> | null;
+  // URL capture & preview system — status is always set ("processing" at
+  // creation); the preview.* fields stay null for non-link memories or until
+  // ingestion runs. See docs/URL_CAPTURE_AND_PREVIEW.md.
+  status: "processing" | "ready" | "partial" | "failed";
+  previewStatus: "available" | "partial" | "unavailable" | null;
+  previewSource: "server" | "browser" | "user" | "platform_fallback" | "generic_fallback" | null;
+  platform: string | null;
+  resourceType: string | null;
+  canonicalUrl: string | null;
+  captureMethod: "server" | "extension" | "manual" | null;
+  collections: { id: string; name: string }[];
 }
 
 export interface Attachment {
@@ -28,7 +44,6 @@ export interface Attachment {
 export interface MemoryDetail extends Memory {
   content: string | null;
   keywords: string[] | null;
-  collections: { id: string; name: string }[];
   attachments: Attachment[];
 }
 

@@ -22,6 +22,14 @@ export function useMemoriesQuery(params: ListMemoriesParams = {}) {
   return useQuery({
     queryKey: memoriesQueryKey(params),
     queryFn: () => listMemories(params),
+    // Self-limiting: only keeps polling while something on the current page
+    // is still mid-ingestion (see MemoryThumbnail's "Processing" badge) —
+    // stops once everything's been enriched, so this never becomes constant
+    // background chatter.
+    refetchInterval: (query) => {
+      const items = query.state.data?.items ?? [];
+      return items.some((item) => item.resourceCategory === null) ? 4000 : false;
+    },
   });
 }
 
@@ -55,6 +63,10 @@ export function useMemoryQuery(id: string, options?: Partial<UseQueryOptions<Awa
     queryKey: memoryQueryKey(id),
     queryFn: () => getMemory(id),
     enabled: Boolean(id),
+    // Same self-limiting poll as useMemoriesQuery — keeps the detail page's
+    // "Memora Understood" panel live while this specific memory is still
+    // being ingested.
+    refetchInterval: (query) => (query.state.data?.resourceCategory === null ? 4000 : false),
     ...options,
   });
 }
