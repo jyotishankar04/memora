@@ -1,17 +1,10 @@
-// Content script to scrape webpage metadata details and sync auth tokens for Memora Capture extension
+// Content script to scrape webpage metadata for Memora Capture extension.
+// Auth token sync lives in background/service-worker.ts via chrome.cookies —
+// the web app's auth cookie is httpOnly, so page-context JS (this file)
+// can never read it directly; a prior version tried a localStorage read here
+// and could never have worked.
 
-// 1. Sync auth token if browsing the Memora web app dashboard
-if (window.location.hostname === "localhost" || window.location.hostname.includes("memora.io")) {
-  // Read token from web client's local storage
-  const webToken = localStorage.getItem("memora_token") || localStorage.getItem("token");
-  if (webToken) {
-    chrome.storage.local.set({ memora_token: webToken }, () => {
-      console.log("Memora authentication token synced to extension storage.");
-    });
-  }
-}
-
-// 2. Fetch active page metadata
+// Fetch active page metadata
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "GET_METADATA") {
     const description = getMetaTag("description") || getMetaTag("og:description") || "";

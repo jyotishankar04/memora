@@ -1,124 +1,170 @@
 import React, { useEffect, useState } from "react";
-import { 
-  Sparkles, Check, Bookmark, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert 
+import {
+  Sparkles, Check, Bookmark, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert
 } from "lucide-react";
+import { apiFetch, ApiError } from "../lib/api";
+import { WEB_APP_URL } from "../lib/config";
 
-type ExtensionState = "checking" | "unauthorized" | "saving" | "saved" | "already_saved" | "error";
+type ExtensionState = "checking" | "unauthorized" | "saving" | "saved" | "error";
 
 interface PageInfo {
   url: string;
   title: string;
   favIconUrl?: string;
   description?: string;
+  previewImage?: string;
+  keywords?: string;
+}
+
+interface CreatedMemory {
+  id: string;
+  title: string;
+  duplicateOf: { id: string; title: string } | null;
 }
 
 export default function Popup() {
   const [state, setState] = useState<ExtensionState>("checking");
-  const [token, setToken] = useState<string | null>(null);
   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [savedMemory, setSavedMemory] = useState<CreatedMemory | null>(null);
   const [note, setNote] = useState("");
   const [selectedCollection, setSelectedCollection] = useState("None");
   const [suggestedTags, setSuggestedTags] = useState<string[]>(["Design", "SaaS", "Inspiration"]);
   const [activeTags, setActiveTags] = useState<string[]>([]);
-  const [timeAgo, setTimeAgo] = useState("3 months ago");
 
   useEffect(() => {
-    // 1. Check authentication status
-    if (typeof chrome !== "undefined" && chrome.storage) {
-      chrome.storage.local.get(["memora_token"], (result) => {
-        const storedToken = result.memora_token || null;
-        setToken(storedToken);
+    if (typeof chrome === "undefined" || !chrome.storage) {
+      // Not actually running inside a Chrome extension host (e.g. loaded as
+      // a plain web page during development) — nothing real to check.
+      setState("unauthorized");
+      return;
+    }
 
-        if (!storedToken) {
+    // Ask the background worker to re-read the auth cookie before trusting
+    // storage — it may be stale if login/logout happened since the last
+    // chrome.cookies.onChanged event (see background/service-worker.ts).
+    chrome.runtime.sendMessage({ action: "SYNC_AUTH" }, () => {
+      chrome.storage.local.get(["memora_token"], (result) => {
+        if (!result.memora_token) {
           setState("unauthorized");
         } else {
-          // 2. Fetch current tab metadata
           captureCurrentTab();
         }
       });
-    } else {
-      // Standalone browser trial mock
-      setState("unauthorized");
-    }
+    });
   }, []);
 
-  const captureCurrentTab = () => {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const activeTab = tabs[0];
-      if (activeTab && activeTab.url && activeTab.id) {
-        const info: PageInfo = {
-          url: activeTab.url,
-          title: activeTab.title || "Untitled Webpage",
-          favIconUrl: activeTab.favIconUrl
-        };
-
-        // Ask the content script for page metadata (og:description etc.) it already scrapes.
-        chrome.tabs.sendMessage(
-          activeTab.id,
-          { action: "GET_METADATA" },
-          (response) => {
-            // Content script may not be injected on this page (e.g. chrome:// URLs) — ignore silently.
-            if (chrome.runtime.lastError) return;
-            if (response?.description) {
-              setPageInfo((prev) => (prev ? { ...prev, description: response.description } : prev));
-            }
-          }
-        );
-
-        setPageInfo(info);
-
-        // Check duplicates mock/simulated check
-        if (info.url.includes("already-saved") || info.url.includes("postgres")) {
-          setState("already_saved");
+  const getPageMetadata = (tabId: number): Promise<{ description?: string; previewImage?: string; keywords?: string }> => {
+    return new Promise((resolve) => {
+      chrome.tabs.sendMessage(tabId, { action: "GET_METADATA" }, (response) => {
+        // Content script may not be injected on this page (e.g. chrome:// URLs).
+        if (chrome.runtime.lastError || !response) {
+          resolve({});
         } else {
-          initiateSave(info);
+          resolve(response);
         }
-      } else {
-        setState("error");
-      }
+      });
     });
   };
 
-  const initiateSave = (info: PageInfo) => {
-    setState("saving");
+  const captureCurrentTab = async () => {
+    const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    if (!activeTab?.url || !activeTab.id) {
+      setState("error");
+      setErrorMessage("Couldn't read the current tab.");
+      return;
+    }
 
-    // Simulated API call: POST /api/memories
-    setTimeout(() => {
-      // In a real app: fetch("https://api.memora.io/api/memories", { method: "POST", headers: { Authorization: token }, body: JSON.stringify(info) })
-      // Auto tag extraction simulation based on title keyword
+    const metadata = await getPageMetadata(activeTab.id);
+    const info: PageInfo = {
+      url: activeTab.url,
+      title: activeTab.title || "Untitled Webpage",
+      favIconUrl: activeTab.favIconUrl,
+      description: metadata.description,
+      previewImage: metadata.previewImage,
+      keywords: metadata.keywords,
+    };
+    setPageInfo(info);
+    await initiateSave(info);
+  };
+
+  const initiateSave = async (info: PageInfo) => {
+    setState("saving");
+    setErrorMessage(null);
+
+    try {
+      const isValidUrl = (value?: string) => {
+        if (!value) return false;
+        try {
+          const parsed = new URL(value);
+          return parsed.protocol === "http:" || parsed.protocol === "https:";
+        } catch {
+          return false;
+        }
+      };
+
+      const keywords = (info.keywords ?? "")
+        .split(",")
+        .map((keyword) => keyword.trim())
+        .filter(Boolean)
+        .slice(0, 20)
+        .map((keyword) => keyword.slice(0, 50));
+
+      const memory = await apiFetch<CreatedMemory>("/memories", {
+        method: "POST",
+        body: JSON.stringify({
+          type: "web",
+          url: info.url,
+          title: info.title.slice(0, 500),
+          description: info.description || undefined,
+          faviconUrl: isValidUrl(info.favIconUrl) ? info.favIconUrl : undefined,
+          previewImageUrl: isValidUrl(info.previewImage) ? info.previewImage : undefined,
+          keywords: keywords.length > 0 ? keywords : undefined,
+          captureMethod: "extension",
+        }),
+      });
+
       const lowTitle = info.title.toLowerCase();
       if (lowTitle.includes("design") || lowTitle.includes("ui") || lowTitle.includes("landing")) {
         setSuggestedTags(["Design", "Inspo", "SaaS"]);
       } else if (lowTitle.includes("postgre") || lowTitle.includes("sql") || lowTitle.includes("code")) {
         setSuggestedTags(["Development", "Database", "Backend"]);
       }
-      
+
+      setSavedMemory(memory);
       setState("saved");
-    }, 1200);
+    } catch (err) {
+      if (err instanceof ApiError && err.status === 401) {
+        setState("unauthorized");
+        return;
+      }
+      setErrorMessage(err instanceof Error ? err.message : "Couldn't save this page.");
+      setState("error");
+    }
   };
 
+  // Note/tags/collection selection below are local-only for now — the
+  // create-time save (above) is the fix this pass targets. Persisting edits
+  // to an existing memory would need a real collections list (GET
+  // /collections) wired in, which is a bigger surface than this pass's
+  // "fix Popup.tsx's initiateSave" scope covers.
   const handleManualSave = () => {
-    // Save updated context (note, tags, collections)
-    setState("saving");
-    setTimeout(() => {
-      setState("saved");
-      setTimeout(() => window.close(), 1000);
-    }, 800);
+    window.close();
   };
 
   const handleSignIn = () => {
     if (typeof chrome !== "undefined" && chrome.tabs) {
-      chrome.tabs.create({ url: "http://localhost:3000/auth/login" });
+      chrome.tabs.create({ url: `${WEB_APP_URL}/auth/login` });
     } else {
-      alert("Opening authentication tab in Web Client...");
+      alert(`Opening ${WEB_APP_URL}/auth/login`);
     }
   };
 
-  const handleOpenMemora = () => {
+  const handleOpenMemora = (path = "/app") => {
     if (typeof chrome !== "undefined" && chrome.tabs) {
-      chrome.tabs.create({ url: "http://localhost:3000/app" });
+      chrome.tabs.create({ url: `${WEB_APP_URL}${path}` });
     } else {
-      alert("Redirecting to http://localhost:3000/app");
+      alert(`Redirecting to ${WEB_APP_URL}${path}`);
     }
   };
 
@@ -139,7 +185,7 @@ export default function Popup() {
           <Sparkles size={16} color="#1447E6" fill="#1447E6" />
           <span style={styles.logoText}>memora</span>
         </div>
-        <button style={styles.iconButton} onClick={handleOpenMemora}>
+        <button style={styles.iconButton} onClick={() => handleOpenMemora()}>
           <Settings size={14} color="#8e8e93" />
         </button>
       </div>
@@ -161,33 +207,6 @@ export default function Popup() {
           <button style={styles.primaryButton} onClick={handleSignIn}>
             Sign in
           </button>
-          {/* import.meta.env.DEV is stripped to `false` by Vite in production builds,
-              so this branch — and the mock-token bypass — never ships to users. */}
-          {import.meta.env.DEV && (
-            <button
-              style={{ ...styles.linkButton, marginTop: 12, color: "#1447E6" }}
-              onClick={() => {
-                const mockToken = "mock-secret-session-token";
-                if (typeof chrome !== "undefined" && chrome.storage) {
-                  chrome.storage.local.set({ memora_token: mockToken }, () => {
-                    setToken(mockToken);
-                    captureCurrentTab();
-                  });
-                } else {
-                  setToken(mockToken);
-                  setPageInfo({
-                    url: "https://linear.app",
-                    title: "Linear — Issue Tracking for Teams",
-                    favIconUrl: "https://linear.app/favicon.ico"
-                  });
-                  setState("saving");
-                  setTimeout(() => setState("saved"), 1000);
-                }
-              }}
-            >
-              Use Mock Token (Dev Mode)
-            </button>
-          )}
         </div>
       )}
 
@@ -204,46 +223,37 @@ export default function Popup() {
         <div style={styles.centerContainer}>
           <AlertCircle size={28} color="#ff3b30" />
           <p style={styles.errorLabel}>Couldn't save page</p>
-          <p style={styles.errorSub}>Make sure you are on a valid webpage context.</p>
+          <p style={styles.errorSub}>{errorMessage || "Make sure you are on a valid webpage context."}</p>
           <button style={styles.secondaryButton} onClick={captureCurrentTab}>
             Try again
           </button>
         </div>
       )}
 
-      {state === "already_saved" && (
-        <div style={styles.cardContainer}>
-          <div style={styles.statusHeader}>
-            <RefreshCw size={16} color="#1447E6" />
-            <span style={styles.statusText}>Already saved</span>
-          </div>
-          <p style={styles.alreadySavedSub}>
-            You saved this {timeAgo}.
-          </p>
-
-          <div style={styles.previewBox}>
-            <TextTruncate text={pageInfo?.title || "Untitled"} lines={2} style={styles.previewTitle} />
-            <span style={styles.previewDomain}>{getDomain(pageInfo?.url)}</span>
-          </div>
-
-          <div style={styles.actionsColumn}>
-            <button style={styles.primaryButton} onClick={handleOpenMemora}>
-              View existing memory
-            </button>
-            <button style={styles.linkButton} onClick={() => pageInfo && initiateSave(pageInfo)}>
-              Save anyway
-            </button>
-          </div>
-        </div>
-      )}
-
       {state === "saved" && (
         <div style={styles.savedForm}>
-          
+
           <div style={styles.statusHeader}>
             <Check size={16} color="#1447E6" />
             <span style={styles.statusText}>Saved to Memora</span>
           </div>
+
+          {/* Non-blocking duplicate notice (docs/URL_CAPTURE_AND_PREVIEW.md —
+              the memory above was already created either way). */}
+          {savedMemory?.duplicateOf && (
+            <div style={styles.duplicateNotice}>
+              <RefreshCw size={12} color="#8e8e93" />
+              <span>
+                You already saved a similar link ("{savedMemory.duplicateOf.title}").{" "}
+                <button
+                  style={styles.inlineLinkButton}
+                  onClick={() => handleOpenMemora(`/app/memories/${savedMemory.duplicateOf!.id}`)}
+                >
+                  View it
+                </button>
+              </span>
+            </div>
+          )}
 
           {/* Web preview panel */}
           <div style={styles.previewBox}>
@@ -309,7 +319,7 @@ export default function Popup() {
             Save changes
           </button>
           
-          <button style={styles.openDashboardLink} onClick={handleOpenMemora}>
+          <button style={styles.openDashboardLink} onClick={() => handleOpenMemora()}>
             <span>Open Memora</span>
             <ExternalLink size={12} style={{ marginLeft: 4 }} />
           </button>
@@ -440,12 +450,6 @@ const styles = {
     color: "#8e8e93",
     margin: "6px 0 16px 0",
   },
-  cardContainer: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "12px",
-    padding: "4px 0",
-  },
   statusHeader: {
     display: "flex",
     alignItems: "center",
@@ -457,10 +461,26 @@ const styles = {
     fontWeight: "bold",
     color: "#1447E6",
   },
-  alreadySavedSub: {
-    fontSize: "12px",
+  duplicateNotice: {
+    display: "flex",
+    alignItems: "flex-start",
+    gap: "6px",
+    fontSize: "11px",
     color: "#8e8e93",
-    marginTop: "-6px",
+    lineHeight: "15px",
+    backgroundColor: "#f2f2f7",
+    borderRadius: "8px",
+    padding: "8px 10px",
+  },
+  inlineLinkButton: {
+    background: "transparent",
+    border: "none",
+    padding: 0,
+    fontSize: "11px",
+    fontWeight: "bold" as const,
+    color: "#1447E6",
+    cursor: "pointer",
+    textDecoration: "underline",
   },
   previewBox: {
     border: "1px solid #e5e5ea",
@@ -487,12 +507,6 @@ const styles = {
     color: "#8e8e93",
     lineHeight: "14px",
     marginTop: "2px",
-  },
-  actionsColumn: {
-    display: "flex",
-    flexDirection: "column" as const,
-    gap: "8px",
-    marginTop: "12px",
   },
   savedForm: {
     display: "flex",
