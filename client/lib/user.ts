@@ -7,7 +7,7 @@ export interface UpdateProfileInput {
 export async function updateProfile(input: UpdateProfileInput): Promise<AuthUser> {
   const { user } = await apiFetch<{ user: AuthUser }>("/users/me", {
     method: "PATCH",
-    body: JSON.stringify(input),
+    body: input,
   });
   return user;
 }
@@ -22,7 +22,7 @@ export interface CompleteOnboardingInput {
 export async function completeOnboarding(input: CompleteOnboardingInput): Promise<AuthUser> {
   const { user } = await apiFetch<{ user: AuthUser }>("/users/me/onboarding", {
     method: "POST",
-    body: JSON.stringify(input),
+    body: input,
   });
   return user;
 }

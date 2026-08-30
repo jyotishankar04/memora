@@ -1,3 +1,5 @@
+import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
+
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
 export type OAuthProvider = "google" | "github";
@@ -26,48 +28,110 @@ export class ApiError extends Error {
   }
 }
 
+interface ApiEnvelope<T> {
+  success: boolean;
+  data: T;
+  meta?: Record<string, unknown>;
+  error?: { message: string; code?: string };
+}
+
+interface RetryableConfig extends InternalAxiosRequestConfig {
+  _retried?: boolean;
+}
+
 /**
- * Calls the Memora API with the httpOnly auth cookies attached, and unwraps
- * the {success,data,meta,error} envelope. The backend owns the access/refresh
- * tokens entirely — this client never reads or stores them itself.
+ * Axios instance for the Memora API. `withCredentials` rides the httpOnly
+ * auth cookies along with every request — the backend owns the
+ * access/refresh tokens entirely, this client never reads or stores them.
  */
-export async function apiFetchRaw<T>(
-  path: string,
-  options: RequestInit = {},
-): Promise<{ data: T; meta: Record<string, unknown> }> {
-  let response: Response;
-  try {
-    response = await fetch(`${API_URL}${path}`, {
-      ...options,
-      credentials: "include",
-      headers: {
-        "Content-Type": "application/json",
-        ...options.headers,
-      },
-    });
-  } catch {
+const api = axios.create({
+  baseURL: API_URL,
+  withCredentials: true,
+  headers: { "Content-Type": "application/json" },
+});
+
+// Access tokens are short-lived (15m) while the refresh token cookie lives
+// for 7d, so a 401 partway through a session doesn't mean the user is
+// actually logged out — it means the access token needs rotating. Shared
+// across callers so concurrent 401s (several in-flight requests expiring at
+// once) trigger a single refresh instead of racing the single-use rotating
+// refresh token against itself (a second call would reuse an
+// already-revoked token and fail for real).
+let refreshInFlight: Promise<boolean> | null = null;
+
+function refreshAccessToken(): Promise<boolean> {
+  if (!refreshInFlight) {
+    refreshInFlight = api
+      .post("/auth/refresh")
+      .then(() => true)
+      .catch(() => false)
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+  return refreshInFlight;
+}
+
+api.interceptors.response.use(undefined, async (error: AxiosError<Partial<ApiEnvelope<unknown>>>) => {
+  // No `response` at all means the request never completed (server
+  // unreachable, dropped connection) rather than a genuine API error.
+  if (!error.response) {
     throw new ApiError("Couldn't reach the server. Please check your connection.", 0);
   }
 
-  if (response.status === 204) {
+  const config = error.config as RetryableConfig | undefined;
+  const path = config?.url ?? "";
+
+  if (error.response.status === 401 && config && !config._retried && path !== "/auth/refresh" && path !== "/auth/logout") {
+    config._retried = true;
+    const refreshed = await refreshAccessToken();
+    if (refreshed) {
+      return api(config);
+    }
+  }
+
+  throw new ApiError(
+    error.response.data?.error?.message ?? "Something went wrong. Please try again.",
+    error.response.status,
+    error.response.data?.error?.code,
+  );
+});
+
+export interface ApiRequestOptions {
+  method?: "GET" | "POST" | "PATCH" | "PUT" | "DELETE";
+  body?: unknown;
+  headers?: Record<string, string>;
+}
+
+/**
+ * Calls the Memora API and unwraps the {success,data,meta,error} envelope.
+ */
+export async function apiFetchRaw<T>(
+  path: string,
+  options: ApiRequestOptions = {},
+): Promise<{ data: T; meta: Record<string, unknown> }> {
+  const response = await api.request<ApiEnvelope<T>>({
+    url: path,
+    method: options.method ?? "GET",
+    data: options.body,
+    headers: options.headers,
+  });
+
+  // A 204 (or otherwise bodyless) response has nothing to unwrap.
+  if (response.status === 204 || !response.data) {
     return { data: undefined as T, meta: {} };
   }
 
-  const body = await response.json().catch(() => null);
-
-  if (!response.ok || !body?.success) {
-    throw new ApiError(
-      body?.error?.message ?? "Something went wrong. Please try again.",
-      response.status,
-      body?.error?.code,
-    );
+  const body = response.data;
+  if (!body.success) {
+    throw new ApiError(body.error?.message ?? "Something went wrong. Please try again.", response.status, body.error?.code);
   }
 
-  return { data: body.data as T, meta: body.meta ?? {} };
+  return { data: body.data, meta: body.meta ?? {} };
 }
 
 /** Same as {@link apiFetchRaw}, but discards `meta` for callers that only need the payload. */
-export async function apiFetch<T>(path: string, options: RequestInit = {}): Promise<T> {
+export async function apiFetch<T>(path: string, options: ApiRequestOptions = {}): Promise<T> {
   const { data } = await apiFetchRaw<T>(path, options);
   return data;
 }

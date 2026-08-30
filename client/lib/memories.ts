@@ -35,6 +35,14 @@ export interface CreateMemoryInput {
   collectionIds?: string[];
   tags?: string[];
   attachments?: AttachmentInput[];
+  captureMethod?: "server" | "extension" | "manual";
+}
+
+export interface CreateMemoryResult extends MemoryDetail {
+  // Non-blocking duplicate hint (docs/URL_CAPTURE_AND_PREVIEW.md) — the
+  // memory above was created either way; this just flags an existing match
+  // by normalized URL so a caller can optionally surface it.
+  duplicateOf: { id: string; title: string } | null;
 }
 
 export type UpdateMemoryInput = Partial<
@@ -69,12 +77,12 @@ export async function getMemory(id: string): Promise<MemoryDetail> {
   return apiFetch<MemoryDetail>(`/memories/${id}`);
 }
 
-export async function createMemory(input: CreateMemoryInput): Promise<MemoryDetail> {
-  return apiFetch<MemoryDetail>("/memories", { method: "POST", body: JSON.stringify(input) });
+export async function createMemory(input: CreateMemoryInput): Promise<CreateMemoryResult> {
+  return apiFetch<CreateMemoryResult>("/memories", { method: "POST", body: input });
 }
 
 export async function updateMemory(id: string, patch: UpdateMemoryInput): Promise<MemoryDetail> {
-  return apiFetch<MemoryDetail>(`/memories/${id}`, { method: "PATCH", body: JSON.stringify(patch) });
+  return apiFetch<MemoryDetail>(`/memories/${id}`, { method: "PATCH", body: patch });
 }
 
 export async function deleteMemory(id: string): Promise<void> {

@@ -1,3 +1,4 @@
+import axios from "axios";
 import { apiFetch } from "@/lib/auth";
 
 export interface UploadedFile {
@@ -22,20 +23,19 @@ interface PresignedUpload {
 export async function uploadFile(file: File): Promise<UploadedFile> {
   const presigned = await apiFetch<PresignedUpload>("/uploads/presign", {
     method: "POST",
-    body: JSON.stringify({
+    body: {
       filename: file.name,
       mimeType: file.type,
       fileSize: file.size,
-    }),
+    },
   });
 
-  const response = await fetch(presigned.uploadUrl, {
-    method: "PUT",
-    headers: { "Content-Type": file.type },
-    body: file,
-  });
-
-  if (!response.ok) {
+  // Goes straight to R2, not through our API — no auth cookies, no envelope.
+  try {
+    await axios.put(presigned.uploadUrl, file, {
+      headers: { "Content-Type": file.type },
+    });
+  } catch {
     throw new Error("Upload failed. Please try again.");
   }
 
