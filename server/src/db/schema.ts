@@ -6,6 +6,7 @@ import {
   pgEnum,
   pgTable,
   primaryKey,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -13,8 +14,10 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 import { defineRelations } from "drizzle-orm";
+import { vector, tsvector, EMBEDDING_DIMENSIONS } from "./pgvector-type";
 import {
   AccentColor,
+  MemoryStatus,
   MemoryType,
   OrganizeMode,
   Provider,
@@ -60,6 +63,13 @@ export const memoryTypeEnum = pgEnum("memory_type", [
   MemoryType.IMAGE,
   MemoryType.DOCUMENT,
   MemoryType.VOICE,
+]);
+
+export const memoryStatusEnum = pgEnum("memory_status", [
+  MemoryStatus.PROCESSING,
+  MemoryStatus.READY,
+  MemoryStatus.PARTIAL,
+  MemoryStatus.FAILED,
 ]);
 
 // -----------------------------------------------------------------------------
@@ -361,14 +371,36 @@ export const memories = pgTable(
       .notNull()
       .references(() => users.id, { onDelete: "cascade" }),
     type: memoryTypeEnum("type").notNull(),
+    // Always exists once POST /memories returns — this describes enrichment
+    // progress, never whether the memory itself succeeded or failed to save.
+    status: memoryStatusEnum("status").notNull().default(MemoryStatus.PROCESSING),
     title: text("title").notNull().default("Untitled"),
     url: text("url"),
+    // Lowercased host, tracking params/fragment/trailing-slash stripped —
+    // for non-blocking duplicate detection (see normalize-url.ts). Null for
+    // non-link memories.
+    normalizedUrl: text("normalized_url"),
     content: text("content"),
     description: text("description"),
     source: varchar("source", { length: 100 }),
     faviconUrl: text("favicon_url"),
     previewImageUrl: text("preview_image_url"),
     keywords: text("keywords").array(),
+    // URL capture & preview system (docs/URL_CAPTURE_AND_PREVIEW.md) — all
+    // null until ingestion runs, or forever null for non-link memories.
+    previewStatus: text("preview_status"),
+    previewSource: text("preview_source"),
+    platform: text("platform"),
+    resourceType: text("resource_type"),
+    canonicalUrl: text("canonical_url"),
+    // Diagnostics only — never shown to the user directly, see UI_COPY in
+    // the plan ("Preview unavailable", not "Cloudflare blocked our crawler").
+    fetchStatus: text("fetch_status"),
+    captureMethod: text("capture_method"),
+    // Raw browser-observed metadata from the Chrome extension's
+    // POST /:id/browser-capture, consumed by the ingestion pipeline's merge
+    // step and kept for re-merging on a later /refresh-preview.
+    browserCapture: jsonb("browser_capture"),
     isFavorite: boolean("is_favorite").notNull().default(false),
     isArchived: boolean("is_archived").notNull().default(false),
     inTrash: boolean("in_trash").notNull().default(false),
@@ -377,10 +409,27 @@ export const memories = pgTable(
       .notNull()
       .defaultNow()
       .$onUpdate(() => new Date()),
+
+    // AI ingestion (docs/AI_REQUIREMENTS.md) — populated async by the
+    // ingestion pipeline after create, all nullable until that job runs.
+    documentEmbedding: vector("document_embedding", EMBEDDING_DIMENSIONS),
+    // Populated by a DB trigger from title/description/inferred_intent/content
+    // (see the ingestion migration) — the app never writes this column.
+    ftsTokens: tsvector("fts_tokens"),
+    resourceCategory: text("resource_category"),
+    inferredIntent: text("inferred_intent"),
+    intentConfidence: real("intent_confidence"),
+    // Open-vocabulary content type (e.g. "recipe", "task", "quote" — not
+    // constrained to a fixed enum, unlike resourceCategory) plus whatever
+    // structured fields the DetectContentType node pulled out of the raw
+    // text for that type (e.g. a recipe's ingredients, a task's due date).
+    contentType: text("content_type"),
+    extractedFields: jsonb("extracted_fields"),
   },
   (table) => [
     index("idx_memories_user_id").on(table.userId),
     index("idx_memories_user_created").on(table.userId, table.createdAt),
+    index("idx_memories_user_normalized_url").on(table.userId, table.normalizedUrl),
   ]
 );
 
@@ -457,7 +506,30 @@ export const attachments = pgTable(
 );
 
 // -----------------------------------------------------------------------------
-// 18. Relations
+// 18. Memory Chunks Table (semantic chunks for RAG retrieval, AI ingestion)
+// -----------------------------------------------------------------------------
+export const memoryChunks = pgTable(
+  "memory_chunks",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    memoryId: uuid("memory_id")
+      .notNull()
+      .references(() => memories.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    chunkIndex: integer("chunk_index").notNull(),
+    chunkContent: text("chunk_content").notNull(),
+    tokenCount: integer("token_count"),
+    embedding: vector("embedding", EMBEDDING_DIMENSIONS).notNull(),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("idx_memory_chunks_user_memory").on(table.userId, table.memoryId)]
+);
+
+// -----------------------------------------------------------------------------
+// 19. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {

@@ -37,3 +37,12 @@ export enum MemoryType {
   DOCUMENT = "document",
   VOICE = "voice",
 }
+
+// A memory always exists once POST /memories returns — this only ever
+// describes how much enrichment it received, never whether it exists.
+export enum MemoryStatus {
+  PROCESSING = "processing",
+  READY = "ready",
+  PARTIAL = "partial",
+  FAILED = "failed",
+}
