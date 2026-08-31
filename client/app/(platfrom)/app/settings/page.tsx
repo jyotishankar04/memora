@@ -1,40 +1,37 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { useUser, UserAvatar } from "@/context/UserContext";
 import { updateProfile } from "@/lib/user";
-import { getSettings, type Settings } from "@/lib/settings";
+import { useSettingsQuery } from "@/hooks/use-settings-group";
 import { cn } from "@/lib/utils";
 
 export default function AccountSettingsPage() {
   const { user, setUser } = useUser();
   const [name, setName] = useState(user.name ?? "");
-  const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
-  const [connectedAccounts, setConnectedAccounts] = useState<Settings["connectedAccounts"] | null>(null);
 
-  useEffect(() => {
-    getSettings()
-      .then((settings) => setConnectedAccounts(settings.connectedAccounts))
-      .catch(() => {
-        // non-critical — the rest of the page still works without this
-      });
-  }, []);
+  // Non-critical — the rest of the page still works without this, so a
+  // failed fetch is left to just show "(Not linked)" for both providers.
+  const { data: settings } = useSettingsQuery();
+  const connectedAccounts = settings?.connectedAccounts;
+
+  const updateProfileMutation = useMutation({
+    mutationFn: updateProfile,
+    onSuccess: setUser,
+  });
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || isSaving) return;
+    if (!name.trim() || updateProfileMutation.isPending) return;
 
-    setIsSaving(true);
     setSaveError(null);
     try {
-      const updated = await updateProfile({ name: name.trim() });
-      setUser(updated);
+      await updateProfileMutation.mutateAsync({ name: name.trim() });
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : "Couldn't save your changes. Please try again.");
-    } finally {
-      setIsSaving(false);
     }
   };
 
@@ -105,8 +102,8 @@ export default function AccountSettingsPage() {
 
         {saveError && <p className="text-[10px] text-destructive">{saveError}</p>}
 
-        <Button type="submit" disabled={isSaving} className="h-9 px-4 rounded-full bg-primary text-white font-bold">
-          {isSaving ? "Saving..." : "Save changes"}
+        <Button type="submit" disabled={updateProfileMutation.isPending} className="h-9 px-4 rounded-full bg-primary text-white font-bold">
+          {updateProfileMutation.isPending ? "Saving..." : "Save changes"}
         </Button>
 
       </form>

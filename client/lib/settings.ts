@@ -41,6 +41,6 @@ export async function getSettings(): Promise<Settings> {
 export async function updateSettings(patch: SettingsPatch): Promise<Settings> {
   return apiFetch<Settings>("/settings", {
     method: "PATCH",
-    body: JSON.stringify(patch),
+    body: patch,
   });
 }

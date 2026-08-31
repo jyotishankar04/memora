@@ -174,3 +174,25 @@
     @apply bg-background text-foreground;
   }
 }
+
+/* Diagonal light sweep for "AI is working on this" states — e.g. a
+   still-processing memory card. Matches the ChatGPT image-generation
+   shimmer: a soft band of light repeatedly crossing the tile. */
+@keyframes shine-sweep {
+  0% {
+    transform: translateX(-120%) skewX(-20deg);
+  }
+  100% {
+    transform: translateX(220%) skewX(-20deg);
+  }
+}
+
+.animate-shine-sweep {
+  animation: shine-sweep 1.8s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-shine-sweep {
+    animation: none;
+  }
+}

@@ -3,12 +3,22 @@
   "name": "Memora Capture",
   "version": "1.0.0",
   "description": "Save anything from the web to Memora in one click.",
+  "icons": {
+    "16": "icon-16.png",
+    "48": "icon-48.png",
+    "128": "icon-128.png"
+  },
   "permissions": [
     "activeTab",
     "storage",
     "contextMenus",
     "clipboardRead",
-    "notifications"
+    "notifications",
+    "cookies"
+  ],
+  "host_permissions": [
+    "http://localhost:4000/*",
+    "<all_urls>"
   ],
   "action": {
     "default_popup": "src/popup/popup.html"

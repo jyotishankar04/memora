@@ -4,6 +4,7 @@ import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/common/theme-provider";
 import { Toaster } from "@/components/ui/toast";
+import { QueryProvider } from "./providers";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -31,9 +32,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
     <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <Toaster>
-            {children}
-          </Toaster>
+          <QueryProvider>
+            <Toaster>
+              {children}
+            </Toaster>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

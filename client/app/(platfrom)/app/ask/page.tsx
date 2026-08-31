@@ -7,6 +7,7 @@ import {
   ArrowRight, X, ArrowUpRight, ChevronRight, RotateCcw, Copy, Check
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 
 interface ChatMessage {
@@ -55,11 +56,12 @@ export default function AskPage() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto px-6 py-10 h-full flex flex-col justify-between">
+    <div className="max-w-4xl mx-auto px-6 py-10 h-full flex flex-col justify-between">
       
       {/* Messages Scroll Area */}
-      <div className="flex-1 overflow-y-auto space-y-6 pr-2 mb-4 scrollbar-thin">
-        
+      <ScrollArea className="flex-1 min-h-0 mb-4">
+      <div className="space-y-6 pr-2">
+
         {/* Chat Title / Initial state */}
         {messages.length === 0 && (
           <div className="space-y-6 pt-10 text-center max-w-md mx-auto">
@@ -152,6 +154,7 @@ export default function AskPage() {
         )}
 
       </div>
+      </ScrollArea>
 
       {/* Message Chat Input Footer */}
       <form onSubmit={handleSubmit} className="border-t border-border/20 pt-4 bg-background shrink-0">

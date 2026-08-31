@@ -1,85 +1,50 @@
 "use client";
 
 import React, { useState } from "react";
-import Link from "next/link";
-import { 
-  Sparkles, Globe, Video, Image as ImageIcon, Code, FileText, StickyNote, Plus, Search, 
-  FolderOpen, ChevronRight, X, FolderPlus, BarChart2 
-} from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
+import { FolderCard } from "@/components/ui/folder-card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { EmojiPicker } from "@/components/ui/emoji-picker";
+import { useCollectionsQuery, useCreateCollectionMutation } from "@/context/MemoryContext";
 
-interface Collection {
-  id: string;
-  name: string;
-  icon: string;
-  color: string;
-  description: string;
-  count: number;
-  lastUpdated: string;
-}
-
-const initialCollections: Collection[] = [
-  {
-    id: "saas",
-    name: "SaaS Inspiration",
-    icon: "🚀",
-    color: "bg-blue-500/10 text-blue-500 border-blue-500/20",
-    description: "Websites, user dashboards, pricing lists, and landing pages references.",
-    count: 128,
-    lastUpdated: "Updated 2 hours ago"
-  },
-  {
-    id: "ai",
-    name: "AI Research",
-    icon: "🤖",
-    color: "bg-purple-500/10 text-purple-500 border-purple-500/20",
-    description: "Material on RAG architectures, LLM prompts, agent memory, and vector comparison tests.",
-    count: 42,
-    lastUpdated: "Updated 4 days ago"
-  },
-  {
-    id: "design",
-    name: "Design",
-    icon: "🎨",
-    color: "bg-pink-500/10 text-pink-500 border-pink-500/20",
-    description: "Color sets, cards grids, typography layouts, and minimal aesthetic references.",
-    count: 31,
-    lastUpdated: "Updated 1 week ago"
-  },
-  {
-    id: "learning",
-    name: "Learning",
-    icon: "📚",
-    color: "bg-teal-500/10 text-teal-500 border-teal-500/20",
-    description: "Tutorial videos, code repositories guides, and tech documentation summaries.",
-    count: 24,
-    lastUpdated: "Updated 2 weeks ago"
-  }
+const COLOR_PALETTE = [
+  "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  "bg-pink-500/10 text-pink-500 border-pink-500/20",
+  "bg-teal-500/10 text-teal-500 border-teal-500/20",
+  "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
 ];
 
+function colorFor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return COLOR_PALETTE[hash % COLOR_PALETTE.length];
+}
+
 export default function CollectionsPage() {
-  const [collections, setCollections] = useState<Collection[]>(initialCollections);
+  const { data: collections = [], isLoading } = useCollectionsQuery();
+  const createMutation = useCreateCollectionMutation();
+
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState("");
   const [newDesc, setNewDesc] = useState("");
   const [newEmoji, setNewEmoji] = useState("📁");
+  const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
-  const handleCreateCollection = (e: React.FormEvent) => {
+  const handleCreateCollection = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newName.trim()) return;
 
-    const newCol: Collection = {
-      id: newName.toLowerCase().replace(/\s+/g, "-"),
-      name: newName,
-      icon: newEmoji,
-      color: "bg-zinc-500/10 text-zinc-500 border-zinc-500/20",
-      description: newDesc || "No description provided.",
-      count: 0,
-      lastUpdated: "Created just now"
-    };
-
-    setCollections(prev => [...prev, newCol]);
+    await createMutation.mutateAsync({
+      name: newName.trim(),
+      icon: newEmoji.trim() || "📁",
+      description: newDesc.trim() || undefined,
+    });
     setNewName("");
     setNewDesc("");
     setShowAddModal(false);
@@ -87,7 +52,7 @@ export default function CollectionsPage() {
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-8 animate-fade-in">
-      
+
       {/* Header Title */}
       <div className="flex items-center justify-between border-b border-border/20 pb-4">
         <div>
@@ -96,8 +61,8 @@ export default function CollectionsPage() {
             Organize your memories around the topics that matter to you.
           </p>
         </div>
-        
-        <Button 
+
+        <Button
           onClick={() => setShowAddModal(true)}
           className="rounded-full px-4 text-xs font-bold bg-primary text-white flex items-center gap-1.5 shadow-sm"
         >
@@ -106,43 +71,50 @@ export default function CollectionsPage() {
       </div>
 
       {/* Collections Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        {collections.map((col) => (
-          <Link
-            key={col.id}
-            href={`/app/collections/${col.id}`}
-            className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs hover:border-primary/20 transition-all duration-300 block group"
-          >
-            <div className="p-5 rounded-lg border border-border/75 bg-card flex flex-col justify-between min-h-[150px] space-y-4">
-              <div>
+      {isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">
+              <div className="p-5 rounded-lg border border-border/75 bg-card min-h-[150px] space-y-4">
                 <div className="flex items-center gap-3">
-                  <div className={cn("h-10 w-10 border rounded-xl flex items-center justify-center text-lg select-none", col.color)}>
-                    {col.icon}
-                  </div>
-                  <h3 className="font-bold text-sm text-foreground group-hover:text-primary transition-colors">
-                    {col.name}
-                  </h3>
+                  <Skeleton className="h-10 w-10 rounded-xl" />
+                  <Skeleton className="h-4 w-32" />
                 </div>
-
-                <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
-                  {col.description}
-                </p>
-              </div>
-
-              <div className="flex items-center justify-between pt-3 border-t border-border/20 text-[9px] font-mono text-muted-foreground">
-                <span className="font-bold text-foreground bg-muted px-2 py-0.5 rounded">{col.count} memories</span>
-                <span>{col.lastUpdated}</span>
+                <Skeleton className="h-2.5 w-full" />
+                <Skeleton className="h-2.5 w-4/5" />
+                <div className="flex items-center justify-between pt-3 border-t border-border/20">
+                  <Skeleton className="h-4 w-16 rounded" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
               </div>
             </div>
-          </Link>
-        ))}
-      </div>
+          ))}
+        </div>
+      ) : collections.length === 0 ? (
+        <div className="text-center py-20 max-w-sm mx-auto space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">No collections yet</h3>
+          <p className="text-xs text-muted-foreground">Create one to start organizing your memories.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+          {collections.map((col) => (
+            <FolderCard
+              key={col.id}
+              href={`/app/collections/${col.id}`}
+              count={col.memoryCount}
+              label={col.name}
+              badge={col.icon}
+              badgeClassName={colorFor(col.id)}
+            />
+          ))}
+        </div>
+      )}
 
       {/* CREATE COLLECTION MODAL */}
       {showAddModal && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
           <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-xl space-y-6 animate-scale-up">
-            
+
             <div className="flex items-center justify-between border-b border-border/20 pb-2">
               <span className="text-xs font-bold text-foreground">Create collection</span>
               <button onClick={() => setShowAddModal(false)} className="text-muted-foreground hover:text-foreground">
@@ -154,37 +126,49 @@ export default function CollectionsPage() {
               <div className="grid grid-cols-3 gap-4">
                 <div className="space-y-1">
                   <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Icon / Emoji</label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="E.g., 🚀"
-                    value={newEmoji}
-                    onChange={(e) => setNewEmoji(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl px-3 py-2.5 text-foreground text-center"
-                  />
+                  <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+                    <PopoverTrigger
+                      render={
+                        <button
+                          type="button"
+                          className="flex h-[42px] w-full items-center justify-center rounded-xl border border-input bg-background text-xl transition-colors hover:bg-muted"
+                        >
+                          {newEmoji}
+                        </button>
+                      }
+                    />
+                    <PopoverContent align="start" className="w-72 p-0">
+                      <EmojiPicker
+                        onEmojiSelect={(emoji) => {
+                          setNewEmoji(emoji);
+                          setEmojiPickerOpen(false);
+                        }}
+                      />
+                    </PopoverContent>
+                  </Popover>
                 </div>
 
                 <div className="col-span-2 space-y-1">
                   <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Collection name</label>
-                  <input
+                  <Input
                     type="text"
                     required
                     placeholder="E.g., Projects"
                     value={newName}
                     onChange={(e) => setNewName(e.target.value)}
-                    className="w-full bg-background border border-input rounded-xl px-3 py-2.5 text-foreground"
+                    className="h-[42px] w-full rounded-xl border-input bg-background px-3 text-xs text-foreground"
                   />
                 </div>
               </div>
 
               <div className="space-y-1">
                 <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Description</label>
-                <textarea
+                <Textarea
                   placeholder="What is this collection for?"
                   value={newDesc}
                   onChange={(e) => setNewDesc(e.target.value)}
                   rows={3}
-                  className="w-full bg-background border border-input rounded-xl px-3 py-2.5 text-foreground resize-none"
+                  className="w-full rounded-xl border-input bg-background px-3 py-2.5 text-xs text-foreground"
                 />
               </div>
 
@@ -199,9 +183,10 @@ export default function CollectionsPage() {
                 </Button>
                 <Button
                   type="submit"
+                  disabled={createMutation.isPending}
                   className="flex-1 h-10 rounded-full bg-primary text-white"
                 >
-                  Create Collection
+                  {createMutation.isPending ? "Creating..." : "Create Collection"}
                 </Button>
               </div>
 

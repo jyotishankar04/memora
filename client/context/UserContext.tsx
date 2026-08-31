@@ -1,8 +1,34 @@
 "use client";
 
-import React, { createContext, useContext } from "react";
-import type { AuthUser } from "@/lib/auth";
+import React, { createContext, useContext, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { ApiError, getCurrentUser, type AuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+
+export const currentUserQueryKey = ["auth", "me"] as const;
+
+/**
+ * Fetches the signed-in user via /auth/me. Transient failures (dev server
+ * mid-restart, a dropped connection) look identical to "not logged in" from
+ * a single failed request — only a real 401 means the session is actually
+ * invalid, so those get a few retries before the caller should treat this
+ * as a logout.
+ */
+export function useCurrentUserQuery() {
+  return useQuery({
+    queryKey: currentUserQueryKey,
+    queryFn: getCurrentUser,
+    retry: (failureCount, error) => !(error instanceof ApiError && error.status === 401) && failureCount < 3,
+    retryDelay: 800,
+    staleTime: 60_000,
+  });
+}
+
+/** Updates the cached current-user record in place (e.g. after a profile edit), without a refetch. */
+export function useSetCurrentUser() {
+  const queryClient = useQueryClient();
+  return (user: AuthUser) => queryClient.setQueryData(currentUserQueryKey, user);
+}
 
 interface UserContextValue {
   user: AuthUser;
@@ -48,8 +74,19 @@ export function formatPlan(roles: string[]): string {
 }
 
 export function UserAvatar({ user, className }: { user: AuthUser; className?: string }) {
-  if (user.avatarUrl) {
-    return <img src={user.avatarUrl} alt="" className={cn("rounded-full object-cover", className)} />;
+  const [failed, setFailed] = useState(false);
+
+  if (user.avatarUrl && !failed) {
+    return (
+      // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain avatar image
+      <img
+        src={user.avatarUrl}
+        alt=""
+        referrerPolicy="no-referrer"
+        onError={() => setFailed(true)}
+        className={cn("rounded-full object-cover", className)}
+      />
+    );
   }
   return (
     <div className={cn("rounded-full bg-primary/10 text-primary flex items-center justify-center font-bold select-none", className)}>
