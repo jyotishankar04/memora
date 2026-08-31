@@ -387,7 +387,7 @@ export default function Popup() {
               onClick={() => setCaptureMode("fullscreenshot")}
             >
               <Maximize size={13} />
-              Full Shot
+              Visible
             </button>
           </div>
 
@@ -419,7 +419,7 @@ export default function Popup() {
               ? "Save to Memora"
               : captureMode === "screenshot"
                 ? "Select Area & Save"
-                : "Capture Full Screenshot"}
+                : "Capture Visible Screenshot"}
           </button>
 
           <div style={styles.fieldGroup}>

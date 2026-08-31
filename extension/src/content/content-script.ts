@@ -329,7 +329,7 @@ function openFloatingMenu(): void {
     { label: "Save this page", onClick: quickSavePage },
     { label: "Screenshot an area", onClick: () => startRegionSelection({}) },
     {
-      label: "Full page screenshot",
+      label: "Screenshot visible page",
       onClick: () => captureFullViewport({}),
     },
   ];
