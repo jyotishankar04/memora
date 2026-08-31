@@ -41,7 +41,7 @@ export default function BillingSettingsPage() {
           <ul className="list-disc pl-4 space-y-1">
             <li>Unlimited memory index slots</li>
             <li>Custom collections organization</li>
-            <li>Full Ask Memora semantic chat queries</li>
+            <li>Full Ask SaveForLatter semantic chat queries</li>
             <li>Web browser and smartphone plugins auto-sync</li>
           </ul>
         </div>

@@ -70,7 +70,7 @@ export function useMemoryQuery(id: string, options?: Partial<UseQueryOptions<Awa
     queryFn: () => getMemory(id),
     enabled: Boolean(id),
     // Same self-limiting poll as useMemoriesQuery — keeps the detail page's
-    // "Memora Understood" panel live while this specific memory is still
+    // "SaveForLatter Understood" panel live while this specific memory is still
     // being ingested.
     refetchInterval: (query) => (query.state.data?.resourceCategory === null ? 4000 : false),
     ...options,

@@ -33,7 +33,7 @@ export default function AskPage() {
             <span className="text-[9px] font-bold text-primary uppercase tracking-widest bg-primary/10 px-2.5 py-1 rounded-full">
               Coming soon
             </span>
-            <h1 className="text-xl font-bold tracking-tight pt-1">Ask Memora</h1>
+            <h1 className="text-xl font-bold tracking-tight pt-1">Ask SaveForLatter</h1>
             <p className="text-xs text-muted-foreground leading-relaxed max-w-sm mx-auto">
               A chat interface for your second brain — ask a question in plain language and get an answer
               grounded in what you&apos;ve actually saved. We&apos;re still building it.
@@ -61,7 +61,7 @@ export default function AskPage() {
         <div className="relative flex items-center opacity-50 pointer-events-none select-none">
           <input
             disabled
-            placeholder="Ask Memora about your saves..."
+            placeholder="Ask SaveForLatter about your saves..."
             className="w-full bg-muted/30 border border-border rounded-full pl-4 pr-12 py-3.5 text-xs text-foreground"
           />
           <div className="absolute right-2 h-9 w-9 rounded-full bg-primary/40 text-white flex items-center justify-center">

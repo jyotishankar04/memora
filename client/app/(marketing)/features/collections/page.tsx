@@ -165,10 +165,10 @@ export default function CollectionsPage() {
           
           <div className="text-center max-w-2xl mx-auto mb-16">
             <h2 className="text-3xl font-medium tracking-tight text-foreground sm:text-4xl">
-              Memora can find what belongs together.
+              SaveForLatter can find what belongs together.
             </h2>
             <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">
-              Saving something new? Memora can suggest collections where it might belong.
+              Saving something new? SaveForLatter can suggest collections where it might belong.
             </p>
           </div>
 

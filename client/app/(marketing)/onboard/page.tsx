@@ -14,6 +14,7 @@ import { completeOnboarding } from "@/lib/user";
 import { useCurrentUserQuery, useSetCurrentUser } from "@/context/UserContext";
 import { useCreateMemoryMutation } from "@/context/MemoryContext";
 import { detectMemoryType, deriveTitle, splitLinkAndCaption } from "@/lib/detect-memory-type";
+import { Logo } from "@/components/logo";
 
 // Step 2 Interests
 const interests = [
@@ -136,10 +137,7 @@ export default function OnboardingPage() {
       <div className="w-full px-6 py-4 bg-background border-b border-border/20 flex flex-col gap-3 shrink-0">
         <div className="max-w-6xl mx-auto w-full flex items-center justify-between">
           <Link href="/" className="flex items-center gap-2 hover:opacity-85 transition-opacity">
-            <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-foreground text-background font-semibold text-xs">
-              M
-            </div>
-            <span className="text-sm font-semibold tracking-[-0.03em]">memora</span>
+            <Logo className="text-sm" />
           </Link>
           <span className="text-[11px] font-mono text-muted-foreground font-semibold">
             ONBOARDING &middot; STEP {step.toString().padStart(2, "0")} / 07
@@ -163,7 +161,7 @@ export default function OnboardingPage() {
           <div className="w-full space-y-12 text-center animate-fade-in my-auto">
             <div className="space-y-4">
               <span className="text-xs font-semibold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full">
-                Welcome to Memora
+                Welcome to SaveForLatter
               </span>
               <h2 className="text-4xl md:text-5xl font-medium tracking-tight text-foreground pt-2">
                 What's your name?
@@ -199,10 +197,10 @@ export default function OnboardingPage() {
           <div className="w-full space-y-8 animate-fade-in">
             <div className="text-center space-y-3">
               <h2 className="text-3xl font-medium tracking-tight text-foreground">
-                What will you use Memora for?
+                What will you use SaveForLatter for?
               </h2>
               <p className="text-sm text-muted-foreground">
-                Choose what you want Memora to help you remember.
+                Choose what you want SaveForLatter to help you remember.
               </p>
             </div>
 
@@ -334,10 +332,10 @@ export default function OnboardingPage() {
           <div className="w-full space-y-8 animate-fade-in">
             <div className="text-center space-y-3">
               <h2 className="text-3xl font-medium tracking-tight text-foreground">
-                How should Memora organize your memories?
+                How should SaveForLatter organize your memories?
               </h2>
               <p className="text-sm text-muted-foreground max-w-sm mx-auto">
-                Memora can understand what you save and organize it without folders or manual tags.
+                SaveForLatter can understand what you save and organize it without folders or manual tags.
               </p>
             </div>
 
@@ -371,7 +369,7 @@ export default function OnboardingPage() {
                         </span>
                       </div>
                       <p className="text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
-                        Let Memora understand and organize everything for you. No tags or folders to maintain.
+                        Let SaveForLatter understand and organize everything for you. No tags or folders to maintain.
                       </p>
                     </div>
                   </div>
@@ -454,7 +452,7 @@ export default function OnboardingPage() {
                 Where do you discover things?
               </h2>
               <p className="text-sm text-muted-foreground">
-                Connect Memora to the places where you find things worth remembering.
+                Connect SaveForLatter to the places where you find things worth remembering.
               </p>
             </div>
 
@@ -529,7 +527,7 @@ export default function OnboardingPage() {
                 disabled={completeOnboardingMutation.isPending}
                 className="w-full h-12 rounded-full font-medium shadow-md"
               >
-                {completeOnboardingMutation.isPending ? "Saving..." : "Save to Memora"}
+                {completeOnboardingMutation.isPending ? "Saving..." : "Add to SaveForLatter"}
               </Button>
             </form>
           </div>
@@ -562,7 +560,7 @@ export default function OnboardingPage() {
               onClick={() => router.push("/app")}
               className="w-full max-w-xs h-11 rounded-full font-medium flex items-center justify-center gap-1.5 shadow-md"
             >
-              Enter Memora <ArrowRight className="h-4 w-4" />
+              Enter SaveForLatter <ArrowRight className="h-4 w-4" />
             </Button>
           </div>
         )}

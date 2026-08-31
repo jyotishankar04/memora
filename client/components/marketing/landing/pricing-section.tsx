@@ -33,7 +33,7 @@ const plans = [
       "AI Auto-Summarization & Auto-Tagging",
       "Image OCR & PDF search indexing",
       "Video audio transcriptions",
-      "Ask Memora (Natural Language AI Querying)",
+      "Ask SaveForLatter (Natural Language AI Querying)",
       "Priority customer support",
     ],
     cta: "Upgrade to Pro",

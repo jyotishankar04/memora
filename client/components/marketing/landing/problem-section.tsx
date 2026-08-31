@@ -67,7 +67,7 @@ export default function ProblemSection() {
             You save a website in your bookmarks, a reel on Instagram, a video on YouTube, and an idea in your notes. Months later, you remember the thing — but not where you saved it.
           </p>
           <p className="mt-4 font-semibold text-primary text-base md:text-lg">
-            Memora puts it all in one place.
+            SaveForLatter puts it all in one place.
           </p>
         </div>
 
@@ -171,7 +171,7 @@ export default function ProblemSection() {
                   </div>
                   
                   <span className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">
-                    MEMORA
+                    SAVEFORLATTER
                   </span>
                   <h4 className="text-sm font-semibold text-foreground mt-2">
                     One Searchable Memory

@@ -32,7 +32,7 @@ export default function FeaturesSection() {
             A second brain that works for you.
           </h2>
           <p className="mt-4 text-muted-foreground text-base md:text-lg">
-            Forget about tagging, categorizing, or filing. Save anything with a single click, and let Memora handle the rest.
+            Forget about tagging, categorizing, or filing. Save anything with a single click, and let SaveForLatter handle the rest.
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export default function FeaturesSection() {
                   <div className="h-2.5 w-2.5 rounded-full bg-emerald-400/80" />
                 </div>
                 <div className="text-[10px] text-muted-foreground bg-muted/60 px-6 py-0.5 rounded-md border border-border/20 w-1/2 text-center truncate">
-                  memora.co/blog/building-a-second-brain
+                  saveforlatter.com/blog/building-a-second-brain
                 </div>
                 <div className="h-4 w-4 rounded-full bg-primary/20 flex items-center justify-center">
                   <div className="h-2 w-2 rounded-full bg-primary" />
@@ -88,7 +88,7 @@ export default function FeaturesSection() {
                 <div className="col-span-4 bg-background border border-primary/30 rounded-xl p-3 shadow-md relative animate-[pulse-glow_4s_ease-in-out_infinite] self-start">
                   <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary">
                     <div className="h-2 w-2 rounded-full bg-primary animate-ping" />
-                    MEMORA SAVE
+                    SAVEFORLATTER
                   </div>
                   <p className="text-[11px] font-medium text-foreground mt-2 truncate">Building a second brain</p>
                   <p className="text-[9px] text-muted-foreground mt-0.5">Article saved successfully.</p>
@@ -101,7 +101,7 @@ export default function FeaturesSection() {
           </div>
         </div>
 
-        {/* Step 2: Memora understands it */}
+        {/* Step 2: SaveForLatter understands it */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center py-12 md:py-16">
           <div className="lg:col-span-7 order-last lg:order-first">
             {/* Visual: AI Context Extraction mockup */}
@@ -163,7 +163,7 @@ export default function FeaturesSection() {
           <div className="lg:col-span-5 space-y-4">
             <span className="text-xs font-bold text-primary tracking-widest uppercase">STEP 02</span>
             <h3 className="text-3xl font-medium text-foreground tracking-tight">
-              Memora understands it. <span className="text-muted-foreground">AI auto-extracts context.</span>
+              SaveForLatter understands it. <span className="text-muted-foreground">AI auto-extracts context.</span>
             </h3>
             <p className="text-muted-foreground text-sm leading-relaxed">
               Once saved, our background AI goes to work. It strips ads, captures a pristine readable text layout, transcribes video audio, reads text inside screenshots using OCR, and creates concise bulleted summaries automatically.
@@ -190,7 +190,7 @@ export default function FeaturesSection() {
               Find it when you need it. <span className="text-muted-foreground">Search by what you remember.</span>
             </h3>
             <p className="text-muted-foreground text-sm leading-relaxed">
-              You don't need to remember file names or tags. Search by typing what you remember: "What was the name of that article on productivity with a blue banner?" or "What tools did that video mention?". Memora queries your semantic brain instantly.
+              You don't need to remember file names or tags. Search by typing what you remember: "What was the name of that article on productivity with a blue banner?" or "What tools did that video mention?". SaveForLatter queries your semantic brain instantly.
             </p>
             <div className="pt-2 flex flex-col gap-2 text-sm text-foreground/80">
               <div className="flex items-center gap-2">
@@ -200,7 +200,7 @@ export default function FeaturesSection() {
                 <div className="h-1.5 w-1.5 rounded-full bg-primary" /> Multi-format Results (Text, Video, Image)
               </div>
               <div className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-primary" /> Ask Memora (AI chatbot querying your data)
+                <div className="h-1.5 w-1.5 rounded-full bg-primary" /> Ask SaveForLatter (AI chatbot querying your data)
               </div>
             </div>
           </div>

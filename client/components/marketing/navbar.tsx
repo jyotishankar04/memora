@@ -13,6 +13,7 @@ import {
   NavigationMenuTrigger,
 } from "@/components/ui/navigation-menu";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Logo } from "@/components/logo";
 import {
   Sheet,
   SheetContent,
@@ -99,24 +100,7 @@ export function Navbar() {
           href="/"
           className="flex items-center gap-2 px-3 hover:opacity-90 transition-opacity shrink-0"
         >
-          {/* Logo mark */}
-          <div
-            className={cn(
-              "flex h-8 w-8 items-center justify-center rounded-xl font-semibold transition-colors duration-300",
-              useWhiteText ? "bg-white text-zinc-950" : "bg-foreground text-background"
-            )}
-          >
-            <span className="text-sm font-semibold">M</span>
-          </div>
-
-          <span
-            className={cn(
-              "text-[17px] font-semibold tracking-[-0.03em] transition-colors duration-300",
-              useWhiteText ? "text-white" : "text-foreground"
-            )}
-          >
-            memora
-          </span>
+          <Logo className={cn("text-[17px] transition-colors duration-300", useWhiteText ? "text-white" : "text-foreground")} />
         </Link>
 
         {/* Desktop Navigation */}
@@ -360,16 +344,11 @@ export function Navbar() {
             >
               <SheetTitle className="sr-only">Menu</SheetTitle>
               <SheetDescription className="sr-only">
-                Mobile navigation menu for Memora.
+                Mobile navigation menu for SaveForLatter.
               </SheetDescription>
               <div>
                 <div className="flex items-center gap-2 mb-8 pr-10">
-                  <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-foreground text-background font-semibold">
-                    M
-                  </div>
-                  <span className="text-[17px] font-semibold tracking-[-0.03em] text-foreground">
-                    memora
-                  </span>
+                  <Logo className="text-[17px] text-foreground" />
                 </div>
 
                 <div className="space-y-6">

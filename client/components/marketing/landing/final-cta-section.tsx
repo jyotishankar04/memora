@@ -29,7 +29,7 @@ export default function FinalCtaSection() {
             Save it now. <br className="hidden sm:block" /> Find it whenever.
           </h2>
           <p className="text-muted-foreground text-sm md:text-base max-w-md mx-auto">
-            The internet is full of things worth remembering. Memora makes sure they don't get lost.
+            The internet is full of things worth remembering. SaveForLatter makes sure they don't get lost.
           </p>
         </div>
 
@@ -53,7 +53,7 @@ export default function FinalCtaSection() {
               "h-12 px-6 rounded-full text-foreground/80 hover:text-foreground text-sm font-medium border border-border/50 hover:bg-muted/50 transition-colors"
             )}
           >
-            Explore Memora
+            Explore SaveForLatter
           </Link>
         </div>
 

@@ -12,7 +12,7 @@ const HeroSection = () => {
           Find It Instantly.
         </h2>
         <p className="mt-6 text-balance text-center text-zinc-200 text-md tracking-[-0.01em] sm:text-md sm:leading-normal md:text-lg">
-          Save websites, videos, screenshots, notes, ideas, and anything else you discover. Memora organizes it automatically so you can find it whenever you need it.
+          Save websites, videos, screenshots, notes, ideas, and anything else you discover. SaveForLatter organizes it automatically so you can find it whenever you need it.
         </p>
         <div className="mx-auto mt-10 flex w-full max-w-xs flex-col items-center justify-center gap-4 sm:flex-row">
           <LandingSlideButton />

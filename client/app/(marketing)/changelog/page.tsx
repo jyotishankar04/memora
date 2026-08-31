@@ -62,7 +62,7 @@ export default function ChangelogPage() {
             Product Changelog.
           </h1>
           <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto leading-relaxed">
-            Follow along with new features, improvements, and bug fixes added to Memora every single week.
+            Follow along with new features, improvements, and bug fixes added to SaveForLatter every single week.
           </p>
         </div>
 

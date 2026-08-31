@@ -4,6 +4,7 @@ import React from "react";
 import Link from "next/link";
 import { Sparkles, ArrowLeft } from "lucide-react";
 import { getProviderLoginUrl } from "@/lib/auth";
+import { Logo } from "@/components/logo";
 
 const GoogleIcon = () => (
   <svg className="h-4 w-4 mr-2 shrink-0" viewBox="0 0 24 24" fill="none">
@@ -38,12 +39,7 @@ export default function SignupPage() {
 
         {/* Brand Logo Header */}
         <Link href="/" className="flex items-center gap-2 text-foreground relative z-10 hover:opacity-90 transition-opacity w-fit">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-foreground text-background font-semibold">
-            M
-          </div>
-          <span className="text-[17px] font-semibold tracking-[-0.03em] text-foreground">
-            memora
-          </span>
+          <Logo className="text-[17px] text-foreground" />
         </Link>
 
         {/* Brand Copy */}
@@ -62,7 +58,7 @@ export default function SignupPage() {
 
         {/* Card Footer copy */}
         <p className="text-[11px] text-muted-foreground relative z-10">
-          &copy; 2026 Memora. All rights reserved.
+          &copy; 2026 SaveForLatter. All rights reserved.
         </p>
 
       </div>

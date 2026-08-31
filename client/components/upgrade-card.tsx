@@ -21,7 +21,7 @@ export function UpgradeCard({ onDismiss }: { onDismiss: () => void }) {
 
         <div className="flex items-center gap-1.5">
           <Sparkles className="h-3 w-3 text-white fill-current" />
-          <span className="text-[10px] font-bold uppercase tracking-wider text-white">Memora Pro</span>
+          <span className="text-[10px] font-bold uppercase tracking-wider text-white">SaveForLatter Pro</span>
         </div>
 
         <div className="space-y-1 pr-4">

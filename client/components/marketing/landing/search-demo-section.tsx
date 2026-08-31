@@ -61,7 +61,7 @@ export default function SearchDemoSection() {
             You don't need to remember where you saved it.
           </h2>
           <p className="mt-4 text-balance text-muted-foreground text-base md:text-lg">
-            Just describe what you're looking for. Memora understands the meaning behind your memories, not just the words.
+            Just describe what you're looking for. SaveForLatter understands the meaning behind your memories, not just the words.
           </p>
         </div>
 
@@ -76,7 +76,7 @@ export default function SearchDemoSection() {
               <div className="h-2.5 w-2.5 rounded-full bg-border" />
             </div>
             <div className="text-[10px] text-muted-foreground font-mono">
-              MEMORA WEB APP v1.0
+              SAVEFORLATTER WEB APP v1.0
             </div>
             <div className="w-10" />
           </div>
@@ -167,7 +167,7 @@ export default function SearchDemoSection() {
                   <Sparkles className="h-3 w-3 fill-current" />
                 </div>
                 <p className="text-xs text-muted-foreground leading-normal">
-                  <span className="font-semibold text-foreground mr-1">Memora found these because they match:</span>
+                  <span className="font-semibold text-foreground mr-1">SaveForLatter found these because they match:</span>
                   <span className="inline-flex gap-1.5 flex-wrap mt-1 md:mt-0">
                     {["SaaS", "Landing pages", "Pricing", "Blue UI"].map((tag, idx) => (
                       <span 

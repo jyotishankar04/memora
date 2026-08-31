@@ -32,10 +32,10 @@ export default function UnderstandingSection() {
             AUTOMATICALLY ORGANIZED
           </span>
           <h2 className="mt-6 text-balance font-medium text-4xl leading-[1.25] tracking-tight text-foreground sm:text-5xl">
-            You save it. Memora understands it.
+            You save it. SaveForLatter understands it.
           </h2>
           <p className="mt-4 text-balance text-muted-foreground text-base md:text-lg">
-            No folders to create. No tags to maintain. Memora automatically understands what each memory is about.
+            No folders to create. No tags to maintain. SaveForLatter automatically understands what each memory is about.
           </p>
         </div>
 
@@ -68,7 +68,7 @@ export default function UnderstandingSection() {
               <div className="flex flex-col items-center justify-center text-primary font-medium text-xs">
                 <div className="flex items-center gap-1 text-primary bg-primary/10 px-3 py-1.5 rounded-full border border-primary/10 shadow-xs animate-pulse">
                   <Sparkles className="h-3.5 w-3.5 fill-current" />
-                  <span>Memora understands</span>
+                  <span>SaveForLatter understands</span>
                 </div>
                 
                 {/* Desktop arrow */}

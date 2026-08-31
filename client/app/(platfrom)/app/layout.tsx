@@ -58,6 +58,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Logo } from "@/components/logo";
 
 /** Exact-matches Home ("/app"); prefix-matches everything else, so a nav
  * item for a list route (Tags, Collections, Memories) stays highlighted on
@@ -307,7 +308,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
       // AI ingestion runs async in the background from here — the modal
       // doesn't wait for it. Once it finishes, the enrichment (corrected
       // caption, real title, tags, collection) shows up wherever the memory
-      // is viewed next: the memories list, its detail page's "Memora
+      // is viewed next: the memories list, its detail page's "SaveForLatter
       // Understood" panel, and the list's slide-in drawer.
       setSavedTitle(memory.title);
       setSavedCollections(memory.collections);
@@ -460,7 +461,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
     { label: "Collections", href: "/app/collections", icon: Layers },
     { label: "Tags", href: "/app/tags", icon: Tag },
     { label: "Search", href: "/app/search", icon: Search },
-    { label: "Ask Memora", href: "/app/ask", icon: Sparkles },
+    { label: "Ask SaveForLatter", href: "/app/ask", icon: Sparkles },
   ];
   const secondaryNavItems = [
     { label: "Favorites", href: "/app/favorites", icon: Heart },
@@ -505,10 +506,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           {/* Header + Quick Capture — fixed, never scrolls with the nav below */}
           <div className="p-5 pb-4 space-y-4 shrink-0">
             <Link href="/app" className="flex items-center gap-2 px-1 hover:opacity-85 transition-opacity">
-              <div className="flex h-7 w-7 items-center justify-center rounded-xl bg-foreground text-background font-semibold text-xs shrink-0">
-                M
-              </div>
-              <span className="text-sm font-semibold tracking-[-0.03em]">memora</span>
+              <Logo className="text-sm" />
             </Link>
 
             {sidebarPhase === "expanded" && (
@@ -839,7 +837,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <div className="bg-card border border-border rounded-2xl w-full max-w-lg p-6 shadow-xl space-y-5 animate-scale-up">
 
             <div className="flex items-center justify-between border-b border-border/20 pb-2">
-              <span className="text-xs font-bold text-foreground">Save to Memora</span>
+              <span className="text-xs font-bold text-foreground">Add to SaveForLatter</span>
               <button onClick={() => setSaveModalOpen(false)} className="text-muted-foreground hover:text-foreground">
                 <X className="h-4 w-4" />
               </button>
@@ -991,7 +989,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 </div>
 
                 <div className="space-y-1">
-                  <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest block">Saved to Memora</span>
+                  <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest block">Saved to SaveForLatter</span>
                   <h4 className="text-xs font-bold text-foreground">{savedTitle}</h4>
                 </div>
 
@@ -1152,7 +1150,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/ask"); }}>
               <Sparkles className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
-              <span>Ask Memora</span>
+              <span>Ask SaveForLatter</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/collections"); }}>
               <FolderPlus className="mr-2 h-3.5 w-3.5 text-muted-foreground" />

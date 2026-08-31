@@ -5,7 +5,7 @@ import { Sparkles, Globe, Smartphone, Laptop, Code, Video, Image } from "lucide-
 
 const channels = [
   { name: "Web", desc: "Save any page instantly.", icon: Globe },
-  { name: "Mobile", desc: "Share anything directly to Memora.", icon: Smartphone },
+  { name: "Mobile", desc: "Share anything directly to SaveForLatter.", icon: Smartphone },
   { name: "Extension", desc: "Save without leaving the page.", icon: Globe },
   { name: "Desktop", desc: "Capture from anywhere with a shortcut.", icon: Laptop },
 ];
@@ -44,7 +44,7 @@ export default function CaptureSection() {
             One click from anywhere.
           </h2>
           <p className="mt-4 text-balance text-muted-foreground text-base md:text-lg">
-            Whatever you're looking at, Memora is always close by.
+            Whatever you're looking at, SaveForLatter is always close by.
           </p>
         </div>
 
@@ -75,7 +75,7 @@ export default function CaptureSection() {
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_2px_10px_rgba(20,71,230,0.3)] mb-2">
               <Sparkles className="h-5.5 w-5.5 fill-current" />
             </div>
-            <span className="text-[10px] font-bold tracking-[0.2em] text-foreground uppercase">MEMORA</span>
+            <span className="text-[10px] font-bold tracking-[0.2em] text-foreground uppercase">SAVEFORLATTER</span>
           </div>
 
           {/* Orbital Nodes */}

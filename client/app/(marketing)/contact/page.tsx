@@ -50,7 +50,7 @@ export default function ContactPage() {
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
                   <Mail className="h-4 w-4" />
                 </div>
-                <span>support@memora.io</span>
+                <span>support@saveforlatter.com</span>
               </div>
 
               <div className="flex items-center gap-3 text-xs text-foreground/80">

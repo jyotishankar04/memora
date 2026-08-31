@@ -127,7 +127,7 @@ export default function QuickCapturePage() {
 
                 <div className="flex items-center justify-between">
                   <div className="text-[9px] font-mono text-muted-foreground flex gap-1 select-none">
-                    <span>Chrome</span> &rarr; <span>Instagram</span> &rarr; <span>YouTube</span> &rarr; <span>GitHub</span> &rarr; <span>Memora</span>
+                    <span>Chrome</span> &rarr; <span>Instagram</span> &rarr; <span>YouTube</span> &rarr; <span>GitHub</span> &rarr; <span>SaveForLatter</span>
                   </div>
                   <kbd className="px-2 py-1 border border-border bg-muted rounded text-[10px] font-mono select-none font-bold">Save ↵</kbd>
                 </div>
@@ -148,7 +148,7 @@ export default function QuickCapturePage() {
               One place to save everything.
             </h2>
             <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">
-              Memora fits into the places where you already discover things.
+              SaveForLatter fits into the places where you already discover things.
             </p>
           </div>
 
@@ -173,7 +173,7 @@ export default function QuickCapturePage() {
               <div className="p-5 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full min-h-[180px]">
                 <div>
                   <h4 className="text-xs font-bold text-foreground">Mobile</h4>
-                  <span className="text-[10px] text-primary font-semibold block mt-1">Share to Memora</span>
+                  <span className="text-[10px] text-primary font-semibold block mt-1">Share to SaveForLatter</span>
                   <p className="text-[10px] text-muted-foreground mt-3 leading-relaxed">
                     Send videos, reels, papers, or layouts directly from your phone share menu.
                   </p>
@@ -230,7 +230,7 @@ export default function QuickCapturePage() {
             <div className="space-y-3 font-semibold text-xs text-foreground/80">
               <div className="p-2.5 bg-card border border-border/80 rounded-lg max-w-[150px] mx-auto font-bold text-primary">SAVE</div>
               <div className="text-muted-foreground">&darr;</div>
-              <div className="p-2.5 bg-card border border-border/80 rounded-lg">Memora captures it</div>
+              <div className="p-2.5 bg-card border border-border/80 rounded-lg">SaveForLatter captures it</div>
               <div className="text-muted-foreground">&darr;</div>
               <div className="p-2.5 bg-card border border-border/80 rounded-lg">AI understands it</div>
               <div className="text-muted-foreground">&darr;</div>
@@ -239,7 +239,7 @@ export default function QuickCapturePage() {
           </div>
 
           <p className="text-center text-sm font-semibold text-muted-foreground mt-10">
-            Save now. Let Memora figure out the rest.
+            Save now. Let SaveForLatter figure out the rest.
           </p>
 
         </div>
@@ -262,7 +262,7 @@ export default function QuickCapturePage() {
               <div className="p-4 rounded-lg border border-border/75 bg-card space-y-2">
                 <span className="text-foreground">Website</span>
                 <span className="block text-primary animate-pulse">&darr;</span>
-                <span className="text-foreground font-mono">Memora</span>
+                <span className="text-foreground font-mono">SaveForLatter</span>
               </div>
             </div>
 
@@ -270,7 +270,7 @@ export default function QuickCapturePage() {
               <div className="p-4 rounded-lg border border-border/75 bg-card space-y-2">
                 <span className="text-foreground">Video</span>
                 <span className="block text-primary animate-pulse">&darr;</span>
-                <span className="text-foreground font-mono">Memora</span>
+                <span className="text-foreground font-mono">SaveForLatter</span>
               </div>
             </div>
 
@@ -278,7 +278,7 @@ export default function QuickCapturePage() {
               <div className="p-4 rounded-lg border border-border/75 bg-card space-y-2">
                 <span className="text-foreground">Screenshot</span>
                 <span className="block text-primary animate-pulse">&darr;</span>
-                <span className="text-foreground font-mono">Memora</span>
+                <span className="text-foreground font-mono">SaveForLatter</span>
               </div>
             </div>
 
@@ -286,7 +286,7 @@ export default function QuickCapturePage() {
               <div className="p-4 rounded-lg border border-border/75 bg-card space-y-2">
                 <span className="text-foreground">Article</span>
                 <span className="block text-primary animate-pulse">&darr;</span>
-                <span className="text-foreground font-mono">Memora</span>
+                <span className="text-foreground font-mono">SaveForLatter</span>
               </div>
             </div>
 
@@ -294,7 +294,7 @@ export default function QuickCapturePage() {
               <div className="p-4 rounded-lg border border-border/75 bg-card space-y-2">
                 <span className="text-foreground">Idea</span>
                 <span className="block text-primary animate-pulse">&darr;</span>
-                <span className="text-foreground font-mono">Memora</span>
+                <span className="text-foreground font-mono">SaveForLatter</span>
               </div>
             </div>
 
@@ -302,7 +302,7 @@ export default function QuickCapturePage() {
               <div className="p-4 rounded-lg border border-border/75 bg-card space-y-2">
                 <span className="text-foreground">GitHub</span>
                 <span className="block text-primary animate-pulse">&darr;</span>
-                <span className="text-foreground font-mono">Memora</span>
+                <span className="text-foreground font-mono">SaveForLatter</span>
               </div>
             </div>
 

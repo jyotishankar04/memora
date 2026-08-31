@@ -45,7 +45,7 @@ const pricingPlans: PricingPlan[] = [
     features: [
       "Unlimited memories",
       "Semantic search",
-      "Ask Memora AI",
+      "Ask SaveForLatter AI",
       "AI summaries",
       "Related memories",
       "Video & screenshot intelligence",

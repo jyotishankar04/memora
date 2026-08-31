@@ -30,7 +30,7 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h2 className="text-base font-bold text-foreground">1. Introduction</h2>
             <p>
-              At Memora, we build personal memory indexers for the internet. This Privacy Policy details how we handle the information you save, collect, and sync using our browser extensions, mobile apps, and dashboard.
+              At SaveForLatter, we build personal memory indexers for the internet. This Privacy Policy details how we handle the information you save, collect, and sync using our browser extensions, mobile apps, and dashboard.
             </p>
             <p>
               Our core mission is to help you remember your ideas, which is why your data belongs exclusively to you.
@@ -40,7 +40,7 @@ export default function PrivacyPage() {
           <section className="space-y-3">
             <h2 className="text-base font-bold text-foreground">2. Information We Collect</h2>
             <p>
-              When you use Memora, we collect and process the following information:
+              When you use SaveForLatter, we collect and process the following information:
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li><strong>Saved Memories:</strong> The URLs, screenshots, text fragments, and repositories you explicitly choose to save.</li>

@@ -27,7 +27,7 @@ export default function AISettingsPage() {
               { key: "summaries", title: "AI summaries", desc: "Write quick summaries detailing content scope." },
               { key: "relatedMemories", title: "Related memories mapping", desc: "Display connected similarity nodes." },
               { key: "semanticSearch", title: "Semantic search capabilities", desc: "Query libraries using descriptive tags." },
-              { key: "askMemora", title: "Ask Memora assistant chatbot", desc: "Enable conceptual conversation queries." },
+              { key: "askMemora", title: "Ask SaveForLatter assistant chatbot", desc: "Enable conceptual conversation queries." },
             ] as const
           ).map((item) => (
             <button

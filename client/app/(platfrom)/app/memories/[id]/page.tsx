@@ -341,14 +341,14 @@ export default function MemoryDetailPage() {
 
         </div>
 
-        {/* Right column: Memora AI Understanding metadata */}
+        {/* Right column: SaveForLatter AI Understanding metadata */}
         <div className="space-y-6">
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-primary">
                 <Sparkles className="h-4 w-4 fill-current" />
-                <h3 className="text-xs font-bold uppercase tracking-widest">Memora understood</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest">SaveForLatter understood</h3>
               </div>
               {isMemoryProcessing(memory) && (
                 <span className="flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[8px] font-bold text-primary">

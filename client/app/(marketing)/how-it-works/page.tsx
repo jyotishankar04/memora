@@ -13,10 +13,10 @@ import { cn } from "@/lib/utils";
 
 // Timeline events for Step 8
 const timelineEvents = [
-  { time: "9:32 AM", action: "You see a beautiful SaaS website.", method: "Save → Memora" },
-  { time: "11:45 AM", action: "You find a useful YouTube video.", method: "Share → Memora" },
-  { time: "2:20 PM", action: "You have a product idea.", method: "Quick note → Memora", note: "“What if users could…”" },
-  { time: "8:10 PM", action: "You're designing your landing page.", query: "“Show me the SaaS websites I saved for landing page inspiration.”", method: "Memora brings everything back." }
+  { time: "9:32 AM", action: "You see a beautiful SaaS website.", method: "Save → SaveForLatter" },
+  { time: "11:45 AM", action: "You find a useful YouTube video.", method: "Share → SaveForLatter" },
+  { time: "2:20 PM", action: "You have a product idea.", method: "Quick note → SaveForLatter", note: "“What if users could…”" },
+  { time: "8:10 PM", action: "You're designing your landing page.", query: "“Show me the SaaS websites I saved for landing page inspiration.”", method: "SaveForLatter brings everything back." }
 ];
 
 export default function HowItWorksPage() {
@@ -53,7 +53,7 @@ export default function HowItWorksPage() {
 
           <div className="mx-auto max-w-4xl px-6 relative text-center space-y-8 flex flex-col items-center">
             <span className="text-xs font-semibold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full">
-              MEMORA &middot; HOW IT WORKS
+              SAVEFORLATTER &middot; HOW IT WORKS
             </span>
             
             <h1 className="text-5xl md:text-7xl font-bold tracking-tight text-foreground leading-[1.05] max-w-3xl">
@@ -61,7 +61,7 @@ export default function HowItWorksPage() {
             </h1>
             
             <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto leading-relaxed">
-              Memora turns your scattered links, notes, screenshots, videos, ideas, and inspiration into one intelligent personal library.
+              SaveForLatter turns your scattered links, notes, screenshots, videos, ideas, and inspiration into one intelligent personal library.
             </p>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -88,7 +88,7 @@ export default function HowItWorksPage() {
               <div className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65 anim-float-s">
                 <div className="p-6 rounded-lg border border-border/75 bg-card text-center space-y-6">
                   <div className="flex items-center justify-between border-b border-border/30 pb-3">
-                    <span className="text-[10px] font-mono tracking-widest font-semibold text-primary">MEMORA</span>
+                    <span className="text-[10px] font-mono tracking-widest font-semibold text-primary">SAVEFORLATTER</span>
                     <span className="text-[9px] text-muted-foreground">PERSONAL LIBRARY</span>
                   </div>
                   
@@ -145,7 +145,7 @@ export default function HowItWorksPage() {
                     <span className="text-2xl font-bold font-mono text-primary">01</span>
                     <h3 className="text-base font-bold text-foreground mt-2">Capture</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                      Save it in seconds. Website link, Instagram reel, YouTube video, screenshot, notes, or ideas. Just send it to Memora.
+                      Save it in seconds. Website link, Instagram reel, YouTube video, screenshot, notes, or ideas. Just send it to SaveForLatter.
                     </p>
                   </div>
                   
@@ -168,7 +168,7 @@ export default function HowItWorksPage() {
                     <span className="text-2xl font-bold font-mono text-primary">02</span>
                     <h3 className="text-base font-bold text-foreground mt-2">Understand</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                      Your saves become more than bookmarks. Memora automatically extracts title, description, source keywords, topics, and important concepts.
+                      Your saves become more than bookmarks. SaveForLatter automatically extracts title, description, source keywords, topics, and important concepts.
                     </p>
                   </div>
 
@@ -192,7 +192,7 @@ export default function HowItWorksPage() {
                     <span className="text-2xl font-bold font-mono text-primary">03</span>
                     <h3 className="text-base font-bold text-foreground mt-2">Organize</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                      Stop creating folders manually. Memora automatically maps and groups tags based on conceptual meaning.
+                      Stop creating folders manually. SaveForLatter automatically maps and groups tags based on conceptual meaning.
                     </p>
                   </div>
 
@@ -218,7 +218,7 @@ export default function HowItWorksPage() {
                     <span className="text-2xl font-bold font-mono text-primary">04</span>
                     <h3 className="text-base font-bold text-foreground mt-2">Find</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
-                      Simply ask. Describe what you save in normal sentences, and Memora brings back exactly what you need.
+                      Simply ask. Describe what you save in normal sentences, and SaveForLatter brings back exactly what you need.
                     </p>
                   </div>
 
@@ -238,7 +238,7 @@ export default function HowItWorksPage() {
             </div>
 
             <p className="text-center text-xs text-muted-foreground mt-12 font-medium">
-              ✦ You don't have to organize anything manually. Memora understands and organizes it all.
+              ✦ You don't have to organize anything manually. SaveForLatter understands and organizes it all.
             </p>
 
           </div>
@@ -291,7 +291,7 @@ export default function HowItWorksPage() {
               {/* Right Side: Memory (Col span 4) */}
               <div className="md:col-span-4 rounded-xl border border-primary/20 bg-muted/75 p-1 shadow-md">
                 <div className="p-6 rounded-lg border border-primary/25 bg-card space-y-4">
-                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Memora (Memory)</h3>
+                  <h3 className="text-sm font-bold uppercase tracking-widest text-primary">Your Memory</h3>
                   
                   <div className="divide-y divide-border/30 text-xs font-medium text-foreground">
                     {["Design", "Development", "Learning", "Ideas", "Inspiration", "Resources"].map((t) => (
@@ -356,7 +356,7 @@ export default function HowItWorksPage() {
                       Save while scrolling on Instagram, YouTube, X, Reddit, and Safari via share menu.
                     </p>
                   </div>
-                  <span className="text-[10px] font-bold text-primary tracking-wider uppercase">Share → Memora</span>
+                  <span className="text-[10px] font-bold text-primary tracking-wider uppercase">Share → SaveForLatter</span>
                 </div>
               </div>
 
@@ -376,14 +376,14 @@ export default function HowItWorksPage() {
                 </div>
               </div>
 
-              {/* Card 4: Memora app */}
+              {/* Card 4: SaveForLatter app */}
               <div className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65">
                 <div className="p-6 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full space-y-6">
                   <div>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary w-fit mb-4">
                       <StickyNote className="h-5 w-5" />
                     </div>
-                    <h3 className="text-base font-bold text-foreground">Memora</h3>
+                    <h3 className="text-base font-bold text-foreground">SaveForLatter</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                       Write down quick notes, thoughts, ideas, and reminders directly inside.
                     </p>
@@ -487,14 +487,14 @@ export default function HowItWorksPage() {
               <div className="rounded-xl border border-primary/20 bg-muted/75 p-1 shadow-md">
                 <div className="p-6 rounded-lg border border-primary/25 bg-card flex flex-col justify-between h-full">
                   <div className="space-y-4">
-                    <span className="text-[9px] font-bold text-primary uppercase tracking-widest">Memora AI Search</span>
+                    <span className="text-[9px] font-bold text-primary uppercase tracking-widest">SaveForLatter AI Search</span>
                     <div className="p-3 bg-primary/5 border border-primary/10 rounded-lg text-xs font-mono text-primary font-semibold space-y-1">
                       <div>✓ "dashboard websites with sidebar navigation"</div>
                       <div>✓ "React authentication resource"</div>
                       <div>✓ "videos about building SaaS products"</div>
                     </div>
                     <p className="text-xs text-muted-foreground leading-relaxed">
-                      Memora uses sentence semantic vectors to locate your saves by their actual meaning, layouts, concepts, and ideas.
+                      SaveForLatter uses sentence semantic vectors to locate your saves by their actual meaning, layouts, concepts, and ideas.
                     </p>
                   </div>
                 </div>
@@ -519,7 +519,7 @@ export default function HowItWorksPage() {
                 GROWTH
               </span>
               <h2 className="mt-6 text-balance font-medium text-3xl tracking-tight text-foreground sm:text-4xl">
-                The more you save, the more useful Memora becomes.
+                The more you save, the more useful SaveForLatter becomes.
               </h2>
             </div>
 
@@ -543,7 +543,7 @@ export default function HowItWorksPage() {
               <div className="md:col-span-2 space-y-4">
                 <h3 className="text-lg font-bold text-foreground">Related memories</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
-                  Memora discovers relationships between things you've saved.
+                  SaveForLatter discovers relationships between things you've saved.
                 </p>
                 <div className="p-4 bg-muted/40 border border-border/45 rounded-lg space-y-2 text-xs font-semibold text-foreground/80">
                   <div>✦ 5 dashboard examples</div>
@@ -558,7 +558,7 @@ export default function HowItWorksPage() {
           </div>
         </section>
 
-        {/* 8. EXAMPLE — A REAL DAY WITH MEMORA */}
+        {/* 8. EXAMPLE — A REAL DAY WITH SAVEFORLATTER */}
         <section className="relative w-full py-20 md:py-28 bg-background border-b border-border/20">
           <div className="mx-auto max-w-4xl px-6">
             
@@ -567,7 +567,7 @@ export default function HowItWorksPage() {
                 TIMELINE
               </span>
               <h2 className="mt-6 text-balance font-medium text-3xl tracking-tight text-foreground sm:text-4xl">
-                A day with Memora
+                A day with SaveForLatter
               </h2>
             </div>
 
@@ -654,7 +654,7 @@ export default function HowItWorksPage() {
             </div>
 
             <p className="text-center text-xs text-muted-foreground mt-8">
-              Memora connects the things you save so you can discover them later.
+              SaveForLatter connects the things you save so you can discover them later.
             </p>
 
           </div>
@@ -672,7 +672,7 @@ export default function HowItWorksPage() {
                 Your memory belongs to you.
               </h2>
               <p className="mt-4 text-xs text-muted-foreground max-w-xs mx-auto">
-                Your saved content is personal. Memora is built to keep your private library private.
+                Your saved content is personal. SaveForLatter is built to keep your private library private.
               </p>
             </div>
 
@@ -760,7 +760,7 @@ export default function HowItWorksPage() {
                 nativeButton={false}
                 className="h-11 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold flex items-center gap-1 shadow-sm"
               >
-                Create your Memora <ArrowRight className="h-4 w-4" />
+                Create your SaveForLatter <ArrowRight className="h-4 w-4" />
               </Button>
               
               <Button

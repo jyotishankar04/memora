@@ -118,7 +118,7 @@ export default function ContentTypesSection() {
             BUILT FOR EVERYTHING
           </span>
           <h2 className="mt-6 text-balance font-medium text-4xl leading-[1.25] tracking-tight text-foreground sm:text-5xl">
-            However you discover it, Memora remembers.
+            However you discover it, SaveForLatter remembers.
           </h2>
           <p className="mt-4 text-balance text-muted-foreground text-base md:text-lg">
             Every format is formatted, indexed, and semantic-search optimized automatically.
