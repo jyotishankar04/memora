@@ -98,7 +98,7 @@ export default function MainFooter() {
         <div className="w-full select-none pointer-events-none overflow-hidden mt-2 md:mt-4 text-center translate-y-[25%]">
           <span
             className="font-black tracking-tighter text-foreground/[0.08] leading-none inline-block font-sans lowercase select-none"
-            style={{ fontSize: "clamp(2.5rem, 8vw, 8rem)" }}
+            style={{ fontSize: "clamp(2rem, 12vw, 8rem)" }}
           >
             saveforlatter
           </span>
