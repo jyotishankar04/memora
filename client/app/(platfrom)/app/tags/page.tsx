@@ -1,8 +1,9 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
-import { Tag as TagIcon } from "lucide-react";
+import { Search, Tag as TagIcon } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTagsQuery } from "@/context/MemoryContext";
 
@@ -23,14 +24,34 @@ function colorFor(id: string): string {
 
 export default function TagsPage() {
   const { data: tags = [], isLoading } = useTagsQuery();
+  const [searchQuery, setSearchQuery] = useState("");
+
+  const filteredTags = searchQuery.trim()
+    ? tags.filter((tag) => tag.name.toLowerCase().includes(searchQuery.trim().toLowerCase()))
+    : tags;
 
   return (
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-8 animate-fade-in">
-      <div className="border-b border-border/20 pb-4">
-        <h1 className="text-2xl font-bold tracking-tight">Tags</h1>
-        <p className="text-xs text-muted-foreground mt-1">
-          Every tag you&apos;ve used, in one place — click one to see everything saved under it.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-border/20 pb-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Tags</h1>
+          <p className="text-xs text-muted-foreground mt-1">
+            Every tag you&apos;ve used, in one place — click one to see everything saved under it.
+          </p>
+        </div>
+
+        {tags.length > 0 && (
+          <div className="relative flex items-center max-w-xs w-full shrink-0">
+            <Search className="absolute left-3.5 h-4 w-4 text-primary stroke-[2.5] z-10" />
+            <Input
+              type="text"
+              placeholder="Search tags..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="h-9 pl-9 rounded-xl text-xs"
+            />
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -46,9 +67,14 @@ export default function TagsPage() {
             Add tags to a memory from its detail page or the capture form, and they&apos;ll show up here.
           </p>
         </div>
+      ) : filteredTags.length === 0 ? (
+        <div className="text-center py-20 max-w-sm mx-auto space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">No tags match &ldquo;{searchQuery.trim()}&rdquo;</h3>
+          <p className="text-xs text-muted-foreground">Try a different search.</p>
+        </div>
       ) : (
         <div className="flex flex-wrap gap-3">
-          {tags.map((tag) => (
+          {filteredTags.map((tag) => (
             <Link
               key={tag.id}
               href={`/app/tags/${encodeURIComponent(tag.name)}`}
