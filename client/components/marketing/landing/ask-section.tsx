@@ -34,13 +34,13 @@ export default function AskSection() {
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20">
           <span className="text-xs font-semibold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full">
-            ASK MEMORA
+            ASK SAVEFORLATTER
           </span>
           <h2 className="mt-6 text-balance font-medium text-4xl leading-[1.25] tracking-tight text-foreground sm:text-5xl">
             Your memory can answer back.
           </h2>
           <p className="mt-4 text-balance text-muted-foreground text-base md:text-lg">
-            Ask questions about everything you've saved. Memora connects the dots and gives you answers grounded in your own memories.
+            Ask questions about everything you've saved. SaveForLatter connects the dots and gives you answers grounded in your own memories.
           </p>
         </div>
 
@@ -53,7 +53,7 @@ export default function AskSection() {
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-xs font-semibold text-foreground tracking-wide flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 text-primary fill-current" /> Ask Memora Assistant
+                  <Sparkles className="h-3 w-3 text-primary fill-current" /> Ask SaveForLatter Assistant
                 </span>
               </div>
               <span className="text-[10px] text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded">

@@ -62,7 +62,7 @@ export default function AppearanceSettingsPage() {
             <div className="flex gap-3">
               {(
                 [
-                  { id: "blue", color: "bg-[#1447E6]", label: "Blue" },
+                  { id: "blue", color: "bg-blue-600", label: "Blue" },
                   { id: "purple", color: "bg-purple-600", label: "Purple" },
                   { id: "green", color: "bg-emerald-600", label: "Green" },
                   { id: "orange", color: "bg-orange-600", label: "Orange" },

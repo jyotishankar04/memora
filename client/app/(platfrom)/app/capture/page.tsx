@@ -177,7 +177,7 @@ export default function CapturePage() {
         </div>
 
         <span className="text-xs font-semibold uppercase tracking-wider text-emerald-600 bg-emerald-500/10 px-3 py-1 rounded-full">
-          Saved to Memora
+          Saved to SaveForLatter
         </span>
         <h1 className="text-3xl font-medium tracking-tight text-foreground pt-3">{saved.title}</h1>
 

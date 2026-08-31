@@ -8,6 +8,7 @@ import {
   Trash2, FolderOpen, MoreHorizontal, Star, Archive, ExternalLink, ArrowLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import {
   DropdownMenu,
@@ -78,7 +79,27 @@ export default function MemoryDetailPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   if (isLoading) {
-    return <div className="max-w-4xl mx-auto px-6 py-20 text-center text-xs text-muted-foreground">Loading memory&hellip;</div>;
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-10 space-y-8">
+        <div className="flex items-center justify-between border-b border-border/20 pb-4">
+          <Skeleton className="h-4 w-28" />
+          <div className="flex items-center gap-3">
+            <Skeleton className="h-9 w-9 rounded-full" />
+            <Skeleton className="h-9 w-9 rounded-full" />
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          <div className="md:col-span-2 space-y-8">
+            <Skeleton className="aspect-video w-full rounded-xl" />
+            <Skeleton className="h-24 w-full rounded-xl" />
+          </div>
+          <div className="space-y-4">
+            <Skeleton className="h-4 w-32" />
+            <Skeleton className="h-40 w-full rounded-xl" />
+          </div>
+        </div>
+      </div>
+    );
   }
 
   if (isError || !memory) {
@@ -320,14 +341,14 @@ export default function MemoryDetailPage() {
 
         </div>
 
-        {/* Right column: Memora AI Understanding metadata */}
+        {/* Right column: SaveForLatter AI Understanding metadata */}
         <div className="space-y-6">
 
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-primary">
                 <Sparkles className="h-4 w-4 fill-current" />
-                <h3 className="text-xs font-bold uppercase tracking-widest">Memora understood</h3>
+                <h3 className="text-xs font-bold uppercase tracking-widest">SaveForLatter understood</h3>
               </div>
               {isMemoryProcessing(memory) && (
                 <span className="flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[8px] font-bold text-primary">

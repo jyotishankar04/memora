@@ -30,14 +30,14 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-base font-bold text-foreground">1. Agreement to Terms</h2>
             <p>
-              By accessing or using Memora, you agree to comply with and be bound by these Terms of Service. If you do not agree, you must not use our browser extensions, mobile applications, or web dashboards.
+              By accessing or using SaveForLatter, you agree to comply with and be bound by these Terms of Service. If you do not agree, you must not use our browser extensions, mobile applications, or web dashboards.
             </p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-base font-bold text-foreground">2. Account Registration</h2>
             <p>
-              To use Memora, you must authenticate securely via our Google or GitHub OAuth providers. You agree to:
+              To use SaveForLatter, you must authenticate securely via our Google or GitHub OAuth providers. You agree to:
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li>Keep your OAuth credentials secure.</li>
@@ -49,7 +49,7 @@ export default function TermsPage() {
           <section className="space-y-3">
             <h2 className="text-base font-bold text-foreground">3. Fair Use & Account Restrictions</h2>
             <p>
-              Memora provides personal indexing services. You agree not to:
+              SaveForLatter provides personal indexing services. You agree not to:
             </p>
             <ul className="list-disc pl-5 space-y-2">
               <li>Upload malicious code, worms, or scripts designed to damage our servers.</li>

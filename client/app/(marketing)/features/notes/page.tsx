@@ -13,7 +13,7 @@ const noteTypesList = [
   { label: "Quick thought", detail: "“Build a better onboarding flow.”" },
   { label: "Meeting note", detail: "“Ideas from today's product discussion...”" },
   { label: "Code snippet", detail: "const memory = await save(item)" },
-  { label: "Idea", detail: "“What if Memora could...”" },
+  { label: "Idea", detail: "“What if SaveForLatter could...”" },
   { label: "Personal note", detail: "“Things I want to explore later.”" }
 ];
 
@@ -152,7 +152,7 @@ export default function NotesPage() {
 
             <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
               <Sparkles className="h-4 w-4 fill-current animate-pulse" />
-              <span>Memora found 4 related memories</span>
+              <span>SaveForLatter found 4 related memories</span>
             </div>
 
             {/* Simulated search outputs */}
@@ -185,7 +185,7 @@ export default function NotesPage() {
               Your thoughts shouldn't live in a separate app.
             </h2>
             <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">
-              Memora brings your thoughts and discoveries into the same memory.
+              SaveForLatter brings your thoughts and discoveries into the same memory.
             </p>
           </div>
 

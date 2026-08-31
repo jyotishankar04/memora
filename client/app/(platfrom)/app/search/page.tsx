@@ -10,6 +10,7 @@ import { listMemories, type ListMemoriesParams } from "@/lib/memories";
 import { memoriesQueryKey, useCollectionsQuery } from "@/context/MemoryContext";
 import { timeAgo } from "@/lib/time";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
+import { QueryErrorState } from "@/components/query-error-state";
 import { cn } from "@/lib/utils";
 import type { MemoryType } from "@/types/memory";
 
@@ -56,7 +57,7 @@ export default function SearchPage() {
     isFavorite: favoriteOnly || undefined,
     collectionId,
   };
-  const { data, isFetching } = useQuery({
+  const { data, isFetching, isError, refetch } = useQuery({
     queryKey: memoriesQueryKey(searchParamsForQuery),
     queryFn: () => listMemories(searchParamsForQuery),
     enabled: trimmedQuery.length > 0,
@@ -194,6 +195,9 @@ export default function SearchPage() {
         </div>
       )}
 
+      {/* ERROR STATE */}
+      {hasSearched && !isFetching && isError && <QueryErrorState onRetry={() => refetch()} />}
+
       {/* SEARCHING LOADING STATE */}
       {hasSearched && isFetching && (
         <div className="space-y-4">
@@ -217,7 +221,7 @@ export default function SearchPage() {
       )}
 
       {/* RESULTS STATE */}
-      {hasSearched && !isFetching && results.length > 0 && (
+      {hasSearched && !isFetching && !isError && results.length > 0 && (
         <div className="space-y-8 animate-fade-in">
 
           <div className="border-t border-border/20 pt-6 space-y-6">
@@ -260,7 +264,7 @@ export default function SearchPage() {
       )}
 
       {/* EMPTY RESULT STATE */}
-      {hasSearched && !isFetching && results.length === 0 && (
+      {hasSearched && !isFetching && !isError && results.length === 0 && (
         <div className="text-center py-20 max-w-sm mx-auto space-y-3">
           <h3 className="text-sm font-semibold text-foreground">No matches found</h3>
           <p className="text-xs text-muted-foreground">

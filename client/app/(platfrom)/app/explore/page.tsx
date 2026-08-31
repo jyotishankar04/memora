@@ -6,9 +6,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMemoriesQuery } from "@/context/MemoryContext";
 import { timeAgo } from "@/lib/time";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
+import { QueryErrorState } from "@/components/query-error-state";
 
 export default function ExplorePage() {
-  const { data, isLoading } = useMemoriesQuery({ limit: 100 });
+  const { data, isLoading, isError, refetch } = useMemoriesQuery({ limit: 100 });
 
   // Rediscover the oldest saves in your library — the ones most likely to
   // have been forgotten since they were captured.
@@ -27,7 +28,9 @@ export default function ExplorePage() {
         </p>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <QueryErrorState onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-3xl">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">

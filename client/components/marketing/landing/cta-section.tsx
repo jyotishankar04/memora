@@ -24,7 +24,7 @@ export default function CtaSection() {
             One place for everything <br className="hidden sm:block" /> you don't want to forget.
           </h2>
           <p className="mt-4 text-muted-foreground text-sm md:text-base max-w-lg mx-auto">
-            Stop losing links, screenshots, and notes. Build your unified digital memory with Memora today.
+            Stop losing links, screenshots, and notes. Build your unified digital memory with SaveForLatter today.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link

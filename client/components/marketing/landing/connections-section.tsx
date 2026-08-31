@@ -56,7 +56,7 @@ export default function ConnectionsSection() {
             One thing always leads to another.
           </h2>
           <p className="mt-4 text-balance text-muted-foreground text-base md:text-lg">
-            Memora connects the things you save, helping you discover relationships you didn't notice before.
+            SaveForLatter connects the things you save, helping you discover relationships you didn't notice before.
           </p>
         </div>
 

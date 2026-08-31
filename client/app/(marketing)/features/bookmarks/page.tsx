@@ -50,7 +50,7 @@ export default function BookmarksPage() {
             </Button>
           </div>
 
-          {/* Large Product Visual: Beautiful Memora Bookmark Collection (Double Bordered Cards!) */}
+          {/* Large Product Visual: Beautiful SaveForLatter Bookmark Collection (Double Bordered Cards!) */}
           <div className="w-full max-w-2xl pt-12">
             <div className="space-y-6 text-left">
               
@@ -105,7 +105,7 @@ export default function BookmarksPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center">
             <div className="space-y-4 text-xs text-muted-foreground leading-relaxed">
               <p>
-                Memora keeps the context around your bookmarks, so months later you don't have to wonder what made the link important.
+                SaveForLatter keeps the context around your bookmarks, so months later you don't have to wonder what made the link important.
               </p>
               
               <div className="p-4 bg-muted/40 border border-border/45 rounded-xl space-y-2 text-xs font-semibold text-foreground/80">
@@ -143,7 +143,7 @@ export default function BookmarksPage() {
               No more folders inside folders.
             </h2>
             <p className="text-xs text-muted-foreground mt-2 max-w-xs mx-auto">
-              Memora understands what your bookmarks are about and makes them searchable without requiring you to maintain a complicated folder structure.
+              SaveForLatter understands what your bookmarks are about and makes them searchable without requiring you to maintain a complicated folder structure.
             </p>
           </div>
 

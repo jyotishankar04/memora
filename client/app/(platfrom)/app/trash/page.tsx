@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
 import { Trash2, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import {
   AlertDialog,
@@ -15,25 +16,40 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useDeleteMemoryMutation, useMemoriesQuery, useUpdateMemoryMutation } from "@/context/MemoryContext";
+import { QueryErrorState } from "@/components/query-error-state";
 
 export default function TrashPage() {
-  const [trashedItems, setTrashedItems] = useState([
-    { id: "mem-del-1", title: "Outdated RAG tutorial draft", source: "Notion page link", daysLeft: "14 days left" }
-  ]);
+  const { data, isLoading, isError, refetch } = useMemoriesQuery({ inTrash: true, limit: 100 });
+  const trashedItems = data?.items ?? [];
+
+  const updateMutation = useUpdateMemoryMutation();
+  const deleteMutation = useDeleteMemoryMutation();
 
   const handleRestore = (id: string, title: string) => {
-    setTrashedItems((prev) => prev.filter((item) => item.id !== id));
-    toast.add({ title: "Restored to active index", description: title, type: "success" });
+    updateMutation.mutate(
+      { id, patch: { inTrash: false } },
+      {
+        onSuccess: () => toast.add({ title: "Restored to active index", description: title, type: "success" }),
+        onError: (err) => toast.add({ title: "Couldn't restore that memory", description: err instanceof Error ? err.message : undefined, type: "error" }),
+      },
+    );
   };
 
   const handleDeletePermanently = (id: string, title: string) => {
-    setTrashedItems((prev) => prev.filter((item) => item.id !== id));
-    toast.add({ title: "Deleted permanently", description: title, type: "success" });
+    deleteMutation.mutate(id, {
+      onSuccess: () => toast.add({ title: "Deleted permanently", description: title, type: "success" }),
+      onError: (err) => toast.add({ title: "Couldn't delete that memory", description: err instanceof Error ? err.message : undefined, type: "error" }),
+    });
   };
 
-  const handleEmptyTrash = () => {
-    setTrashedItems([]);
-    toast.add({ title: "Trash emptied", type: "success" });
+  const handleEmptyTrash = async () => {
+    try {
+      await Promise.all(trashedItems.map((item) => deleteMutation.mutateAsync(item.id)));
+      toast.add({ title: "Trash emptied", type: "success" });
+    } catch (err) {
+      toast.add({ title: "Couldn't empty trash", description: err instanceof Error ? err.message : undefined, type: "error" });
+    }
   };
 
   return (
@@ -42,7 +58,7 @@ export default function TrashPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Trash</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Items in trash are permanently deleted after 30 days.
+            Deleted memories stay here until you delete them permanently or restore them.
           </p>
         </div>
 
@@ -59,7 +75,7 @@ export default function TrashPage() {
               <AlertDialogHeader>
                 <AlertDialogTitle>Empty trash?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This will permanently delete all {trashedItems.length} item{trashedItems.length === 1 ? "" : "s"} in your trash. This action can't be undone.
+                  This will permanently delete all {trashedItems.length} item{trashedItems.length === 1 ? "" : "s"} in your trash. This action can&apos;t be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -73,16 +89,26 @@ export default function TrashPage() {
         )}
       </div>
 
-      {trashedItems.length > 0 ? (
+      {isError ? (
+        <QueryErrorState onRetry={() => refetch()} />
+      ) : isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">
+              <div className="p-4 rounded-lg border border-border/75 bg-card min-h-[130px] space-y-3">
+                <Skeleton className="h-3.5 w-4/5" />
+                <Skeleton className="h-2.5 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : trashedItems.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl text-xs font-semibold">
           {trashedItems.map((item) => (
             <div key={item.id} className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs">
               <div className="p-4 rounded-lg border border-border/75 bg-card flex flex-col justify-between min-h-[130px] space-y-4">
                 <div>
-                  <div className="flex justify-between items-center text-[8.5px] font-mono text-red-500 font-bold mb-1">
-                    <span>TRASHED</span>
-                    <span>{item.daysLeft}</span>
-                  </div>
+                  <span className="text-[8.5px] font-mono text-red-500 font-bold mb-1 block">TRASHED</span>
                   <h4 className="text-foreground leading-snug">{item.title}</h4>
                   <span className="text-[9px] text-muted-foreground font-mono mt-0.5 block">{item.source}</span>
                 </div>
@@ -109,9 +135,9 @@ export default function TrashPage() {
                     />
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Delete "{item.title}" permanently?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete &ldquo;{item.title}&rdquo; permanently?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This action can't be undone.
+                          This action can&apos;t be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -131,8 +157,9 @@ export default function TrashPage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-xs text-muted-foreground">Your trash is empty.</p>
+        <div className="text-center py-20 max-w-sm mx-auto space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Your trash is empty</h3>
+          <p className="text-xs text-muted-foreground">Deleted memories will show up here before they&apos;re gone for good.</p>
         </div>
       )}
 

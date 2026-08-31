@@ -20,7 +20,7 @@ const featuresList = [
   },
   {
     title: "AI Auto-Categorization",
-    description: "Memora reads and understands what you save, automatically adding tags and conceptual categories.",
+    description: "SaveForLatter reads and understands what you save, automatically adding tags and conceptual categories.",
     icon: Sparkles,
     color: "text-primary bg-primary/10"
   },
@@ -38,13 +38,13 @@ const featuresList = [
   },
   {
     title: "Screenshot OCR Scanning",
-    description: "Drop in screenshots, designs, or photos. Memora extracts all readable text to make them searchable.",
+    description: "Drop in screenshots, designs, or photos. SaveForLatter extracts all readable text to make them searchable.",
     icon: Image,
     color: "text-pink-500 bg-pink-500/10"
   },
   {
     title: "Video Transcriptions",
-    description: "Save YouTube links or media posts. Memora indexes video transcripts so you can query key moments.",
+    description: "Save YouTube links or media posts. SaveForLatter indexes video transcripts so you can query key moments.",
     icon: Video,
     color: "text-red-500 bg-red-500/10"
   },
@@ -66,7 +66,7 @@ export default function FeaturesPage() {
             Everything you save, <br className="hidden sm:block" /> fully searchable.
           </h1>
           <p className="text-muted-foreground text-sm md:text-base max-w-xl mx-auto leading-relaxed">
-            Memora is built for researchers, creators, and developers. A personal library that grows smarter over time.
+            SaveForLatter is built for researchers, creators, and developers. A personal library that grows smarter over time.
           </p>
         </div>
 

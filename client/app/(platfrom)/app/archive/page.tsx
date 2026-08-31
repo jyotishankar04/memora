@@ -1,8 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
-import { Archive, RotateCcw, Trash2 } from "lucide-react";
+import React from "react";
+import { RotateCcw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import {
   AlertDialog,
@@ -15,20 +16,31 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { useDeleteMemoryMutation, useMemoriesQuery, useUpdateMemoryMutation } from "@/context/MemoryContext";
+import { QueryErrorState } from "@/components/query-error-state";
 
 export default function ArchivePage() {
-  const [archives, setArchives] = useState([
-    { id: "mem-6", title: "Raycast Store Extension", type: "web", source: "raycast.com" }
-  ]);
+  const { data, isLoading, isError, refetch } = useMemoriesQuery({ isArchived: true, limit: 100 });
+  const archives = data?.items ?? [];
+
+  const updateMutation = useUpdateMemoryMutation();
+  const deleteMutation = useDeleteMemoryMutation();
 
   const handleRestore = (id: string, title: string) => {
-    setArchives((prev) => prev.filter((item) => item.id !== id));
-    toast.add({ title: "Restored to active index", description: title, type: "success" });
+    updateMutation.mutate(
+      { id, patch: { isArchived: false } },
+      {
+        onSuccess: () => toast.add({ title: "Restored to active index", description: title, type: "success" }),
+        onError: (err) => toast.add({ title: "Couldn't restore that memory", description: err instanceof Error ? err.message : undefined, type: "error" }),
+      },
+    );
   };
 
   const handleDelete = (id: string, title: string) => {
-    setArchives((prev) => prev.filter((item) => item.id !== id));
-    toast.add({ title: "Deleted permanently", description: title, type: "success" });
+    deleteMutation.mutate(id, {
+      onSuccess: () => toast.add({ title: "Deleted permanently", description: title, type: "success" }),
+      onError: (err) => toast.add({ title: "Couldn't delete that memory", description: err instanceof Error ? err.message : undefined, type: "error" }),
+    });
   };
 
   return (
@@ -36,11 +48,24 @@ export default function ArchivePage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Archive</h1>
         <p className="text-xs text-muted-foreground mt-1">
-          Archived memories won't appear in your active home or search views unless restored.
+          Archived memories won&apos;t appear in your active home or search views unless restored.
         </p>
       </div>
 
-      {archives.length > 0 ? (
+      {isError ? (
+        <QueryErrorState onRetry={() => refetch()} />
+      ) : isLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl">
+          {Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">
+              <div className="p-4 rounded-lg border border-border/75 bg-card min-h-[120px] space-y-3">
+                <Skeleton className="h-3.5 w-4/5" />
+                <Skeleton className="h-2.5 w-1/2" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : archives.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl text-xs font-semibold">
           {archives.map((item) => (
             <div key={item.id} className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs">
@@ -72,9 +97,9 @@ export default function ArchivePage() {
                     />
                     <AlertDialogContent>
                       <AlertDialogHeader>
-                        <AlertDialogTitle>Delete "{item.title}" permanently?</AlertDialogTitle>
+                        <AlertDialogTitle>Delete &ldquo;{item.title}&rdquo; permanently?</AlertDialogTitle>
                         <AlertDialogDescription>
-                          This action can't be undone.
+                          This action can&apos;t be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -94,8 +119,9 @@ export default function ArchivePage() {
           ))}
         </div>
       ) : (
-        <div className="text-center py-12">
-          <p className="text-xs text-muted-foreground">Your archive vault is empty.</p>
+        <div className="text-center py-20 max-w-sm mx-auto space-y-3">
+          <h3 className="text-sm font-semibold text-foreground">Your archive vault is empty</h3>
+          <p className="text-xs text-muted-foreground">Archive a memory from its detail page to keep it out of your active views.</p>
         </div>
       )}
 

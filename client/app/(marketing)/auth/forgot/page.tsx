@@ -2,8 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Sparkles, ArrowLeft } from "lucide-react";
+import { getProviderLoginUrl } from "@/lib/auth";
+import { Logo } from "@/components/logo";
 
 const GoogleIcon = () => (
   <svg className="h-4 w-4 mr-2 shrink-0" viewBox="0 0 24 24" fill="none">
@@ -21,7 +22,6 @@ const GithubIcon = () => (
 );
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans p-4 lg:p-6 gap-6">
       
@@ -39,12 +39,7 @@ export default function ForgotPasswordPage() {
 
         {/* Brand Logo Header */}
         <Link href="/" className="flex items-center gap-2 text-foreground relative z-10 hover:opacity-90 transition-opacity w-fit">
-          <div className="flex h-8 w-8 items-center justify-center rounded-xl bg-foreground text-background font-semibold">
-            M
-          </div>
-          <span className="text-[17px] font-semibold tracking-[-0.03em] text-foreground">
-            memora
-          </span>
+          <Logo className="text-[17px] text-foreground" />
         </Link>
 
         {/* Brand Copy */}
@@ -63,7 +58,7 @@ export default function ForgotPasswordPage() {
 
         {/* Card Footer copy */}
         <p className="text-[11px] text-muted-foreground relative z-10">
-          &copy; 2026 Memora. All rights reserved.
+          &copy; 2026 SaveForLatter. All rights reserved.
         </p>
 
       </div>
@@ -93,7 +88,7 @@ export default function ForgotPasswordPage() {
               <span>Passwordless OAuth Active</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              Memora uses passwordless OAuth login. Since your account is linked directly to your Google or GitHub profile, there are no passwords to reset or recover.
+              SaveForLatter uses passwordless OAuth login. Since your account is linked directly to your Google or GitHub profile, there are no passwords to reset or recover.
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed">
               Simply log in using the same social account you registered with.
@@ -104,8 +99,7 @@ export default function ForgotPasswordPage() {
           <div className="space-y-3">
             <button
               onClick={() => {
-                localStorage.setItem("memora_token", "mock-secret-session-token");
-                router.push("/app");
+                window.location.href = getProviderLoginUrl("google");
               }}
               className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
             >
@@ -114,8 +108,7 @@ export default function ForgotPasswordPage() {
             </button>
             <button
               onClick={() => {
-                localStorage.setItem("memora_token", "mock-secret-session-token");
-                router.push("/app");
+                window.location.href = getProviderLoginUrl("github");
               }}
               className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
             >
@@ -127,7 +120,7 @@ export default function ForgotPasswordPage() {
           {/* Help Links */}
           <div className="text-center text-xs">
             <p className="text-muted-foreground">
-              Don't have an account yet?{" "}
+              Don&apos;t have an account yet?{" "}
               <Link href="/auth/signup" className="text-primary hover:underline font-semibold">
                 Sign up
               </Link>

@@ -56,3 +56,9 @@ export interface Collection {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface Tag {
+  id: string;
+  name: string;
+  memoryCount: number;
+}

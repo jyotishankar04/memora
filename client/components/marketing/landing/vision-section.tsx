@@ -26,7 +26,7 @@ export default function VisionSection() {
             It's not a library. It's your memory.
           </h2>
           <p className="mt-4 text-balance text-muted-foreground text-base md:text-lg">
-            Bookmarks store links. Notes store words. Memora connects everything you discover into a living, searchable memory.
+            Bookmarks store links. Notes store words. SaveForLatter connects everything you discover into a living, searchable memory.
           </p>
         </div>
 

@@ -33,7 +33,7 @@ export default function RediscoverSection() {
             Some of your best ideas are already in your memory.
           </h2>
           <p className="mt-4 text-balance text-muted-foreground text-base md:text-lg">
-            You saved it for a reason. Memora brings old discoveries back when they become useful again.
+            You saved it for a reason. SaveForLatter brings old discoveries back when they become useful again.
           </p>
         </div>
 

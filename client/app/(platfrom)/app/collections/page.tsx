@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FolderCard } from "@/components/ui/folder-card";
@@ -9,7 +9,9 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useCollectionsQuery, useCreateCollectionMutation } from "@/context/MemoryContext";
+import { QueryErrorState } from "@/components/query-error-state";
 
 const COLOR_PALETTE = [
   "bg-blue-500/10 text-blue-500 border-blue-500/20",
@@ -27,7 +29,7 @@ function colorFor(id: string): string {
 }
 
 export default function CollectionsPage() {
-  const { data: collections = [], isLoading } = useCollectionsQuery();
+  const { data: collections = [], isLoading, isError, refetch } = useCollectionsQuery();
   const createMutation = useCreateCollectionMutation();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -47,7 +49,17 @@ export default function CollectionsPage() {
     });
     setNewName("");
     setNewDesc("");
+    setNewEmoji("📁");
     setShowAddModal(false);
+  };
+
+  const handleModalOpenChange = (open: boolean) => {
+    setShowAddModal(open);
+    if (!open) {
+      setNewName("");
+      setNewDesc("");
+      setNewEmoji("📁");
+    }
   };
 
   return (
@@ -71,7 +83,9 @@ export default function CollectionsPage() {
       </div>
 
       {/* Collections Grid */}
-      {isLoading ? (
+      {isError ? (
+        <QueryErrorState onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">
@@ -96,7 +110,7 @@ export default function CollectionsPage() {
           <p className="text-xs text-muted-foreground">Create one to start organizing your memories.</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-8">
           {collections.map((col) => (
             <FolderCard
               key={col.id}
@@ -111,89 +125,83 @@ export default function CollectionsPage() {
       )}
 
       {/* CREATE COLLECTION MODAL */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-xs z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl w-full max-w-md p-6 shadow-xl space-y-6 animate-scale-up">
+      <Dialog open={showAddModal} onOpenChange={handleModalOpenChange}>
+        <DialogContent className="sm:max-w-md p-6 gap-6 max-h-[calc(100vh-2rem)] overflow-y-auto">
+          <DialogHeader className="border-b border-border/20 pb-2">
+            <DialogTitle className="text-xs font-bold text-foreground">Create collection</DialogTitle>
+          </DialogHeader>
 
-            <div className="flex items-center justify-between border-b border-border/20 pb-2">
-              <span className="text-xs font-bold text-foreground">Create collection</span>
-              <button onClick={() => setShowAddModal(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
-              </button>
-            </div>
-
-            <form onSubmit={handleCreateCollection} className="space-y-4 text-xs font-semibold">
-              <div className="grid grid-cols-3 gap-4">
-                <div className="space-y-1">
-                  <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Icon / Emoji</label>
-                  <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
-                    <PopoverTrigger
-                      render={
-                        <button
-                          type="button"
-                          className="flex h-[42px] w-full items-center justify-center rounded-xl border border-input bg-background text-xl transition-colors hover:bg-muted"
-                        >
-                          {newEmoji}
-                        </button>
-                      }
-                    />
-                    <PopoverContent align="start" className="w-72 p-0">
-                      <EmojiPicker
-                        onEmojiSelect={(emoji) => {
-                          setNewEmoji(emoji);
-                          setEmojiPickerOpen(false);
-                        }}
-                      />
-                    </PopoverContent>
-                  </Popover>
-                </div>
-
-                <div className="col-span-2 space-y-1">
-                  <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Collection name</label>
-                  <Input
-                    type="text"
-                    required
-                    placeholder="E.g., Projects"
-                    value={newName}
-                    onChange={(e) => setNewName(e.target.value)}
-                    className="h-[42px] w-full rounded-xl border-input bg-background px-3 text-xs text-foreground"
+          <form onSubmit={handleCreateCollection} className="space-y-4 text-xs font-semibold">
+            <div className="grid grid-cols-3 gap-4">
+              <div className="space-y-1">
+                <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Icon / Emoji</label>
+                <Popover open={emojiPickerOpen} onOpenChange={setEmojiPickerOpen}>
+                  <PopoverTrigger
+                    render={
+                      <button
+                        type="button"
+                        className="flex h-[42px] w-full items-center justify-center rounded-xl border border-input bg-background text-xl transition-colors hover:bg-muted"
+                      >
+                        {newEmoji}
+                      </button>
+                    }
                   />
-                </div>
+                  <PopoverContent align="start" className="w-72 p-0">
+                    <EmojiPicker
+                      onEmojiSelect={(emoji) => {
+                        setNewEmoji(emoji);
+                        setEmojiPickerOpen(false);
+                      }}
+                    />
+                  </PopoverContent>
+                </Popover>
               </div>
 
-              <div className="space-y-1">
-                <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Description</label>
-                <Textarea
-                  placeholder="What is this collection for?"
-                  value={newDesc}
-                  onChange={(e) => setNewDesc(e.target.value)}
-                  rows={3}
-                  className="w-full rounded-xl border-input bg-background px-3 py-2.5 text-xs text-foreground"
+              <div className="col-span-2 space-y-1">
+                <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Collection name</label>
+                <Input
+                  type="text"
+                  required
+                  placeholder="E.g., Projects"
+                  value={newName}
+                  onChange={(e) => setNewName(e.target.value)}
+                  className="h-[42px] w-full rounded-xl border-input bg-background px-3 text-xs text-foreground"
                 />
               </div>
+            </div>
 
-              <div className="flex gap-3 pt-4">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 h-10 rounded-full"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createMutation.isPending}
-                  className="flex-1 h-10 rounded-full bg-primary text-white"
-                >
-                  {createMutation.isPending ? "Creating..." : "Create Collection"}
-                </Button>
-              </div>
+            <div className="space-y-1">
+              <label className="text-[9px] uppercase tracking-wider text-muted-foreground">Description</label>
+              <Textarea
+                placeholder="What is this collection for?"
+                value={newDesc}
+                onChange={(e) => setNewDesc(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl border-input bg-background px-3 py-2.5 text-xs text-foreground"
+              />
+            </div>
 
-            </form>
-          </div>
-        </div>
-      )}
+            <div className="flex gap-3 pt-4">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => handleModalOpenChange(false)}
+                className="flex-1 h-10 rounded-full"
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createMutation.isPending}
+                className="flex-1 h-10 rounded-full bg-primary text-white"
+              >
+                {createMutation.isPending ? "Creating..." : "Create Collection"}
+              </Button>
+            </div>
+
+          </form>
+        </DialogContent>
+      </Dialog>
 
       {/* Local animation keyframes */}
       <style>{`
@@ -201,15 +209,8 @@ export default function CollectionsPage() {
           from { opacity: 0; transform: translateY(4px); }
           to { opacity: 1; transform: translateY(0); }
         }
-        @keyframes scaleUp {
-          from { opacity: 0; transform: scale(0.97); }
-          to { opacity: 1; transform: scale(1); }
-        }
         .animate-fade-in {
           animation: fadeIn 0.3s ease-out forwards;
-        }
-        .animate-scale-up {
-          animation: scaleUp 0.22s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
       `}</style>
 
