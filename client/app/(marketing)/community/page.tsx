@@ -4,7 +4,6 @@ import React from "react";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
 import { Users, MessageSquare, Code, HelpCircle, ArrowUpRight } from "lucide-react";
-import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
 const communityLinks = [
@@ -59,9 +58,10 @@ export default function CommunityPage() {
                   </div>
 
                   <Button
-                    render={<Link href="#" target="_blank" />}
-                    nativeButton={false}
-                    className="mt-6 w-full h-10 rounded-full font-semibold flex items-center justify-center gap-1"
+                    disabled
+                    title="Coming soon"
+                    aria-label={`${item.cta} — coming soon`}
+                    className="mt-6 w-full h-10 rounded-full font-semibold flex items-center justify-center gap-1 opacity-60 cursor-not-allowed"
                     variant="outline"
                   >
                     {item.cta} <ArrowUpRight className="h-4 w-4" />
