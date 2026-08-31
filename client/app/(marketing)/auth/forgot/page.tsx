@@ -2,8 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Sparkles, ArrowLeft } from "lucide-react";
+import { getProviderLoginUrl } from "@/lib/auth";
 
 const GoogleIcon = () => (
   <svg className="h-4 w-4 mr-2 shrink-0" viewBox="0 0 24 24" fill="none">
@@ -21,7 +21,6 @@ const GithubIcon = () => (
 );
 
 export default function ForgotPasswordPage() {
-  const router = useRouter();
   return (
     <div className="flex min-h-screen bg-background text-foreground font-sans p-4 lg:p-6 gap-6">
       
@@ -104,8 +103,7 @@ export default function ForgotPasswordPage() {
           <div className="space-y-3">
             <button
               onClick={() => {
-                localStorage.setItem("memora_token", "mock-secret-session-token");
-                router.push("/app");
+                window.location.href = getProviderLoginUrl("google");
               }}
               className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
             >
@@ -114,8 +112,7 @@ export default function ForgotPasswordPage() {
             </button>
             <button
               onClick={() => {
-                localStorage.setItem("memora_token", "mock-secret-session-token");
-                router.push("/app");
+                window.location.href = getProviderLoginUrl("github");
               }}
               className="w-full flex items-center justify-center border border-input bg-background hover:bg-muted text-foreground text-sm font-medium py-3 rounded-xl transition-all cursor-pointer"
             >
@@ -127,7 +124,7 @@ export default function ForgotPasswordPage() {
           {/* Help Links */}
           <div className="text-center text-xs">
             <p className="text-muted-foreground">
-              Don't have an account yet?{" "}
+              Don&apos;t have an account yet?{" "}
               <Link href="/auth/signup" className="text-primary hover:underline font-semibold">
                 Sign up
               </Link>
