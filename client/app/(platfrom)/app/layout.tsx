@@ -439,7 +439,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   ];
   const secondaryNavItems = [
     { label: "Favorites", href: "/app/favorites", icon: Heart },
-    { label: "Spaces", href: "/app/spaces", icon: Clock },
+    { label: "Recent", href: "/app/recent", icon: Clock },
     { label: "Explore", href: "/app/explore", icon: CompassIcon },
     { label: "Memory Graph", href: "/app/graph", icon: BarChart2 },
   ];

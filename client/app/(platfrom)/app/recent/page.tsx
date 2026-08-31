@@ -8,7 +8,7 @@ import { timeAgo, timelineGroup } from "@/lib/time";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 import type { Memory } from "@/types/memory";
 
-export default function SpacesPage() {
+export default function RecentPage() {
   const { data, isLoading } = useMemoriesQuery({ limit: 40 });
   const items = data?.items ?? [];
 
@@ -27,9 +27,9 @@ export default function SpacesPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-10 animate-fade-in">
       <div className="border-b border-border/20 pb-4">
-        <h1 className="text-2xl font-bold tracking-tight">Spaces</h1>
+        <h1 className="text-2xl font-bold tracking-tight">Recent</h1>
         <p className="text-xs text-muted-foreground mt-1">
-          Your recent activity, most recent first — pick up where you left off.
+          Your latest saves, most recent first — pick up where you left off.
         </p>
       </div>
 
