@@ -1,5 +1,6 @@
 // Background service worker for Memora Chrome Extension V1
 import { ACCESS_TOKEN_COOKIE, SERVER_ORIGIN, TOKEN_STORAGE_KEY } from "../lib/config";
+import { apiFetch, ApiError } from "../lib/api";
 
 // Only the background worker holds the "cookies" permission — it mirrors the
 // httpOnly access-token cookie into chrome.storage.local, which is what the
@@ -72,100 +73,193 @@ function getStoredToken(): Promise<string | null> {
 chrome.contextMenus.onClicked.addListener(async (info, tab) => {
   const token = await getStoredToken();
   if (!token) {
-    chrome.notifications?.create({
-      type: "basic",
-      iconUrl: "src/popup/icon-128.png",
-      title: "Sign in to Memora",
-      message: "Open the Memora extension popup and sign in before saving.",
-      priority: 1
-    });
+    notifySignInRequired();
     return;
   }
 
-  if (info.menuItemId === "save-page" && tab?.url) {
-    saveMemory({
-      type: "link",
-      url: tab.url,
-      title: tab.title || "Saved Page",
-      source: "context_menu_page"
-    }, token);
-  }
-
-  else if (info.menuItemId === "save-selection" && info.selectionText && tab?.url) {
-    saveMemory({
-      type: "note",
-      url: tab.url,
-      title: `Quote from ${tab.title || "Webpage"}`,
-      content: info.selectionText,
-      source: "context_menu_selection"
-    }, token);
-  }
-
-  else if (info.menuItemId === "save-image" && info.srcUrl && tab?.url) {
-    saveMemory({
-      type: "image",
-      url: tab.url,
-      imageUrl: info.srcUrl,
-      title: `Saved image from ${tab.title || "Webpage"}`,
-      source: "context_menu_image"
-    }, token);
+  try {
+    if (info.menuItemId === "save-page" && tab?.url) {
+      await createMemory({ type: "web", url: tab.url, title: tab.title || "Saved Page" });
+    } else if (info.menuItemId === "save-selection" && info.selectionText && tab?.url) {
+      await createMemory({
+        type: "note",
+        url: tab.url,
+        title: `Quote from ${tab.title || "Webpage"}`,
+        content: info.selectionText,
+      });
+    } else if (info.menuItemId === "save-image" && info.srcUrl && tab?.url) {
+      await createMemory({
+        type: "image",
+        url: tab.url,
+        title: `Saved image from ${tab.title || "Webpage"}`,
+        attachments: [{ fileUrl: info.srcUrl }],
+      });
+    }
+  } catch (err) {
+    notifySaveError(err);
   }
 });
 
 // Keyboard Commands listener
 chrome.commands.onCommand.addListener(async (command) => {
-  if (command === "quick-save-page") {
-    const token = await getStoredToken();
-    if (!token) {
-      chrome.notifications?.create({
-        type: "basic",
-        iconUrl: "src/popup/icon-128.png",
-        title: "Sign in to Memora",
-        message: "Open the Memora extension popup and sign in before saving.",
-        priority: 1
-      });
-      return;
-    }
+  if (command !== "quick-save-page") return;
 
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const activeTab = tabs[0];
-      if (activeTab && activeTab.url) {
-        saveMemory({
-          type: "link",
-          url: activeTab.url,
-          title: activeTab.title || "Quick Saved Page",
-          source: "keyboard_shortcut"
-        }, token);
-      }
-    });
+  const token = await getStoredToken();
+  if (!token) {
+    notifySignInRequired();
+    return;
   }
+
+  chrome.tabs.query({ active: true, currentWindow: true }, async (tabs) => {
+    const activeTab = tabs[0];
+    if (!activeTab?.url) return;
+    try {
+      await createMemory({ type: "web", url: activeTab.url, title: activeTab.title || "Quick Saved Page" });
+    } catch (err) {
+      notifySaveError(err);
+    }
+  });
 });
 
-// Core API Save function
-function saveMemory(payload: any, token: string) {
-  console.log("Initiating background save to Memora:", payload);
-  
-  // Simulated POST to Memora Web API backend
-  // In production:
-  // fetch("http://localhost:3000/api/memories", {
-  //   method: "POST",
-  //   headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
-  //   body: JSON.stringify(payload)
-  // })
-  // .then(res => res.json())
-  // .then(data => console.log("Memory saved successfully:", data))
-  // .catch(err => console.error("Error saving memory:", err));
+// --- Screenshot capture --------------------------------------------------
+//
+// The popup's "Take Screenshot" button asks this file to start a region
+// selection on the active tab (content-script.ts owns the drag-to-select
+// overlay, since it needs the page's DOM); once the user finishes
+// dragging, the content script sends back the picked rect plus whatever
+// text it read out of that region, and this file does the actual pixel
+// capture (chrome.tabs.captureVisibleTab isn't available to content
+// scripts), crops it to just the selected area, uploads it, and creates
+// the memory — same real save path as everything else in this file.
 
-  // Trigger browser desktop notification to confirm the save!
+interface ScreenshotRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+chrome.runtime.onMessage.addListener((request, sender) => {
+  if (request.action === "START_SCREENSHOT_SELECTION") {
+    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+      const tab = tabs[0];
+      if (tab?.id) chrome.tabs.sendMessage(tab.id, { action: "START_SELECTION" });
+    });
+  }
+
+  if (request.action === "SCREENSHOT_REGION_SELECTED" && sender.tab?.windowId != null) {
+    handleScreenshotRegion(request, sender.tab.windowId).catch(notifySaveError);
+  }
+
+  return undefined;
+});
+
+async function handleScreenshotRegion(
+  msg: { rect: ScreenshotRect; dpr: number; extractedText: string; pageTitle: string; pageUrl: string },
+  windowId: number,
+): Promise<void> {
+  const token = await getStoredToken();
+  if (!token) {
+    notifySignInRequired();
+    return;
+  }
+
+  const dataUrl = await chrome.tabs.captureVisibleTab(windowId, { format: "png" });
+  const blob = await cropToRect(dataUrl, msg.rect, msg.dpr);
+  const uploaded = await uploadScreenshot(blob);
+
+  await createMemory({
+    type: "image",
+    url: msg.pageUrl,
+    title: (msg.pageTitle || "Screenshot").slice(0, 500),
+    content: msg.extractedText || undefined,
+    attachments: [{ fileUrl: uploaded.fileUrl, fileSize: uploaded.fileSize, mimeType: uploaded.mimeType }],
+  });
+}
+
+/** Crops the full-viewport capture down to just the selected rect. `dpr` converts the content script's CSS-pixel rect into the device pixels captureVisibleTab actually returns. Service workers have no <canvas>/<img> DOM elements, hence OffscreenCanvas + createImageBitmap. */
+async function cropToRect(dataUrl: string, rect: ScreenshotRect, dpr: number): Promise<Blob> {
+  const bitmap = await createImageBitmap(await (await fetch(dataUrl)).blob());
+
+  const sx = Math.max(0, Math.round(rect.x * dpr));
+  const sy = Math.max(0, Math.round(rect.y * dpr));
+  const sw = Math.min(Math.round(rect.width * dpr), bitmap.width - sx);
+  const sh = Math.min(Math.round(rect.height * dpr), bitmap.height - sy);
+
+  const canvas = new OffscreenCanvas(sw, sh);
+  const ctx = canvas.getContext("2d");
+  if (!ctx) throw new Error("Couldn't render the screenshot crop.");
+  ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, sw, sh);
+
+  return canvas.convertToBlob({ type: "image/png" });
+}
+
+async function uploadScreenshot(blob: Blob): Promise<{ fileUrl: string; mimeType: string; fileSize: number }> {
+  const presigned = await apiFetch<{ uploadUrl: string; fileUrl: string; key: string }>("/uploads/presign", {
+    method: "POST",
+    body: JSON.stringify({ filename: `screenshot-${Date.now()}.png`, mimeType: "image/png", fileSize: blob.size }),
+  });
+
+  const putResponse = await fetch(presigned.uploadUrl, {
+    method: "PUT",
+    headers: { "Content-Type": "image/png" },
+    body: blob,
+  });
+  if (!putResponse.ok) throw new Error("Uploading the screenshot to storage failed.");
+
+  return { fileUrl: presigned.fileUrl, mimeType: "image/png", fileSize: blob.size };
+}
+
+// --- Shared save path ------------------------------------------------------
+
+interface MemoryCreatePayload {
+  type: "web" | "note" | "image";
+  url?: string;
+  title: string;
+  content?: string;
+  attachments?: { fileUrl: string; fileSize?: number; mimeType?: string }[];
+}
+
+async function createMemory(payload: MemoryCreatePayload): Promise<void> {
+  const memory = await apiFetch<{ id: string; title: string }>("/memories", {
+    method: "POST",
+    body: JSON.stringify({ ...payload, captureMethod: "extension" }),
+  });
+
+  chrome.notifications?.create(
+    {
+      type: "basic",
+      iconUrl: "src/popup/icon-128.png",
+      title: "Saved to Memora",
+      message: memory.title || payload.title,
+      priority: 1,
+    },
+    () => {
+      if (chrome.runtime.lastError) {
+        console.log("Notifications API not fully loaded, skipping alert window.");
+      }
+    },
+  );
+}
+
+function notifySignInRequired(): void {
   chrome.notifications?.create({
     type: "basic",
-    iconUrl: "src/popup/icon-128.png", // fallback local icon
-    title: "Saved to Memora",
-    message: payload.title,
-    priority: 1
-  }, () => {
-    if (chrome.runtime.lastError) {
-      console.log("Notifications API not fully loaded, skipping alert window.");
-    }
+    iconUrl: "src/popup/icon-128.png",
+    title: "Sign in to Memora",
+    message: "Open the Memora extension popup and sign in before saving.",
+    priority: 1,
+  });
+}
+
+function notifySaveError(err: unknown): void {
+  console.error("Memora save failed:", err);
+  const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Something went wrong.";
+  chrome.notifications?.create({
+    type: "basic",
+    iconUrl: "src/popup/icon-128.png",
+    title: "Couldn't save to Memora",
+    message,
+    priority: 1,
   });
 }

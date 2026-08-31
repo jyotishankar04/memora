@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
-  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Loader2
+  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Loader2, Camera
 } from "lucide-react";
 import { apiFetch, ApiError } from "../lib/api";
 import { WEB_APP_URL } from "../lib/config";
@@ -195,6 +195,15 @@ export default function Popup() {
     }
   };
 
+  const handleTakeScreenshot = () => {
+    if (typeof chrome === "undefined" || !chrome.runtime) return;
+    chrome.runtime.sendMessage({ action: "START_SCREENSHOT_SELECTION" });
+    // The selection overlay lives on the page itself, so the popup just
+    // gets out of the way — the background worker handles capture/upload/
+    // save and reports back via a desktop notification.
+    window.close();
+  };
+
   const handleSignIn = () => {
     if (typeof chrome !== "undefined" && chrome.tabs) {
       chrome.tabs.create({ url: `${WEB_APP_URL}/auth/login` });
@@ -220,9 +229,16 @@ export default function Popup() {
           <Sparkles size={16} color="#1447E6" fill="#1447E6" />
           <span style={styles.logoText}>memora</span>
         </div>
-        <button style={styles.iconButton} onClick={() => handleOpenMemora()}>
-          <Settings size={14} color="#8e8e93" />
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          {state !== "checking" && state !== "unauthorized" && (
+            <button style={styles.iconButton} onClick={handleTakeScreenshot} title="Take screenshot">
+              <Camera size={14} color="#8e8e93" />
+            </button>
+          )}
+          <button style={styles.iconButton} onClick={() => handleOpenMemora()}>
+            <Settings size={14} color="#8e8e93" />
+          </button>
+        </div>
       </div>
 
       {/* State Renderers */}
