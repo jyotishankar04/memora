@@ -5,6 +5,7 @@ import userRoutes from "../modules/user";
 import settingsRoutes from "../modules/settings";
 import memoryRoutes from "../modules/memory";
 import collectionRoutes from "../modules/collection";
+import tagRoutes from "../modules/tag";
 import uploadRoutes from "../modules/upload";
 
 const router = Router();
@@ -15,6 +16,7 @@ router.use("/users", userRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/memories", memoryRoutes);
 router.use("/collections", collectionRoutes);
+router.use("/tags", tagRoutes);
 router.use("/uploads", uploadRoutes);
 
 export default router;

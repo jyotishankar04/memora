@@ -10,7 +10,7 @@ import {
   Settings, HelpCircle, Bell, X, Moon, Sun, FolderOpen,
   Compass, Check, ChevronRight, ChevronDown,
   FolderPlus, Heart, Clock, Compass as CompassIcon, BarChart2, FileText,
-  Paperclip, UploadCloud, Layers, PanelLeftClose, PanelLeftOpen, Menu
+  Paperclip, UploadCloud, Layers, PanelLeftClose, PanelLeftOpen, Menu, Tag
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -433,12 +433,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
     { label: "Home", href: "/app", icon: Compass },
     { label: "Memories", href: "/app/memories", icon: FolderOpen },
     { label: "Collections", href: "/app/collections", icon: Layers },
+    { label: "Tags", href: "/app/tags", icon: Tag },
     { label: "Search", href: "/app/search", icon: Search },
     { label: "Ask Memora", href: "/app/ask", icon: Sparkles },
   ];
   const secondaryNavItems = [
     { label: "Favorites", href: "/app/favorites", icon: Heart },
-    { label: "Recent", href: "/app/recent", icon: Clock },
+    { label: "Spaces", href: "/app/spaces", icon: Clock },
     { label: "Explore", href: "/app/explore", icon: CompassIcon },
     { label: "Memory Graph", href: "/app/graph", icon: BarChart2 },
   ];

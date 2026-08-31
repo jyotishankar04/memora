@@ -3,6 +3,7 @@
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import type { Collection, Memory } from "@/types/memory";
 import { createCollection, deleteCollection, listCollections, type CreateCollectionInput } from "@/lib/collections";
+import { listTags } from "@/lib/tags";
 import {
   createMemory,
   deleteMemory,
@@ -16,6 +17,7 @@ import {
 
 export const memoriesQueryKey = (params: ListMemoriesParams = {}) => ["memories", params] as const;
 export const collectionsQueryKey = () => ["collections"] as const;
+export const tagsQueryKey = () => ["tags"] as const;
 export const memoryQueryKey = (id: string) => ["memory", id] as const;
 
 export function useMemoriesQuery(params: ListMemoriesParams = {}) {
@@ -35,6 +37,10 @@ export function useMemoriesQuery(params: ListMemoriesParams = {}) {
 
 export function useCollectionsQuery() {
   return useQuery({ queryKey: collectionsQueryKey(), queryFn: listCollections });
+}
+
+export function useTagsQuery() {
+  return useQuery({ queryKey: tagsQueryKey(), queryFn: listTags });
 }
 
 export function useCreateCollectionMutation() {
@@ -117,6 +123,7 @@ export function useUpdateMemoryMutation() {
       queryClient.invalidateQueries({ queryKey: ["memories"] });
       queryClient.invalidateQueries({ queryKey: memoryQueryKey(id) });
       queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
+      queryClient.invalidateQueries({ queryKey: tagsQueryKey() });
     },
   });
 }
@@ -128,6 +135,7 @@ export function useDeleteMemoryMutation() {
     onSuccess: (_data, id) => {
       queryClient.invalidateQueries({ queryKey: ["memories"] });
       queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
+      queryClient.invalidateQueries({ queryKey: tagsQueryKey() });
       queryClient.removeQueries({ queryKey: memoryQueryKey(id) });
     },
   });
@@ -140,6 +148,7 @@ export function useCreateMemoryMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["memories"] });
       queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
+      queryClient.invalidateQueries({ queryKey: tagsQueryKey() });
     },
   });
 }
