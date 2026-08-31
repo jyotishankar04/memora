@@ -159,33 +159,64 @@ function isRestrictedPage(url: string | undefined): boolean {
   return !url || RESTRICTED_URL_PREFIXES.some((prefix) => url.startsWith(prefix));
 }
 
-/** Forwards a capture request to the active tab's content script, whichever kind it is (drag-select region or full-page) — both need the same "does this page even support it" check and the same lastError handling. */
+/**
+ * Forwards a capture request to a tab's content script, whichever kind it
+ * is (drag-select region or full-page) — both need the same "does this
+ * page even support it" check and the same lastError handling.
+ *
+ * Prefers the tabId/tabUrl the popup already resolved via its own
+ * chrome.tabs.query (in loadPageInfo) over re-querying "the active tab"
+ * here — by the time this runs, the popup that made this call has already
+ * closed, and re-deriving "active tab" from the background at that point
+ * is a real race (e.g. it can resolve to whatever window last had focus,
+ * which might not be the tab the user actually meant if something else —
+ * a DevTools window, another app — grabbed focus in between). Only falls
+ * back to a fresh query if the caller genuinely didn't have one.
+ */
 function dispatchCaptureToActiveTab(
   contentScriptAction: string,
+  knownTabId: number | undefined,
+  knownTabUrl: string | undefined,
   extra: { note?: string; tags?: string[]; collectionIds?: string[] },
   sendResponse: (response: { ok: boolean }) => void,
 ): void {
-  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-    const tab = tabs[0];
-    if (!tab?.id || isRestrictedPage(tab.url)) {
-      console.log("Memora: dispatchCaptureToActiveTab found no capturable active tab", tab?.url);
+  const proceed = (tabId: number, tabUrl: string | undefined) => {
+    if (isRestrictedPage(tabUrl)) {
+      console.log("Memora: target tab is a restricted page", tabUrl);
       notifyCannotCapture();
       sendResponse({ ok: false });
       return;
     }
-    console.log(`Memora: forwarding ${contentScriptAction} to tab ${tab.id} (${tab.url})`);
+    console.log(`Memora: forwarding ${contentScriptAction} to tab ${tabId} (${tabUrl})`);
     // No callback here previously meant a failure (most commonly: this
     // tab was open before the extension was installed/reloaded, so it
     // never got the content script) failed completely silently — the
     // button would just do nothing with no indication why. Checking
     // chrome.runtime.lastError is what surfaces that as a real message.
-    chrome.tabs.sendMessage(tab.id, { action: contentScriptAction, ...extra }, () => {
+    chrome.tabs.sendMessage(tabId, { action: contentScriptAction, ...extra }, () => {
       if (chrome.runtime.lastError) {
         console.error("Memora: content script didn't respond —", chrome.runtime.lastError.message);
         notifyCannotCapture();
       }
       sendResponse({ ok: true });
     });
+  };
+
+  if (knownTabId != null) {
+    proceed(knownTabId, knownTabUrl);
+    return;
+  }
+
+  console.log("Memora: no tabId passed in, falling back to querying the active tab");
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs[0];
+    if (!tab?.id) {
+      console.log("Memora: fallback query found no active tab");
+      notifyCannotCapture();
+      sendResponse({ ok: false });
+      return;
+    }
+    proceed(tab.id, tab.url);
   });
 }
 
@@ -193,6 +224,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "START_SCREENSHOT_SELECTION") {
     dispatchCaptureToActiveTab(
       "START_SELECTION",
+      request.tabId,
+      request.tabUrl,
       { note: request.note, tags: request.tags, collectionIds: request.collectionIds },
       sendResponse,
     );
@@ -200,9 +233,11 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "CAPTURE_FULL_PAGE_SCREENSHOT") {
-    console.log("Memora: CAPTURE_FULL_PAGE_SCREENSHOT received from popup");
+    console.log("Memora: CAPTURE_FULL_PAGE_SCREENSHOT received from popup", request.tabId, request.tabUrl);
     dispatchCaptureToActiveTab(
       "CAPTURE_FULL_PAGE",
+      request.tabId,
+      request.tabUrl,
       { note: request.note, tags: request.tags, collectionIds: request.collectionIds },
       sendResponse,
     );

@@ -41,6 +41,13 @@ export default function Popup() {
   const [captureMode, setCaptureMode] = useState<"page" | "screenshot" | "fullscreenshot">("page");
   const [collectionsOpen, setCollectionsOpen] = useState(false);
   const collectionsRef = useRef<HTMLDivElement>(null);
+  // The tab loadPageInfo already resolved via chrome.tabs.query — captured
+  // here so the screenshot triggers below can hand it straight to the
+  // background worker instead of it re-querying "the active tab" itself
+  // after the popup has already closed, which is a real race (the
+  // background's query can land on the wrong window, e.g. if a DevTools
+  // window is focused at that exact moment) that this sidesteps entirely.
+  const activeTabIdRef = useRef<number | null>(null);
 
   // Closes the collections dropdown on an outside click.
   useEffect(() => {
@@ -144,6 +151,7 @@ export default function Popup() {
       return;
     }
 
+    activeTabIdRef.current = activeTab.id;
     const metadata = await getPageMetadata(activeTab.id);
     setPageInfo({
       url: activeTab.url,
@@ -210,8 +218,13 @@ export default function Popup() {
 
   // Whatever the user already filled in here travels with a screenshot too
   // — the background worker attaches it to the memory it creates once the
-  // capture (region or full viewport) actually happens.
+  // capture (region or full viewport) actually happens. tabId/tabUrl are
+  // the ones loadPageInfo already resolved, so the background worker
+  // doesn't have to re-derive "the active tab" itself after the popup's
+  // already closed.
   const buildCaptureContext = () => ({
+    tabId: activeTabIdRef.current ?? undefined,
+    tabUrl: pageInfo?.url,
     note: note.trim() || undefined,
     tags: tags.length > 0 ? tags : undefined,
     collectionIds: selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined,
