@@ -38,6 +38,8 @@ export interface PlatformInfo {
   platform: string | null;
   resourceType: string | null;
   domain: string;
+  /** Whether this platform has a configured credential (see getPlatformCredential) — signals that an authenticated fetch path is available, without exposing the credential itself. */
+  hasAuth: boolean;
 }
 
 export type PreviewSource = "server" | "browser" | "user" | "platform_fallback" | "generic_fallback";

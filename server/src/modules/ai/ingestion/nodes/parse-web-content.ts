@@ -30,7 +30,7 @@ export async function parseWebContent(state: IngestionStateType): Promise<Ingest
     return { rawContent: "" };
   }
 
-  const { platform, resourceType, domain } = detectPlatform(state.url);
+  const { platform, resourceType, domain, hasAuth } = detectPlatform(state.url);
   const fetchResult = await fetchUrl(state.url);
 
   // A pasted URL is always mediaType "web" client-side (content-type isn't
@@ -100,7 +100,7 @@ export async function parseWebContent(state: IngestionStateType): Promise<Ingest
     ? extractServerMetadata(fetchResult.html, fetchResult.finalUrl ?? state.url)
     : { title: null, description: null, imageUrl: null, canonicalUrl: null, faviconUrl: defaultFaviconUrl(state.url) };
 
-  const preview = buildPreview(serverMetadata, state.browserCapture, { platform, resourceType, domain });
+  const preview = buildPreview(serverMetadata, state.browserCapture, { platform, resourceType, domain, hasAuth });
   const rawContent = fetchResult.html ? stripHtml(fetchResult.html).slice(0, MAX_CONTENT_LENGTH) : "";
 
   logNode(state.memoryId, "parseWebContent", {

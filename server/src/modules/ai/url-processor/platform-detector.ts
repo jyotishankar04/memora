@@ -1,17 +1,35 @@
 import type { PlatformInfo } from "./types";
 
+/**
+ * Credential lookup for a platform that requires authenticated fetching
+ * (e.g. Instagram blocks unauthenticated scraping). `envVar` names the env
+ * var holding the secret — resolved lazily via `getPlatformCredential()`,
+ * never read at module load, so a platform with no `auth` (or one whose
+ * env var isn't set) just has no credential, nothing fails.
+ */
+interface PlatformAuthConfig {
+  type: "cookie" | "bearer_token" | "api_key";
+  envVar: string;
+}
+
 interface PlatformRule {
   platform: string;
   hostnames: string[];
   resourceType?: (pathname: string) => string | null;
+  auth?: PlatformAuthConfig;
 }
 
-// Data, not branching logic — a new platform is a new row here, never a new
-// `if (host.includes(...))` somewhere else in the codebase. Not every URL
-// from a platform is the same resource type (a GitHub URL can be a repo, an
-// issue, a PR, or a profile), so resourceType is a small per-platform
-// classifier over the path, kept honest about what it can't determine
-// (returns null rather than guessing).
+// Data, not branching logic — a new platform (with or without auth) is a
+// new row here, never a new `if (host.includes(...))` or `if (platform ===
+// "x")` somewhere else in the codebase. To support a platform that needs
+// authenticated fetching, add `auth: { type: ..., envVar: "..." }` to its
+// row and set that env var — nothing else in this file, or any caller of
+// detectPlatform/getPlatformCredential, needs to change.
+//
+// Not every URL from a platform is the same resource type (a GitHub URL can
+// be a repo, an issue, a PR, or a profile), so resourceType is a small
+// per-platform classifier over the path, kept honest about what it can't
+// determine (returns null rather than guessing).
 const PLATFORM_RULES: PlatformRule[] = [
   {
     platform: "instagram",
@@ -101,9 +119,6 @@ const PLATFORM_RULES: PlatformRule[] = [
     resourceType: (path) => (/^\/posts\//.test(path) ? "product" : null),
   },
   {
-    // Fronted by Cloudflare's bot challenge, so our server-side fetch almost
-    // never gets the real page — a platform-branded tile beats the fully
-    // generic one for every LeetCode link, not just profiles.
     platform: "leetcode",
     hostnames: ["leetcode.com"],
     resourceType: (path) => {
@@ -126,11 +141,31 @@ export function detectPlatform(url: string): PlatformInfo {
     hostname = parsed.hostname.replace(/^www\./, "").toLowerCase();
     pathname = parsed.pathname;
   } catch {
-    return { platform: null, resourceType: null, domain: "" };
+    return { platform: null, resourceType: null, domain: "", hasAuth: false };
   }
 
   const rule = PLATFORM_RULES.find((r) => r.hostnames.some((h) => hostname === h || hostname.endsWith(`.${h}`)));
-  if (!rule) return { platform: null, resourceType: null, domain: hostname };
+  if (!rule) return { platform: null, resourceType: null, domain: hostname, hasAuth: false };
 
-  return { platform: rule.platform, resourceType: rule.resourceType?.(pathname) ?? null, domain: hostname };
+  return {
+    platform: rule.platform,
+    resourceType: rule.resourceType?.(pathname) ?? null,
+    domain: hostname,
+    hasAuth: !!rule.auth && !!process.env[rule.auth.envVar],
+  };
+}
+
+/**
+ * Resolves the configured credential for a platform, if any — the one
+ * place a future authenticated fetcher (e.g. for Instagram) should read
+ * secrets from, instead of hardcoding `process.env.INSTAGRAM_...` inline.
+ * Reads `process.env` directly (not the Zod-validated `env` object) since
+ * these are per-platform, optional, and pluggable — a platform's row can
+ * declare `auth` without every deployment needing to set it.
+ */
+export function getPlatformCredential(platform: string): { type: PlatformAuthConfig["type"]; value: string } | null {
+  const rule = PLATFORM_RULES.find((r) => r.platform === platform);
+  if (!rule?.auth) return null;
+  const value = process.env[rule.auth.envVar];
+  return value ? { type: rule.auth.type, value } : null;
 }
