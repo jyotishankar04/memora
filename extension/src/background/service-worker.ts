@@ -168,10 +168,12 @@ function dispatchCaptureToActiveTab(
   chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
     const tab = tabs[0];
     if (!tab?.id || isRestrictedPage(tab.url)) {
+      console.log("Memora: dispatchCaptureToActiveTab found no capturable active tab", tab?.url);
       notifyCannotCapture();
       sendResponse({ ok: false });
       return;
     }
+    console.log(`Memora: forwarding ${contentScriptAction} to tab ${tab.id} (${tab.url})`);
     // No callback here previously meant a failure (most commonly: this
     // tab was open before the extension was installed/reloaded, so it
     // never got the content script) failed completely silently — the
@@ -179,6 +181,7 @@ function dispatchCaptureToActiveTab(
     // chrome.runtime.lastError is what surfaces that as a real message.
     chrome.tabs.sendMessage(tab.id, { action: contentScriptAction, ...extra }, () => {
       if (chrome.runtime.lastError) {
+        console.error("Memora: content script didn't respond —", chrome.runtime.lastError.message);
         notifyCannotCapture();
       }
       sendResponse({ ok: true });
@@ -197,6 +200,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "CAPTURE_FULL_PAGE_SCREENSHOT") {
+    console.log("Memora: CAPTURE_FULL_PAGE_SCREENSHOT received from popup");
     dispatchCaptureToActiveTab(
       "CAPTURE_FULL_PAGE",
       { note: request.note, tags: request.tags, collectionIds: request.collectionIds },
@@ -212,7 +216,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     chrome.tabs
       .captureVisibleTab(sender.tab.windowId, { format: "png" })
       .then((dataUrl) => sendResponse({ dataUrl }))
-      .catch((err) => sendResponse({ error: err instanceof Error ? err.message : "Capture failed" }));
+      .catch((err) => {
+        console.error("Memora: captureVisibleTab failed", err);
+        sendResponse({ error: err instanceof Error ? err.message : "Capture failed" });
+      });
     return true;
   }
 
@@ -232,6 +239,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "FULL_PAGE_CAPTURED") {
+    console.log(`Memora: FULL_PAGE_CAPTURED received, ${request.shots?.length ?? 0} shots to stitch`);
     handleFullPageCaptured(request)
       .catch(notifySaveError)
       .finally(() => sendResponse({ ok: true }));
@@ -239,6 +247,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "FULL_PAGE_CAPTURE_FAILED") {
+    console.error("Memora: content script reported a full-page capture failure —", request.message);
     notifySaveError(new Error(request.message || "Full page capture failed."));
     return undefined;
   }
@@ -246,15 +255,24 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   return undefined;
 });
 
+/** Always logs to this worker's own console in addition to trying a desktop notification — if notifications are blocked at the OS/browser level (or anything else about chrome.notifications.create fails), the console is what's still guaranteed to show something. Check via chrome://extensions -> Memora Capture -> "service worker". */
+function notify(title: string, message: string): void {
+  console.log(`Memora: ${title} — ${message}`);
+  chrome.notifications?.create(
+    { type: "basic", iconUrl: "icon-128.png", title, message, priority: 1 },
+    () => {
+      if (chrome.runtime.lastError) {
+        console.error("Memora: notification failed to display —", chrome.runtime.lastError.message);
+      }
+    },
+  );
+}
+
 function notifyCannotCapture(): void {
-  chrome.notifications?.create({
-    type: "basic",
-    iconUrl: "icon-128.png",
-    title: "Can't capture this page",
-    message:
-      "This page doesn't support screenshot capture — that's usually a browser system page (chrome://, the Web Store, PDF viewer), or a tab that was already open before Memora was installed or updated. Reloading the tab fixes the latter.",
-    priority: 1,
-  });
+  notify(
+    "Can't capture this page",
+    "This page doesn't support screenshot capture — that's usually a browser system page (chrome://, the Web Store, PDF viewer), or a tab that was already open before Memora was installed or updated. Reloading the tab fixes the latter.",
+  );
 }
 
 async function handleScreenshotRegion(
@@ -409,40 +427,14 @@ async function createMemory(payload: MemoryCreatePayload): Promise<void> {
     body: JSON.stringify({ ...payload, captureMethod: "extension" }),
   });
 
-  chrome.notifications?.create(
-    {
-      type: "basic",
-      iconUrl: "icon-128.png",
-      title: "Saved to Memora",
-      message: memory.title || payload.title,
-      priority: 1,
-    },
-    () => {
-      if (chrome.runtime.lastError) {
-        console.log("Notifications API not fully loaded, skipping alert window.");
-      }
-    },
-  );
+  notify("Saved to Memora", memory.title || payload.title);
 }
 
 function notifySignInRequired(): void {
-  chrome.notifications?.create({
-    type: "basic",
-    iconUrl: "icon-128.png",
-    title: "Sign in to Memora",
-    message: "Open the Memora extension popup and sign in before saving.",
-    priority: 1,
-  });
+  notify("Sign in to Memora", "Open the Memora extension popup and sign in before saving.");
 }
 
 function notifySaveError(err: unknown): void {
-  console.error("Memora save failed:", err);
   const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Something went wrong.";
-  chrome.notifications?.create({
-    type: "basic",
-    iconUrl: "icon-128.png",
-    title: "Couldn't save to Memora",
-    message,
-    priority: 1,
-  });
+  notify("Couldn't save to Memora", message);
 }

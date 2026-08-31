@@ -22,7 +22,17 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "CAPTURE_FULL_PAGE") {
-    captureFullPage({ note: request.note, tags: request.tags, collectionIds: request.collectionIds });
+    // Belt-and-suspenders on top of captureFullPage's own try/catch — an
+    // async function called without awaiting or catching turns any escaped
+    // exception into an invisible unhandled rejection, so this makes sure
+    // nothing from here can fail completely silently.
+    captureFullPage({ note: request.note, tags: request.tags, collectionIds: request.collectionIds }).catch((err) => {
+      console.error("Memora: captureFullPage rejected", err);
+      chrome.runtime.sendMessage({
+        action: "FULL_PAGE_CAPTURE_FAILED",
+        message: err instanceof Error ? err.message : "Full page capture failed.",
+      });
+    });
   }
 
   return true;
@@ -202,22 +212,29 @@ function removeFullPageStatus(): void {
 }
 
 async function captureFullPage(meta: SelectionMeta): Promise<void> {
+  // Visible the instant this starts, before any computation below runs —
+  // if something after this throws, at least this much proves the click
+  // was received and the capture actually started, rather than the whole
+  // thing failing invisibly with nothing on screen to show for it.
+  showFullPageStatus("Capturing full page…");
+
   const originalScrollX = window.scrollX;
   const originalScrollY = window.scrollY;
-  const dpr = window.devicePixelRatio || 1;
-  const viewportWidth = window.innerWidth;
-  const viewportHeight = window.innerHeight;
-  const pageHeight = Math.max(
-    document.body.scrollHeight,
-    document.documentElement.scrollHeight,
-    document.body.offsetHeight,
-    document.documentElement.offsetHeight,
-  );
-  const stepCount = Math.min(MAX_FULL_PAGE_SHOTS, Math.max(1, Math.ceil(pageHeight / viewportHeight)));
-
-  const shots: { dataUrl: string; y: number }[] = [];
 
   try {
+    const dpr = window.devicePixelRatio || 1;
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const pageHeight = Math.max(
+      document.body.scrollHeight,
+      document.documentElement.scrollHeight,
+      document.body.offsetHeight,
+      document.documentElement.offsetHeight,
+    );
+    const stepCount = Math.min(MAX_FULL_PAGE_SHOTS, Math.max(1, Math.ceil(pageHeight / viewportHeight)));
+
+    const shots: { dataUrl: string; y: number }[] = [];
+
     for (let i = 0; i < stepCount; i++) {
       showFullPageStatus(stepCount > 1 ? `Capturing full page… (${i + 1}/${stepCount})` : "Capturing full page…");
 
@@ -249,6 +266,14 @@ async function captureFullPage(meta: SelectionMeta): Promise<void> {
       collectionIds: meta.collectionIds,
     });
   } catch (err) {
+    // Everything above is now inside this try — including the page-height
+    // computation that used to run before it, unprotected. A throw there
+    // used to become a silent unhandled promise rejection (visible only in
+    // the page's own DevTools console, never as a toast or notification),
+    // which is exactly the "nothing happens at all" failure mode this is
+    // fixing: any failure from here on is now guaranteed to reach the
+    // background worker and surface as a real notification.
+    console.error("Memora: full page capture failed", err);
     chrome.runtime.sendMessage({
       action: "FULL_PAGE_CAPTURE_FAILED",
       message: err instanceof Error ? err.message : "Full page capture failed.",
