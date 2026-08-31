@@ -57,6 +57,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 /** Exact-matches Home ("/app"); prefix-matches everything else, so a nav
  * item for a list route (Tags, Collections, Memories) stays highlighted on
@@ -1073,11 +1074,17 @@ function AppShell({ children }: { children: React.ReactNode }) {
               className="fixed z-50 hidden md:block"
               style={{ left: menuAnchor.x, top: menuAnchor.y }}
             >
+              <TooltipProvider delay={150}>
               {[...primaryNavItems, ...secondaryNavItems].map((item, idx, all) => {
                 const Icon = item.icon;
                 const active = isNavItemActive(pathname, item.href);
                 const itemSize = 48;
-                const radius = 150;
+                // Radius scales with item count so items keep roughly the
+                // same arc-length gap (~52px, the spacing the original fixed
+                // radius=150 gave for 10 items) instead of overlapping once
+                // more nav items are added — a fixed radius crowded the last
+                // few icons into a clump once this list grew past ~10.
+                const radius = all.length <= 1 ? 150 : (52 * (all.length - 1)) / Math.PI;
                 // Half-circle bulging to the right of the button (-90deg =
                 // straight up, 0deg = right, +90deg = straight down), since
                 // the dock is pinned to the left edge of the screen.
@@ -1095,27 +1102,34 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     exit={{ x: originOffset, y: originOffset, opacity: 0, scale: 0.3 }}
                     transition={{ duration: 0.25, delay: idx * 0.02, ease: "easeOut" }}
                   >
-                    <Link
-                      ref={(el) => {
-                        flyoutItemRefs.current[idx] = el;
-                      }}
-                      href={item.href}
-                      onClick={() => setSidebarFlyoutOpen(false)}
-                      title={item.label}
-                      aria-label={item.label}
-                      style={{ height: itemSize, width: itemSize }}
-                      className={cn(
-                        "rounded-full border flex items-center justify-center shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
-                        active
-                          ? "bg-primary/15 border-primary/30 text-primary"
-                          : "bg-card border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted"
-                      )}
-                    >
-                      <Icon className="h-5 w-5" />
-                    </Link>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <Link
+                            ref={(el) => {
+                              flyoutItemRefs.current[idx] = el;
+                            }}
+                            href={item.href}
+                            onClick={() => setSidebarFlyoutOpen(false)}
+                            aria-label={item.label}
+                            style={{ height: itemSize, width: itemSize }}
+                            className={cn(
+                              "rounded-full border flex items-center justify-center shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50",
+                              active
+                                ? "bg-primary/15 border-primary/30 text-primary"
+                                : "bg-card border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted"
+                            )}
+                          >
+                            <Icon className="h-5 w-5" />
+                          </Link>
+                        }
+                      />
+                      <TooltipContent side="right" align="center">{item.label}</TooltipContent>
+                    </Tooltip>
                   </motion.div>
                 );
               })}
+              </TooltipProvider>
             </div>
           </React.Fragment>
         )}
