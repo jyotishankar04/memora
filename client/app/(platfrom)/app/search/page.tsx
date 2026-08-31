@@ -3,13 +3,24 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, X } from "lucide-react";
+import { Search, X, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
-import { listMemories } from "@/lib/memories";
-import { memoriesQueryKey } from "@/context/MemoryContext";
+import { listMemories, type ListMemoriesParams } from "@/lib/memories";
+import { memoriesQueryKey, useCollectionsQuery } from "@/context/MemoryContext";
 import { timeAgo } from "@/lib/time";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
+import { cn } from "@/lib/utils";
+import type { MemoryType } from "@/types/memory";
+
+const FILTER_TYPE: Record<string, MemoryType | undefined> = {
+  all: undefined,
+  links: "web",
+  notes: "note",
+  videos: "video",
+  images: "image",
+  files: "document",
+};
 
 export default function SearchPage() {
   const searchParams = useSearchParams();
@@ -18,6 +29,11 @@ export default function SearchPage() {
 
   const [query, setQuery] = useState(urlQuery);
   const [debouncedQuery, setDebouncedQuery] = useState(urlQuery);
+  const [typeFilter, setTypeFilter] = useState("all");
+  const [favoriteOnly, setFavoriteOnly] = useState(false);
+  const [collectionId, setCollectionId] = useState<string | undefined>(undefined);
+
+  const { data: collections = [] } = useCollectionsQuery();
 
   useEffect(() => {
     function syncFromUrl() {
@@ -33,13 +49,21 @@ export default function SearchPage() {
   }, [query]);
 
   const trimmedQuery = debouncedQuery.trim();
+  const searchParamsForQuery: ListMemoriesParams = {
+    q: trimmedQuery,
+    limit: 50,
+    type: FILTER_TYPE[typeFilter],
+    isFavorite: favoriteOnly || undefined,
+    collectionId,
+  };
   const { data, isFetching } = useQuery({
-    queryKey: memoriesQueryKey({ q: trimmedQuery, limit: 50 }),
-    queryFn: () => listMemories({ q: trimmedQuery, limit: 50 }),
+    queryKey: memoriesQueryKey(searchParamsForQuery),
+    queryFn: () => listMemories(searchParamsForQuery),
     enabled: trimmedQuery.length > 0,
   });
   const results = data?.items ?? [];
   const hasSearched = trimmedQuery.length > 0;
+  const hasActiveFilters = typeFilter !== "all" || favoriteOnly || Boolean(collectionId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -58,7 +82,7 @@ export default function SearchPage() {
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Search your memory</h1>
         <p className="text-xs text-muted-foreground mt-1">
-          Query your personal library by title, description, or tags.
+          Ask in plain language — we&apos;ll find what&apos;s relevant, not just exact keyword matches.
         </p>
       </div>
 
@@ -81,16 +105,82 @@ export default function SearchPage() {
         </div>
       </form>
 
+      {/* Filters — type, favorites, collection. All optional, combine with the query. */}
+      <div className="flex flex-wrap items-center gap-1.5 -mt-6 max-w-2xl text-xs font-semibold">
+        {[
+          { id: "all", label: "All" },
+          { id: "links", label: "Websites" },
+          { id: "notes", label: "Notes" },
+          { id: "videos", label: "Videos" },
+          { id: "images", label: "Images" },
+          { id: "files", label: "Files" },
+        ].map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setTypeFilter(tab.id)}
+            className={cn(
+              "px-3 py-1.5 rounded-full border transition-all text-nowrap select-none",
+              typeFilter === tab.id
+                ? "border-primary/20 bg-primary/10 text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted",
+            )}
+          >
+            {tab.label}
+          </button>
+        ))}
+
+        <span className="w-px h-4 bg-border/60 mx-1" />
+
+        <button
+          onClick={() => setFavoriteOnly((prev) => !prev)}
+          className={cn(
+            "px-3 py-1.5 rounded-full border transition-all flex items-center gap-1 select-none",
+            favoriteOnly
+              ? "border-primary/20 bg-primary/10 text-primary"
+              : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted",
+          )}
+        >
+          Favorites {favoriteOnly && <Check className="h-3 w-3 stroke-[3]" />}
+        </button>
+
+        {collections.length > 0 && (
+          <select
+            value={collectionId ?? ""}
+            onChange={(e) => setCollectionId(e.target.value || undefined)}
+            className={cn(
+              "px-3 py-1.5 rounded-full border bg-background transition-all cursor-pointer",
+              collectionId
+                ? "border-primary/20 bg-primary/10 text-primary"
+                : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted",
+            )}
+          >
+            <option value="">Any collection</option>
+            {collections.map((col) => (
+              <option key={col.id} value={col.id}>{col.icon} {col.name}</option>
+            ))}
+          </select>
+        )}
+
+        {hasActiveFilters && (
+          <button
+            onClick={() => { setTypeFilter("all"); setFavoriteOnly(false); setCollectionId(undefined); }}
+            className="px-3 py-1.5 rounded-full text-muted-foreground hover:text-foreground flex items-center gap-1 select-none"
+          >
+            <X className="h-3 w-3" /> Clear
+          </button>
+        )}
+      </div>
+
       {/* INITIAL STATE */}
       {!hasSearched && (
         <div className="space-y-4 max-w-xl font-medium">
           <span className="text-[11px] text-muted-foreground uppercase tracking-wider block">Try searching for:</span>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             {[
-              { label: "SaaS", query: "SaaS" },
-              { label: "AI research", query: "AI" },
-              { label: "Design references", query: "Design" },
-              { label: "Pricing UI", query: "Pricing" }
+              { label: "langchain course", query: "langchain course" },
+              { label: "landing page inspirations", query: "landing page inspirations" },
+              { label: "that github gist about vps setup", query: "github gist about how to setup vps" },
+              { label: "pricing page design references", query: "pricing page design references" }
             ].map((item, idx) => (
               <button
                 key={idx}
@@ -174,7 +264,9 @@ export default function SearchPage() {
         <div className="text-center py-20 max-w-sm mx-auto space-y-3">
           <h3 className="text-sm font-semibold text-foreground">No matches found</h3>
           <p className="text-xs text-muted-foreground">
-            We couldn&apos;t find items matching your query. Try searching for other concepts like &quot;SaaS&quot;, &quot;Linear&quot;, or &quot;Pricing&quot;.
+            {hasActiveFilters
+              ? "We couldn't find anything matching your query and filters. Try clearing a filter or rephrasing your search."
+              : "We couldn't find anything relevant. Try rephrasing, or search for a broader concept."}
           </p>
         </div>
       )}

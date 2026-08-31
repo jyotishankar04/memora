@@ -1,4 +1,4 @@
-import { and, count, desc, eq, ilike, inArray, or, type SQL } from "drizzle-orm";
+import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
 import { db } from "../../db";
 import { attachments, collectionMemories, collections, memories, memoryTags, tags } from "../../db/schema";
 import { MemoryStatus, type MemoryType } from "../../db/enums";
@@ -6,6 +6,7 @@ import { AppError } from "../../shared/errors/app-error";
 import { logger } from "../../shared/utils/logger";
 import { enqueueIngestion } from "../ai/ingestion/queue";
 import { getVectorStore } from "../ai/vector-store";
+import { hybridSearch } from "../ai/search";
 import { normalizeUrl } from "./normalize-url";
 import type {
   AttachmentInput,
@@ -154,10 +155,19 @@ function toListItem(
   };
 }
 
-export async function listMemories(
+/**
+ * userId/inTrash/isArchived/type/isFavorite/collectionId/tag scoping shared
+ * by both the plain list path and the hybrid-search path below — does NOT
+ * include the `q` predicate itself, that's handled entirely differently by
+ * each path (ILIKE-free now; see searchMemories). Returns null when a
+ * collectionId/tag filter resolves to zero matching memory IDs, so the
+ * caller can short-circuit to an empty result instead of running a
+ * pointless query.
+ */
+async function buildFilterConditions(
   userId: string,
-  query: ListMemoriesQuery,
-): Promise<{ items: MemoryListItem[]; page: number; limit: number; total: number }> {
+  query: Pick<ListMemoriesQuery, "type" | "isFavorite" | "isArchived" | "inTrash" | "collectionId" | "tag">,
+): Promise<SQL[] | null> {
   const conditions: SQL[] = [
     eq(memories.userId, userId),
     eq(memories.inTrash, query.inTrash ?? false),
@@ -166,9 +176,6 @@ export async function listMemories(
 
   if (query.type) conditions.push(eq(memories.type, query.type as MemoryType));
   if (query.isFavorite !== undefined) conditions.push(eq(memories.isFavorite, query.isFavorite));
-  if (query.q) {
-    conditions.push(or(ilike(memories.title, `%${query.q}%`), ilike(memories.description, `%${query.q}%`))!);
-  }
 
   if (query.collectionId) {
     const rows = await db
@@ -176,7 +183,7 @@ export async function listMemories(
       .from(collectionMemories)
       .where(eq(collectionMemories.collectionId, query.collectionId));
     const ids = rows.map((row) => row.memoryId);
-    if (ids.length === 0) return { items: [], page: query.page, limit: query.limit, total: 0 };
+    if (ids.length === 0) return null;
     conditions.push(inArray(memories.id, ids));
   }
 
@@ -187,11 +194,28 @@ export async function listMemories(
       .innerJoin(tags, eq(memoryTags.tagId, tags.id))
       .where(and(eq(tags.userId, userId), eq(tags.name, query.tag)));
     const ids = rows.map((row) => row.memoryId);
-    if (ids.length === 0) return { items: [], page: query.page, limit: query.limit, total: 0 };
+    if (ids.length === 0) return null;
     conditions.push(inArray(memories.id, ids));
   }
 
-  const where = and(...conditions);
+  return conditions;
+}
+
+export async function listMemories(
+  userId: string,
+  query: ListMemoriesQuery,
+): Promise<{ items: MemoryListItem[]; page: number; limit: number; total: number }> {
+  const baseConditions = await buildFilterConditions(userId, query);
+  if (baseConditions === null) {
+    return { items: [], page: query.page, limit: query.limit, total: 0 };
+  }
+
+  const trimmedQ = query.q?.trim();
+  if (trimmedQ) {
+    return searchMemories(userId, query, trimmedQ, baseConditions);
+  }
+
+  const where = and(...baseConditions);
 
   const [{ value: total }] = await db.select({ value: count() }).from(memories).where(where);
 
@@ -209,6 +233,67 @@ export async function listMemories(
     attachCollections(memoryIds),
   ]);
   const items = rows.map((row) =>
+    toListItem(row, tagsByMemory.get(row.id) ?? [], collectionsByMemory.get(row.id) ?? []),
+  );
+
+  return { items, page: query.page, limit: query.limit, total };
+}
+
+/**
+ * Hybrid (semantic + lexical, RRF-fused) search path for a non-empty `q`.
+ * candidateLimit scales with the requested page so RRF has real headroom to
+ * re-rank above the page size — docs' flat 25 only really suits page 1 —
+ * capped at 200 as a safety net (never hit today since the client always
+ * requests page 1/limit 50).
+ *
+ * `total` here is ranked.length — the count of distinct memories matched
+ * across both legs after the similarity floor and facet post-filter, bounded
+ * by ~2x candidateLimit. It's an approximation of "how many things matched,"
+ * not a true unbounded COUNT(*) — acceptable since the search page doesn't
+ * currently use `total` for pagination UI.
+ */
+async function searchMemories(
+  userId: string,
+  query: ListMemoriesQuery,
+  trimmedQ: string,
+  baseConditions: SQL[],
+): Promise<{ items: MemoryListItem[]; page: number; limit: number; total: number }> {
+  const candidateLimit = Math.min(200, Math.max(25, query.page * query.limit * 2));
+
+  const ranked = await hybridSearch({
+    userId,
+    query: trimmedQ,
+    filterConditions: baseConditions,
+    candidateLimit,
+  });
+
+  const total = ranked.length;
+  const start = (query.page - 1) * query.limit;
+  const pageIds = ranked.slice(start, start + query.limit).map((r) => r.memoryId);
+
+  if (pageIds.length === 0) {
+    return { items: [], page: query.page, limit: query.limit, total };
+  }
+
+  const rows = await db
+    .select()
+    .from(memories)
+    .where(and(eq(memories.userId, userId), inArray(memories.id, pageIds)));
+
+  // RRF's ranked order doesn't survive a plain `IN (...)` fetch — reorder
+  // via the same Map-based idiom attachTags/attachCollections already use
+  // for batch-fetch-by-ID-array, rather than a SQL array_position/CASE
+  // (which appears nowhere else in this codebase).
+  const rowsById = new Map(rows.map((row) => [row.id, row]));
+  const orderedRows = pageIds
+    .map((id) => rowsById.get(id))
+    .filter((row): row is typeof rows[number] => row !== undefined);
+
+  const [tagsByMemory, collectionsByMemory] = await Promise.all([
+    attachTags(pageIds),
+    attachCollections(pageIds),
+  ]);
+  const items = orderedRows.map((row) =>
     toListItem(row, tagsByMemory.get(row.id) ?? [], collectionsByMemory.get(row.id) ?? []),
   );
 

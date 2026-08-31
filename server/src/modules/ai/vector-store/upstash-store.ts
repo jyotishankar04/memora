@@ -48,5 +48,22 @@ export function createUpstashVectorStore(): VectorStore {
     async deleteMemoryVectors(memoryId: string) {
       await index.delete({ prefix: `${memoryId}:` });
     },
+
+    async searchByEmbedding(userId, embedding, limit) {
+      // kind='document' scopes this to the one summary-level vector per
+      // memory (not the per-chunk vectors also stored under this same
+      // index) — memoryId is read straight off metadata rather than parsed
+      // out of the `${memoryId}:document` id string.
+      const results = await index.query<{ memoryId: string; userId: string; kind: string }>({
+        vector: embedding,
+        topK: limit,
+        filter: `kind = 'document' and userId = '${userId}'`,
+        includeMetadata: true,
+      });
+
+      return results
+        .filter((r) => r.metadata?.memoryId)
+        .map((r) => ({ memoryId: r.metadata!.memoryId, score: r.score }));
+    },
   };
 }
