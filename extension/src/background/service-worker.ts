@@ -226,7 +226,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
 function notifyCannotCapture(): void {
   chrome.notifications?.create({
     type: "basic",
-    iconUrl: "src/popup/icon-128.png",
+    iconUrl: "icon-128.png",
     title: "Can't capture this page",
     message:
       "This page doesn't support screenshot capture — that's usually a browser system page (chrome://, the Web Store, PDF viewer), or a tab that was already open before Memora was installed or updated. Reloading the tab fixes the latter.",
@@ -280,6 +280,9 @@ async function cropToRect(dataUrl: string, rect: ScreenshotRect, dpr: number): P
   const sy = Math.max(0, Math.round(rect.y * dpr));
   const sw = Math.min(Math.round(rect.width * dpr), bitmap.width - sx);
   const sh = Math.min(Math.round(rect.height * dpr), bitmap.height - sy);
+  if (sw <= 0 || sh <= 0) {
+    throw new Error("Screenshot capture came back empty — try again.");
+  }
 
   const canvas = new OffscreenCanvas(sw, sh);
   const ctx = canvas.getContext("2d");
@@ -326,7 +329,7 @@ async function createMemory(payload: MemoryCreatePayload): Promise<void> {
   chrome.notifications?.create(
     {
       type: "basic",
-      iconUrl: "src/popup/icon-128.png",
+      iconUrl: "icon-128.png",
       title: "Saved to Memora",
       message: memory.title || payload.title,
       priority: 1,
@@ -342,7 +345,7 @@ async function createMemory(payload: MemoryCreatePayload): Promise<void> {
 function notifySignInRequired(): void {
   chrome.notifications?.create({
     type: "basic",
-    iconUrl: "src/popup/icon-128.png",
+    iconUrl: "icon-128.png",
     title: "Sign in to Memora",
     message: "Open the Memora extension popup and sign in before saving.",
     priority: 1,
@@ -354,7 +357,7 @@ function notifySaveError(err: unknown): void {
   const message = err instanceof ApiError ? err.message : err instanceof Error ? err.message : "Something went wrong.";
   chrome.notifications?.create({
     type: "basic",
-    iconUrl: "src/popup/icon-128.png",
+    iconUrl: "icon-128.png",
     title: "Couldn't save to Memora",
     message,
     priority: 1,
