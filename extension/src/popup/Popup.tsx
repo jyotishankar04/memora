@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Loader2, Camera
 } from "lucide-react";
@@ -28,6 +28,13 @@ interface Collection {
   icon: string;
 }
 
+// How long the automatic "save this page" POST waits before actually
+// firing, giving a "Take Screenshot" click a window to preempt it outright
+// instead of racing a create against a delete. The existing progress-bar
+// animation already runs ~1s, so this is invisible in the common case
+// where the user isn't reaching for the camera button at all.
+const AUTO_SAVE_GRACE_MS = 600;
+
 export default function Popup() {
   const [state, setState] = useState<ExtensionState>("checking");
   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
@@ -39,6 +46,8 @@ export default function Popup() {
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
   const [saveChangesState, setSaveChangesState] = useState<"idle" | "saving" | "error">("idle");
+  const screenshotRequestedRef = useRef(false);
+  const captureAbortRef = useRef<AbortController | null>(null);
 
   // Real collections, fetched once the memory exists — the picker below
   // used to list 3 hardcoded names; this is the user's actual collection
@@ -122,12 +131,20 @@ export default function Popup() {
       keywords: metadata.keywords,
     };
     setPageInfo(info);
+    setState("saving"); // shows the header (and the screenshot button) right away, not just once the save itself starts
+
+    // Give a "Take Screenshot" click a window to cancel the auto-save
+    // before it ever fires — see AUTO_SAVE_GRACE_MS.
+    await new Promise((resolve) => setTimeout(resolve, AUTO_SAVE_GRACE_MS));
+    if (screenshotRequestedRef.current) return;
+
     await initiateSave(info);
   };
 
   const initiateSave = async (info: PageInfo) => {
-    setState("saving");
     setErrorMessage(null);
+    const controller = new AbortController();
+    captureAbortRef.current = controller;
 
     try {
       const isValidUrl = (value?: string) => {
@@ -159,11 +176,17 @@ export default function Popup() {
           keywords: keywords.length > 0 ? keywords : undefined,
           captureMethod: "extension",
         }),
+        signal: controller.signal,
       });
 
       setSavedMemory(memory);
       setState("saved");
     } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") {
+        // Cancelled in favor of a screenshot capture instead (see
+        // handleTakeScreenshot) — not a real failure, nothing to show.
+        return;
+      }
       if (err instanceof ApiError && err.status === 401) {
         setState("unauthorized");
         return;
@@ -195,8 +218,25 @@ export default function Popup() {
     }
   };
 
-  const handleTakeScreenshot = () => {
+  const handleTakeScreenshot = async () => {
     if (typeof chrome === "undefined" || !chrome.runtime) return;
+
+    // Opening the popup already kicked off an automatic save of the
+    // current page — a screenshot action means that's not what the user
+    // wanted. The ref stops it from ever firing if AUTO_SAVE_GRACE_MS
+    // hasn't elapsed yet (the common case); abort/delete below are just a
+    // safety net for a click landing right as/after it already went out,
+    // so a screenshot never leaves a duplicate "full page" memory behind.
+    screenshotRequestedRef.current = true;
+    captureAbortRef.current?.abort();
+    if (savedMemory?.id) {
+      try {
+        await apiFetch(`/memories/${savedMemory.id}`, { method: "DELETE" });
+      } catch {
+        // Best-effort — the screenshot still proceeds either way.
+      }
+    }
+
     chrome.runtime.sendMessage({ action: "START_SCREENSHOT_SELECTION" });
     // The selection overlay lives on the page itself, so the popup just
     // gets out of the way — the background worker handles capture/upload/

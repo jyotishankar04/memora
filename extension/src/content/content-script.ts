@@ -38,17 +38,20 @@ function getMetaTag(nameOrProperty: string): string | null {
 // it — the actual pixel capture has to happen in the background service
 // worker (chrome.tabs.captureVisibleTab isn't available to content
 // scripts), so on mouseup this just hands the rect off via a message and
-// gets out of the way. Ignored entirely if a selection is already active,
-// so re-triggering the shortcut/button mid-drag is a no-op, not a second
-// overlay stacked on top.
+// gets out of the way.
 
-let selectionActive = false;
+const OVERLAY_ID = "memora-screenshot-selection-overlay";
 
 function startRegionSelection(): void {
-  if (selectionActive) return;
-  selectionActive = true;
+  // Self-heals from a selection that didn't clean up properly (see the
+  // window-level mouseup/blur listeners below for why that could happen) —
+  // checking the DOM directly instead of a separate boolean flag means
+  // there's nothing that can drift out of sync with reality and silently
+  // block every future screenshot attempt on this page until it's reloaded.
+  document.getElementById(OVERLAY_ID)?.remove();
 
   const overlay = document.createElement("div");
+  overlay.id = OVERLAY_ID;
   overlay.style.cssText =
     "position:fixed;inset:0;z-index:2147483647;cursor:crosshair;background:rgba(15,17,21,0.25);";
 
@@ -73,35 +76,23 @@ function startRegionSelection(): void {
   const cleanup = () => {
     overlay.remove();
     document.removeEventListener("keydown", onKeyDown, true);
-    selectionActive = false;
+    window.removeEventListener("mouseup", onWindowMouseUp, true);
+    window.removeEventListener("blur", cleanup);
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
     if (e.key === "Escape") cleanup();
   };
 
-  overlay.addEventListener("mousedown", (e) => {
-    dragging = true;
-    startX = e.clientX;
-    startY = e.clientY;
-    box.style.display = "block";
-    updateBox(startX, startY, startX, startY);
-  });
-
-  overlay.addEventListener("mousemove", (e) => {
-    if (!dragging) return;
-    updateBox(startX, startY, e.clientX, e.clientY);
-  });
-
-  overlay.addEventListener("mouseup", (e) => {
+  const finalize = (endX: number, endY: number) => {
     if (!dragging) return;
     dragging = false;
 
     const rect = {
-      x: Math.min(startX, e.clientX),
-      y: Math.min(startY, e.clientY),
-      width: Math.abs(e.clientX - startX),
-      height: Math.abs(e.clientY - startY),
+      x: Math.min(startX, endX),
+      y: Math.min(startY, endY),
+      width: Math.abs(endX - startX),
+      height: Math.abs(endY - startY),
     };
 
     cleanup();
@@ -117,9 +108,39 @@ function startRegionSelection(): void {
       pageTitle: document.title,
       pageUrl: location.href,
     });
+  };
+
+  // The overlay's own mouseup handles the normal case. This window-level
+  // one (capture phase, so it runs first and is never blocked by a page
+  // script stopping propagation) is what actually fixes the "sometimes
+  // just doesn't work" bug: dragging past the edge of the viewport and
+  // releasing the mouse there never fires mouseup ON the overlay at all,
+  // which used to leave it (and every future screenshot attempt) stuck
+  // until the page was reloaded. finalize()'s `dragging` guard makes it
+  // safe to also fire from the overlay's own listener for a normal
+  // in-viewport release — the second call is just a no-op.
+  const onWindowMouseUp = (e: MouseEvent) => finalize(e.clientX, e.clientY);
+
+  overlay.addEventListener("mousedown", (e) => {
+    dragging = true;
+    startX = e.clientX;
+    startY = e.clientY;
+    box.style.display = "block";
+    updateBox(startX, startY, startX, startY);
   });
 
+  overlay.addEventListener("mousemove", (e) => {
+    if (!dragging) return;
+    updateBox(startX, startY, e.clientX, e.clientY);
+  });
+
+  overlay.addEventListener("mouseup", (e) => finalize(e.clientX, e.clientY));
+
   document.addEventListener("keydown", onKeyDown, true);
+  window.addEventListener("mouseup", onWindowMouseUp, true);
+  // Alt-tabbing or clicking into another app mid-drag: cancel cleanly
+  // rather than leaving the overlay stranded on top of the page.
+  window.addEventListener("blur", cleanup);
 
   function updateBox(x1: number, y1: number, x2: number, y2: number) {
     box.style.left = `${Math.min(x1, x2)}px`;
