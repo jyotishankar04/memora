@@ -10,7 +10,8 @@ import {
   Settings, HelpCircle, Bell, X, Moon, Sun, FolderOpen,
   Compass, Check, ChevronRight, ChevronDown,
   FolderPlus, Heart, Clock, Compass as CompassIcon, BarChart2, FileText,
-  Paperclip, UploadCloud, Layers, PanelLeftClose, PanelLeftOpen, Menu, Tag
+  Paperclip, UploadCloud, Layers, PanelLeftClose, PanelLeftOpen, Menu, Tag,
+  Keyboard, Archive, Trash2, TrendingUp, Plug
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -49,6 +50,31 @@ import {
   AttachmentActions,
   AttachmentAction,
 } from "@/components/ui/attachment";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from "@/components/ui/dialog";
+
+/** Exact-matches Home ("/app"); prefix-matches everything else, so a nav
+ * item for a list route (Tags, Collections, Memories) stays highlighted on
+ * its own dynamic detail routes (/app/tags/foo, /app/collections/[id]). */
+function isNavItemActive(pathname: string, href: string): boolean {
+  if (href === "/app") return pathname === "/app";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
+const KEYBOARD_SHORTCUTS: { keys: string; label: string }[] = [
+  { keys: "⌘K / Ctrl+K", label: "Open search" },
+  { keys: "⌘Q / Ctrl+Q", label: "Quick capture" },
+  { keys: "⌘B / Ctrl+B", label: "Toggle sidebar" },
+  { keys: "⌘M / Ctrl+M", label: "Open collapsed sidebar menu" },
+  { keys: "⌘N / Ctrl+N", label: "Go to notifications" },
+  { keys: "⌘P / Ctrl+P", label: "Go to settings" },
+  { keys: "Esc", label: "Close open menu" },
+];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -121,6 +147,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [userDropdownOpen, setUserDropdownOpen] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [collectionsOpen, setCollectionsOpen] = useState(true);
   const [collectionsShowAll, setCollectionsShowAll] = useState(false);
   const COLLECTIONS_PREVIEW_COUNT = 4;
@@ -275,10 +302,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
         collectionIds: captureCollectionIds.length > 0 ? captureCollectionIds : undefined,
         attachments: captureAttachment ? [captureAttachment] : undefined,
       };
-      console.log("[capture] detected", { rawText: captureText, detectedType, extractedUrl: extractedUrl?.href ?? null, caption });
-      console.log("[capture] submitting", payload);
       const memory = await create(payload);
-      console.log("[capture] saved", memory);
       // AI ingestion runs async in the background from here — the modal
       // doesn't wait for it. Once it finishes, the enrichment (corrected
       // caption, real title, tags, collection) shows up wherever the memory
@@ -441,6 +465,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
     { label: "Favorites", href: "/app/favorites", icon: Heart },
     { label: "Recent", href: "/app/recent", icon: Clock },
     { label: "Explore", href: "/app/explore", icon: CompassIcon },
+    { label: "Archive", href: "/app/archive", icon: Archive },
+    { label: "Trash", href: "/app/trash", icon: Trash2 },
+    { label: "Notifications", href: "/app/notifications", icon: Bell },
+    { label: "Insights", href: "/app/insights", icon: TrendingUp },
+    { label: "Integrations", href: "/app/integrations", icon: Plug },
     { label: "Memory Graph", href: "/app/graph", icon: BarChart2 },
   ];
 
@@ -523,7 +552,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <div className="space-y-0.5">
             {primaryNavItems.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href;
+              const active = isNavItemActive(pathname, item.href);
               return (
                 <Link
                   key={item.href}
@@ -606,7 +635,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           <div className="space-y-0.5 pt-4 border-t border-border/30">
             {secondaryNavItems.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href;
+              const active = isNavItemActive(pathname, item.href);
               return (
                 <Link
                   key={item.href}
@@ -688,12 +717,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <span>Settings</span>
               </Link>
 
-              <Link href="/app/settings/billing" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
-                <BarChart2 className="h-3.5 w-3.5 opacity-60" />
+              <button
+                type="button"
+                onClick={() => { setUserDropdownOpen(false); setShortcutsOpen(true); }}
+                className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2"
+              >
+                <Keyboard className="h-3.5 w-3.5 opacity-60" />
                 <span>Keyboard shortcuts</span>
-              </Link>
+              </button>
 
-              <Link href="/app/help" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
+              <Link href="/help" target="_blank" rel="noreferrer" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
                 <HelpCircle className="h-3.5 w-3.5 opacity-60" />
                 <span>Help & Docs</span>
               </Link>
@@ -768,12 +801,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
         {/* 3. MOBILE BOTTOM NAVIGATION BAR */}
         <nav className="fixed bottom-0 left-0 right-0 h-14 bg-card border-t border-border flex items-center justify-around z-40 md:hidden px-4">
-          <Link href="/app" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", pathname === "/app" ? "text-primary" : "text-muted-foreground")}>
+          <Link href="/app" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", isNavItemActive(pathname, "/app") ? "text-primary" : "text-muted-foreground")}>
             <Compass className="h-5 w-5" />
             <span>Home</span>
           </Link>
 
-          <Link href="/app/search" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", pathname === "/app/search" ? "text-primary" : "text-muted-foreground")}>
+          <Link href="/app/search" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", isNavItemActive(pathname, "/app/search") ? "text-primary" : "text-muted-foreground")}>
             <Search className="h-5 w-5" />
             <span>Search</span>
           </Link>
@@ -786,12 +819,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <Plus className="h-6 w-6 stroke-[2.5]" />
           </button>
 
-          <Link href="/app/ask" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", pathname === "/app/ask" ? "text-primary" : "text-muted-foreground")}>
+          <Link href="/app/ask" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", isNavItemActive(pathname, "/app/ask") ? "text-primary" : "text-muted-foreground")}>
             <Sparkles className="h-5 w-5" />
             <span>Ask</span>
           </Link>
 
-          <Link href="/app/settings" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", pathname.startsWith("/app/settings") ? "text-primary" : "text-muted-foreground")}>
+          <Link href="/app/settings" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", isNavItemActive(pathname, "/app/settings") ? "text-primary" : "text-muted-foreground")}>
             <Settings className="h-5 w-5" />
             <span>You</span>
           </Link>
@@ -1042,7 +1075,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             >
               {[...primaryNavItems, ...secondaryNavItems].map((item, idx, all) => {
                 const Icon = item.icon;
-                const active = pathname === item.href;
+                const active = isNavItemActive(pathname, item.href);
                 const itemSize = 48;
                 const radius = 150;
                 // Half-circle bulging to the right of the button (-90deg =
@@ -1135,6 +1168,24 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </CommandGroup>
         </CommandList>
       </CommandDialog>
+
+      {/* KEYBOARD SHORTCUTS DIALOG */}
+      <Dialog open={shortcutsOpen} onOpenChange={setShortcutsOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Keyboard shortcuts</DialogTitle>
+            <DialogDescription>Available anywhere in the app.</DialogDescription>
+          </DialogHeader>
+          <ul className="space-y-2 pt-1">
+            {KEYBOARD_SHORTCUTS.map((s) => (
+              <li key={s.label} className="flex items-center justify-between gap-4 text-xs">
+                <span className="text-muted-foreground">{s.label}</span>
+                <kbd className="px-1.5 py-0.5 border border-border bg-muted rounded text-[10px] font-mono text-foreground shrink-0">{s.keys}</kbd>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
 
       {/* Global CSS animations styles */}
       <style>{`
