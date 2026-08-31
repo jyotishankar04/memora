@@ -29,7 +29,7 @@ export default function SpacesPage() {
       <div className="border-b border-border/20 pb-4">
         <h1 className="text-2xl font-bold tracking-tight">Spaces</h1>
         <p className="text-xs text-muted-foreground mt-1">
-          Everything you&apos;ve captured, laid out as a timeline — pick up where you left off.
+          Your recent activity, most recent first — pick up where you left off.
         </p>
       </div>
 
