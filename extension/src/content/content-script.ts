@@ -17,8 +17,20 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
   }
 
+  // START_SELECTION and CAPTURE_FULL_PAGE both kick off multi-second work
+  // (a drag interaction, or the whole scroll-and-shoot loop) and report
+  // their real result later via a completely separate message
+  // (SCREENSHOT_REGION_SELECTED / FULL_PAGE_CAPTURED /
+  // FULL_PAGE_CAPTURE_FAILED) — they must acknowledge THIS message right
+  // away rather than leaving its channel open for all of that. Chrome
+  // eventually times out a channel nothing ever responds on and reports it
+  // to the sender as chrome.runtime.lastError, which dispatchCaptureToActiveTab
+  // (service-worker.ts) was reading as "capture failed" — even after the
+  // real capture had already succeeded independently. That's what caused
+  // "Can't capture this page" to fire alongside an actually-successful save.
   if (request.action === "START_SELECTION") {
     startRegionSelection({ note: request.note, tags: request.tags, collectionIds: request.collectionIds });
+    sendResponse({ received: true });
   }
 
   if (request.action === "CAPTURE_FULL_PAGE") {
@@ -33,6 +45,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
         message: err instanceof Error ? err.message : "Full page capture failed.",
       });
     });
+    sendResponse({ received: true });
   }
 
   return true;

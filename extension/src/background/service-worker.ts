@@ -333,15 +333,16 @@ async function handleScreenshotRegion(
   const blob = await cropToRect(dataUrl, msg.rect, msg.dpr);
   const uploaded = await uploadScreenshot(blob);
 
-  // The user's own note (if any) leads, with the region's extracted DOM
-  // text right behind it as grounding for the AI ingestion pipeline.
-  const content = [msg.note?.trim(), msg.extractedText].filter(Boolean).join("\n\n");
-
   await createMemory({
     type: "image",
     url: msg.pageUrl,
     title: (msg.pageTitle || "Screenshot").slice(0, 500),
-    content: content || undefined,
+    // The user's own note stays exactly what they typed, nothing appended
+    // to it — the region's extracted DOM text goes in `description`
+    // instead, a separate field for page context rather than something
+    // that looks like part of the user's own words.
+    content: msg.note?.trim() || undefined,
+    description: msg.extractedText || undefined,
     tags: msg.tags && msg.tags.length > 0 ? msg.tags : undefined,
     collectionIds: msg.collectionIds && msg.collectionIds.length > 0 ? msg.collectionIds : undefined,
     attachments: [{ fileUrl: uploaded.fileUrl, fileSize: uploaded.fileSize, mimeType: uploaded.mimeType }],
@@ -415,13 +416,15 @@ async function handleFullPageCaptured(msg: {
   const blob = await canvas.convertToBlob({ type: "image/png" });
   const uploaded = await uploadScreenshot(blob);
 
-  const content = [msg.note?.trim(), msg.extractedText].filter(Boolean).join("\n\n");
-
   await createMemory({
     type: "image",
     url: msg.pageUrl,
     title: (msg.pageTitle || "Full Page Screenshot").slice(0, 500),
-    content: content || undefined,
+    // Same split as handleScreenshotRegion() — the note is only ever what
+    // the user actually typed; the page's extracted text is separate
+    // context, not appended to it.
+    content: msg.note?.trim() || undefined,
+    description: msg.extractedText || undefined,
     tags: msg.tags && msg.tags.length > 0 ? msg.tags : undefined,
     collectionIds: msg.collectionIds && msg.collectionIds.length > 0 ? msg.collectionIds : undefined,
     attachments: [{ fileUrl: uploaded.fileUrl, fileSize: uploaded.fileSize, mimeType: uploaded.mimeType }],
@@ -451,6 +454,7 @@ interface MemoryCreatePayload {
   url?: string;
   title: string;
   content?: string;
+  description?: string;
   tags?: string[];
   collectionIds?: string[];
   attachments?: { fileUrl: string; fileSize?: number; mimeType?: string }[];
