@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Camera, FileText, ChevronDown
+  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Camera, FileText, ChevronDown, Maximize
 } from "lucide-react";
 import { apiFetch, ApiError } from "../lib/api";
 import { WEB_APP_URL } from "../lib/config";
@@ -38,7 +38,7 @@ export default function Popup() {
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
-  const [captureMode, setCaptureMode] = useState<"page" | "screenshot">("page");
+  const [captureMode, setCaptureMode] = useState<"page" | "screenshot" | "fullscreenshot">("page");
   const [collectionsOpen, setCollectionsOpen] = useState(false);
   const collectionsRef = useRef<HTMLDivElement>(null);
 
@@ -208,21 +208,31 @@ export default function Popup() {
     }
   };
 
+  // Whatever the user already filled in here travels with a screenshot too
+  // — the background worker attaches it to the memory it creates once the
+  // capture (region or full viewport) actually happens.
+  const buildCaptureContext = () => ({
+    note: note.trim() || undefined,
+    tags: tags.length > 0 ? tags : undefined,
+    collectionIds: selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined,
+  });
+
   const handleTakeScreenshot = () => {
     if (typeof chrome === "undefined" || !chrome.runtime) return;
-    // Whatever the user already filled in here travels with the
-    // screenshot too — the background worker attaches it to the memory it
-    // creates once the region is picked (see service-worker.ts).
-    chrome.runtime.sendMessage({
-      action: "START_SCREENSHOT_SELECTION",
-      note: note.trim() || undefined,
-      tags: tags.length > 0 ? tags : undefined,
-      collectionIds: selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined,
-    });
+    chrome.runtime.sendMessage({ action: "START_SCREENSHOT_SELECTION", ...buildCaptureContext() });
     // The selection overlay lives on the page itself, so the popup just
     // gets out of the way — the background worker handles capture/upload/
     // save and reports back via a desktop notification. Nothing else was
     // saved by opening the popup, so there's nothing to undo here.
+    window.close();
+  };
+
+  const handleFullPageScreenshot = () => {
+    if (typeof chrome === "undefined" || !chrome.runtime) return;
+    // Same pipeline as a region screenshot, just with no drag step — the
+    // content script captures the whole current viewport instead of a
+    // user-picked rect (see content-script.ts's CAPTURE_FULL_VIEWPORT).
+    chrome.runtime.sendMessage({ action: "CAPTURE_FULL_PAGE_SCREENSHOT", ...buildCaptureContext() });
     window.close();
   };
 
@@ -303,27 +313,39 @@ export default function Popup() {
           Memora" below is the only thing that writes anything. */}
       {state === "ready" && (
         <div style={styles.savedForm}>
-          {/* Quick capture-mode buttons — "Full Page" saves the tab as-is;
-              "Screenshot" hands off to the region-select overlay on the
-              page itself. Room for more modes here later without touching
-              anything below, since note/tags/collections apply regardless
-              of which mode is picked. */}
+          {/* Quick capture-mode buttons — "Page" saves the tab as-is;
+              "Region" hands off to the drag-select overlay on the page
+              itself; "Full Shot" screenshots the whole current viewport
+              with no dragging needed. Room for more modes here later
+              without touching anything below, since note/tags/collections
+              apply regardless of which mode is picked. */}
           <div style={styles.modeRow}>
             <button
               type="button"
+              title="Save this page as a link"
               style={captureMode === "page" ? styles.modeButtonActive : styles.modeButton}
               onClick={() => setCaptureMode("page")}
             >
               <FileText size={13} />
-              Full Page
+              Page
             </button>
             <button
               type="button"
+              title="Drag to screenshot part of the page"
               style={captureMode === "screenshot" ? styles.modeButtonActive : styles.modeButton}
               onClick={() => setCaptureMode("screenshot")}
             >
               <Camera size={13} />
-              Screenshot
+              Region
+            </button>
+            <button
+              type="button"
+              title="Screenshot the entire visible page"
+              style={captureMode === "fullscreenshot" ? styles.modeButtonActive : styles.modeButton}
+              onClick={() => setCaptureMode("fullscreenshot")}
+            >
+              <Maximize size={13} />
+              Full Shot
             </button>
           </div>
 
@@ -345,8 +367,17 @@ export default function Popup() {
             />
           </div>
 
-          <button style={styles.primaryButton} onClick={captureMode === "page" ? handleSave : handleTakeScreenshot}>
-            {captureMode === "page" ? "Save to Memora" : "Select Area & Save"}
+          <button
+            style={styles.primaryButton}
+            onClick={
+              captureMode === "page" ? handleSave : captureMode === "screenshot" ? handleTakeScreenshot : handleFullPageScreenshot
+            }
+          >
+            {captureMode === "page"
+              ? "Save to Memora"
+              : captureMode === "screenshot"
+                ? "Select Area & Save"
+                : "Capture Full Screenshot"}
           </button>
 
           <div style={styles.fieldGroup}>

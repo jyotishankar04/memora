@@ -159,36 +159,49 @@ function isRestrictedPage(url: string | undefined): boolean {
   return !url || RESTRICTED_URL_PREFIXES.some((prefix) => url.startsWith(prefix));
 }
 
+/** Forwards a capture request to the active tab's content script, whichever kind it is (drag-select region or full-viewport) — both need the same "does this page even support it" check and the same lastError handling. */
+function dispatchCaptureToActiveTab(
+  contentScriptAction: string,
+  extra: { note?: string; tags?: string[]; collectionIds?: string[] },
+  sendResponse: (response: { ok: boolean }) => void,
+): void {
+  chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
+    const tab = tabs[0];
+    if (!tab?.id || isRestrictedPage(tab.url)) {
+      notifyCannotCapture();
+      sendResponse({ ok: false });
+      return;
+    }
+    // No callback here previously meant a failure (most commonly: this
+    // tab was open before the extension was installed/reloaded, so it
+    // never got the content script) failed completely silently — the
+    // button would just do nothing with no indication why. Checking
+    // chrome.runtime.lastError is what surfaces that as a real message.
+    chrome.tabs.sendMessage(tab.id, { action: contentScriptAction, ...extra }, () => {
+      if (chrome.runtime.lastError) {
+        notifyCannotCapture();
+      }
+      sendResponse({ ok: true });
+    });
+  });
+}
+
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "START_SCREENSHOT_SELECTION") {
-    chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
-      const tab = tabs[0];
-      if (!tab?.id || isRestrictedPage(tab.url)) {
-        notifyCannotCapture();
-        sendResponse({ ok: false });
-        return;
-      }
-      // No callback here previously meant a failure (most commonly: this
-      // tab was open before the extension was installed/reloaded, so it
-      // never got the content script) failed completely silently — the
-      // button would just do nothing with no indication why. Checking
-      // chrome.runtime.lastError is what surfaces that as a real message.
-      chrome.tabs.sendMessage(
-        tab.id,
-        {
-          action: "START_SELECTION",
-          note: request.note,
-          tags: request.tags,
-          collectionIds: request.collectionIds,
-        },
-        () => {
-          if (chrome.runtime.lastError) {
-            notifyCannotCapture();
-          }
-          sendResponse({ ok: true });
-        },
-      );
-    });
+    dispatchCaptureToActiveTab(
+      "START_SELECTION",
+      { note: request.note, tags: request.tags, collectionIds: request.collectionIds },
+      sendResponse,
+    );
+    return true;
+  }
+
+  if (request.action === "CAPTURE_FULL_PAGE_SCREENSHOT") {
+    dispatchCaptureToActiveTab(
+      "CAPTURE_FULL_VIEWPORT",
+      { note: request.note, tags: request.tags, collectionIds: request.collectionIds },
+      sendResponse,
+    );
     return true;
   }
 

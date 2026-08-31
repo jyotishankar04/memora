@@ -21,6 +21,10 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     startRegionSelection({ note: request.note, tags: request.tags, collectionIds: request.collectionIds });
   }
 
+  if (request.action === "CAPTURE_FULL_VIEWPORT") {
+    captureFullViewport({ note: request.note, tags: request.tags, collectionIds: request.collectionIds });
+  }
+
   return true;
 });
 
@@ -157,6 +161,25 @@ function startRegionSelection(meta: SelectionMeta): void {
     box.style.width = `${Math.abs(x2 - x1)}px`;
     box.style.height = `${Math.abs(y2 - y1)}px`;
   }
+}
+
+// No dragging needed — the "rect" is just the whole current viewport, so
+// this reuses the exact same SCREENSHOT_REGION_SELECTED message (and so
+// the exact same capture/crop/upload/save pipeline in the background
+// worker) as a dragged region, just skipping the selection step entirely.
+function captureFullViewport(meta: SelectionMeta): void {
+  const rect = { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight };
+  chrome.runtime.sendMessage({
+    action: "SCREENSHOT_REGION_SELECTED",
+    rect,
+    dpr: window.devicePixelRatio || 1,
+    extractedText: extractTextInRect(rect),
+    pageTitle: document.title,
+    pageUrl: location.href,
+    note: meta.note,
+    tags: meta.tags,
+    collectionIds: meta.collectionIds,
+  });
 }
 
 const MAX_EXTRACTED_TEXT_LENGTH = 5000;
