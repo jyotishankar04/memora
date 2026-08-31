@@ -1,11 +1,11 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
-  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Loader2, Camera
+  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Camera
 } from "lucide-react";
 import { apiFetch, ApiError } from "../lib/api";
 import { WEB_APP_URL } from "../lib/config";
 
-type ExtensionState = "checking" | "unauthorized" | "saving" | "saved" | "error";
+type ExtensionState = "checking" | "unauthorized" | "ready" | "saving" | "saved" | "error";
 
 interface PageInfo {
   url: string;
@@ -28,13 +28,6 @@ interface Collection {
   icon: string;
 }
 
-// How long the automatic "save this page" POST waits before actually
-// firing, giving a "Take Screenshot" click a window to preempt it outright
-// instead of racing a create against a delete. The existing progress-bar
-// animation already runs ~1s, so this is invisible in the common case
-// where the user isn't reaching for the camera button at all.
-const AUTO_SAVE_GRACE_MS = 600;
-
 export default function Popup() {
   const [state, setState] = useState<ExtensionState>("checking");
   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
@@ -45,20 +38,16 @@ export default function Popup() {
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
-  const [saveChangesState, setSaveChangesState] = useState<"idle" | "saving" | "error">("idle");
-  const screenshotRequestedRef = useRef(false);
-  const captureAbortRef = useRef<AbortController | null>(null);
 
-  // Real collections, fetched once the memory exists — the picker below
-  // used to list 3 hardcoded names; this is the user's actual collection
-  // set, same GET /collections the dashboard's capture page uses.
+  // Real collections, fetched as soon as the page is loaded and ready to
+  // save — the picker used to list 3 hardcoded names; this is the user's
+  // actual collection set, same GET /collections the dashboard uses.
   useEffect(() => {
-    if (state !== "saved") return;
+    if (state !== "ready") return;
     apiFetch<Collection[]>("/collections")
       .then(setCollections)
       .catch(() => {
-        // Non-fatal — the picker just stays empty; the memory itself is
-        // already saved regardless of whether collections load.
+        // Non-fatal — the picker just stays empty.
       });
   }, [state]);
 
@@ -94,7 +83,7 @@ export default function Popup() {
         if (!result.memora_token) {
           setState("unauthorized");
         } else {
-          captureCurrentTab();
+          loadPageInfo();
         }
       });
     });
@@ -113,7 +102,11 @@ export default function Popup() {
     });
   };
 
-  const captureCurrentTab = async () => {
+  // Just reads the tab — no network write. Opening the popup used to
+  // auto-save the page immediately, with no way to know whether that's
+  // actually what the user wanted; now it only loads a preview, and
+  // nothing is saved until "Save to Memora" is clicked below.
+  const loadPageInfo = async () => {
     const [activeTab] = await chrome.tabs.query({ active: true, currentWindow: true });
     if (!activeTab?.url || !activeTab.id) {
       setState("error");
@@ -122,29 +115,21 @@ export default function Popup() {
     }
 
     const metadata = await getPageMetadata(activeTab.id);
-    const info: PageInfo = {
+    setPageInfo({
       url: activeTab.url,
       title: activeTab.title || "Untitled Webpage",
       favIconUrl: activeTab.favIconUrl,
       description: metadata.description,
       previewImage: metadata.previewImage,
       keywords: metadata.keywords,
-    };
-    setPageInfo(info);
-    setState("saving"); // shows the header (and the screenshot button) right away, not just once the save itself starts
-
-    // Give a "Take Screenshot" click a window to cancel the auto-save
-    // before it ever fires — see AUTO_SAVE_GRACE_MS.
-    await new Promise((resolve) => setTimeout(resolve, AUTO_SAVE_GRACE_MS));
-    if (screenshotRequestedRef.current) return;
-
-    await initiateSave(info);
+    });
+    setState("ready");
   };
 
-  const initiateSave = async (info: PageInfo) => {
+  const handleSave = async () => {
+    if (!pageInfo) return;
+    setState("saving");
     setErrorMessage(null);
-    const controller = new AbortController();
-    captureAbortRef.current = controller;
 
     try {
       const isValidUrl = (value?: string) => {
@@ -157,7 +142,7 @@ export default function Popup() {
         }
       };
 
-      const keywords = (info.keywords ?? "")
+      const keywords = (pageInfo.keywords ?? "")
         .split(",")
         .map((keyword) => keyword.trim())
         .filter(Boolean)
@@ -168,25 +153,22 @@ export default function Popup() {
         method: "POST",
         body: JSON.stringify({
           type: "web",
-          url: info.url,
-          title: info.title.slice(0, 500),
-          description: info.description || undefined,
-          faviconUrl: isValidUrl(info.favIconUrl) ? info.favIconUrl : undefined,
-          previewImageUrl: isValidUrl(info.previewImage) ? info.previewImage : undefined,
+          url: pageInfo.url,
+          title: pageInfo.title.slice(0, 500),
+          description: pageInfo.description || undefined,
+          faviconUrl: isValidUrl(pageInfo.favIconUrl) ? pageInfo.favIconUrl : undefined,
+          previewImageUrl: isValidUrl(pageInfo.previewImage) ? pageInfo.previewImage : undefined,
           keywords: keywords.length > 0 ? keywords : undefined,
+          content: note.trim() || undefined,
+          tags: tags.length > 0 ? tags : undefined,
+          collectionIds: selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined,
           captureMethod: "extension",
         }),
-        signal: controller.signal,
       });
 
       setSavedMemory(memory);
       setState("saved");
     } catch (err) {
-      if (err instanceof DOMException && err.name === "AbortError") {
-        // Cancelled in favor of a screenshot capture instead (see
-        // handleTakeScreenshot) — not a real failure, nothing to show.
-        return;
-      }
       if (err instanceof ApiError && err.status === 401) {
         setState("unauthorized");
         return;
@@ -196,51 +178,13 @@ export default function Popup() {
     }
   };
 
-  const handleSaveChanges = async () => {
-    if (!savedMemory) return;
-    if (!note.trim() && tags.length === 0 && selectedCollectionIds.length === 0) {
-      window.close();
-      return;
-    }
-    setSaveChangesState("saving");
-    try {
-      await apiFetch(`/memories/${savedMemory.id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          content: note.trim() || undefined,
-          tags: tags.length > 0 ? tags : undefined,
-          collectionIds: selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined,
-        }),
-      });
-      window.close();
-    } catch {
-      setSaveChangesState("error");
-    }
-  };
-
-  const handleTakeScreenshot = async () => {
+  const handleTakeScreenshot = () => {
     if (typeof chrome === "undefined" || !chrome.runtime) return;
-
-    // Opening the popup already kicked off an automatic save of the
-    // current page — a screenshot action means that's not what the user
-    // wanted. The ref stops it from ever firing if AUTO_SAVE_GRACE_MS
-    // hasn't elapsed yet (the common case); abort/delete below are just a
-    // safety net for a click landing right as/after it already went out,
-    // so a screenshot never leaves a duplicate "full page" memory behind.
-    screenshotRequestedRef.current = true;
-    captureAbortRef.current?.abort();
-    if (savedMemory?.id) {
-      try {
-        await apiFetch(`/memories/${savedMemory.id}`, { method: "DELETE" });
-      } catch {
-        // Best-effort — the screenshot still proceeds either way.
-      }
-    }
-
     chrome.runtime.sendMessage({ action: "START_SCREENSHOT_SELECTION" });
     // The selection overlay lives on the page itself, so the popup just
     // gets out of the way — the background worker handles capture/upload/
-    // save and reports back via a desktop notification.
+    // save and reports back via a desktop notification. Nothing else was
+    // saved by opening the popup, so there's nothing to undo here.
     window.close();
   };
 
@@ -315,38 +259,19 @@ export default function Popup() {
           <AlertCircle size={28} color="#ff3b30" />
           <p style={styles.errorLabel}>Couldn't save page</p>
           <p style={styles.errorSub}>{errorMessage || "Make sure you are on a valid webpage context."}</p>
-          <button style={styles.secondaryButton} onClick={captureCurrentTab}>
+          <button style={styles.secondaryButton} onClick={loadPageInfo}>
             Try again
           </button>
         </div>
       )}
 
-      {state === "saved" && (
+      {/* Nothing is saved yet here — opening the popup used to auto-save
+          the page immediately, which meant it always happened whether or
+          not that's what the user actually wanted (e.g. reaching for
+          "Take Screenshot" instead). Now this is just a preview; "Save to
+          Memora" below is the only thing that writes anything. */}
+      {state === "ready" && (
         <div style={styles.savedForm}>
-
-          <div style={styles.statusHeader}>
-            <Check size={16} color="#1447E6" />
-            <span style={styles.statusText}>Saved to Memora</span>
-          </div>
-
-          {/* Non-blocking duplicate notice (docs/URL_CAPTURE_AND_PREVIEW.md —
-              the memory above was already created either way). */}
-          {savedMemory?.duplicateOf && (
-            <div style={styles.duplicateNotice}>
-              <RefreshCw size={12} color="#8e8e93" />
-              <span>
-                You already saved a similar link ("{savedMemory.duplicateOf.title}").{" "}
-                <button
-                  style={styles.inlineLinkButton}
-                  onClick={() => handleOpenMemora(`/app/memories/${savedMemory.duplicateOf!.id}`)}
-                >
-                  View it
-                </button>
-              </span>
-            </div>
-          )}
-
-          {/* Web preview panel */}
           <div style={styles.previewBox}>
             <TextTruncate text={pageInfo?.title || "Untitled"} lines={2} style={styles.previewTitle} />
             <span style={styles.previewDomain}>{getDomain(pageInfo?.url)}</span>
@@ -355,7 +280,6 @@ export default function Popup() {
             )}
           </div>
 
-          {/* Context note input */}
           <div style={styles.fieldGroup}>
             <label style={styles.fieldLabel}>ADD A NOTE</label>
             <textarea
@@ -366,9 +290,6 @@ export default function Popup() {
             />
           </div>
 
-          {/* Tags — free-entry, no fake "AI suggestions" that don't
-              persist; real AI tags land on the memory async via ingestion
-              and show up on the dashboard once ready. */}
           <div style={styles.fieldGroup}>
             <label style={styles.fieldLabel}>TAGS</label>
             <div style={styles.tagsContainer}>
@@ -421,24 +342,49 @@ export default function Popup() {
             </div>
           )}
 
-          {saveChangesState === "error" && (
-            <p style={styles.errorSub}>Couldn't save your changes. Try again.</p>
+          <button style={styles.primaryButton} onClick={handleSave}>
+            Save to Memora
+          </button>
+        </div>
+      )}
+
+      {state === "saved" && (
+        <div style={styles.savedForm}>
+          <div style={styles.statusHeader}>
+            <Check size={16} color="#1447E6" />
+            <span style={styles.statusText}>Saved to Memora</span>
+          </div>
+
+          {/* Non-blocking duplicate notice (docs/URL_CAPTURE_AND_PREVIEW.md —
+              the memory above was already created either way). */}
+          {savedMemory?.duplicateOf && (
+            <div style={styles.duplicateNotice}>
+              <RefreshCw size={12} color="#8e8e93" />
+              <span>
+                You already saved a similar link ("{savedMemory.duplicateOf.title}").{" "}
+                <button
+                  style={styles.inlineLinkButton}
+                  onClick={() => handleOpenMemora(`/app/memories/${savedMemory.duplicateOf!.id}`)}
+                >
+                  View it
+                </button>
+              </span>
+            </div>
           )}
 
-          {/* Buttons footer */}
-          <button style={styles.primaryButton} onClick={handleSaveChanges} disabled={saveChangesState === "saving"}>
-            {saveChangesState === "saving" ? (
-              <Loader2 size={13} className="animate-spin" style={{ verticalAlign: "middle" }} />
-            ) : (
-              "Save changes"
-            )}
+          <div style={styles.previewBox}>
+            <TextTruncate text={pageInfo?.title || "Untitled"} lines={2} style={styles.previewTitle} />
+            <span style={styles.previewDomain}>{getDomain(pageInfo?.url)}</span>
+          </div>
+
+          <button style={styles.primaryButton} onClick={() => window.close()}>
+            Done
           </button>
 
           <button style={styles.openDashboardLink} onClick={() => handleOpenMemora()}>
             <span>Open Memora</span>
             <ExternalLink size={12} style={{ marginLeft: 4 }} />
           </button>
-
         </div>
       )}
 
