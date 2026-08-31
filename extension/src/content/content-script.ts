@@ -21,8 +21,8 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     startRegionSelection({ note: request.note, tags: request.tags, collectionIds: request.collectionIds });
   }
 
-  if (request.action === "CAPTURE_FULL_VIEWPORT") {
-    captureFullViewport({ note: request.note, tags: request.tags, collectionIds: request.collectionIds });
+  if (request.action === "CAPTURE_FULL_PAGE") {
+    captureFullPage({ note: request.note, tags: request.tags, collectionIds: request.collectionIds });
   }
 
   return true;
@@ -45,6 +45,7 @@ function getMetaTag(nameOrProperty: string): string | null {
 // gets out of the way.
 
 const OVERLAY_ID = "memora-screenshot-selection-overlay";
+const MAX_EXTRACTED_TEXT_LENGTH = 5000;
 
 interface SelectionMeta {
   note?: string;
@@ -163,26 +164,105 @@ function startRegionSelection(meta: SelectionMeta): void {
   }
 }
 
-// No dragging needed — the "rect" is just the whole current viewport, so
-// this reuses the exact same SCREENSHOT_REGION_SELECTED message (and so
-// the exact same capture/crop/upload/save pipeline in the background
-// worker) as a dragged region, just skipping the selection step entirely.
-function captureFullViewport(meta: SelectionMeta): void {
-  const rect = { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight };
-  chrome.runtime.sendMessage({
-    action: "SCREENSHOT_REGION_SELECTED",
-    rect,
-    dpr: window.devicePixelRatio || 1,
-    extractedText: extractTextInRect(rect),
-    pageTitle: document.title,
-    pageUrl: location.href,
-    note: meta.note,
-    tags: meta.tags,
-    collectionIds: meta.collectionIds,
-  });
+// --- Full-page screenshot ------------------------------------------------
+//
+// chrome.tabs.captureVisibleTab only ever sees what's currently on screen,
+// so a genuinely full-page shot means scrolling through the page in
+// viewport-height steps, asking the background worker to capture each
+// step (only it can call captureVisibleTab), and stitching the results
+// into one tall image there. This file drives the scroll loop (only it
+// can); the background worker does the pixel work and the final save.
+
+const FULL_PAGE_STATUS_ID = "memora-fullpage-status";
+// captureVisibleTab is rate-limited (Chrome throttles rapid calls), and
+// this delay also gives the page a moment to repaint/settle after each
+// scroll (lazy-loaded images, sticky headers re-positioning, etc.) before
+// it's captured — too short and shots come out mid-scroll or half-loaded.
+const FULL_PAGE_STEP_DELAY_MS = 400;
+// Bounds how many shots a very tall (or infinite-scroll) page gets stitched
+// from — 15 steps covers most real pages; beyond that we stop rather than
+// hammering captureVisibleTab dozens of times for one capture.
+const MAX_FULL_PAGE_SHOTS = 15;
+
+function showFullPageStatus(text: string): void {
+  let el = document.getElementById(FULL_PAGE_STATUS_ID);
+  if (!el) {
+    el = document.createElement("div");
+    el.id = FULL_PAGE_STATUS_ID;
+    el.style.cssText =
+      "position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#1c1c1e;" +
+      "color:#fff;font:12px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;padding:6px 12px;border-radius:8px;pointer-events:none;";
+    document.documentElement.appendChild(el);
+  }
+  el.textContent = text;
 }
 
-const MAX_EXTRACTED_TEXT_LENGTH = 5000;
+function removeFullPageStatus(): void {
+  document.getElementById(FULL_PAGE_STATUS_ID)?.remove();
+}
+
+async function captureFullPage(meta: SelectionMeta): Promise<void> {
+  const originalScrollX = window.scrollX;
+  const originalScrollY = window.scrollY;
+  const dpr = window.devicePixelRatio || 1;
+  const viewportWidth = window.innerWidth;
+  const viewportHeight = window.innerHeight;
+  const pageHeight = Math.max(
+    document.body.scrollHeight,
+    document.documentElement.scrollHeight,
+    document.body.offsetHeight,
+    document.documentElement.offsetHeight,
+  );
+  const stepCount = Math.min(MAX_FULL_PAGE_SHOTS, Math.max(1, Math.ceil(pageHeight / viewportHeight)));
+
+  const shots: { dataUrl: string; y: number }[] = [];
+
+  try {
+    for (let i = 0; i < stepCount; i++) {
+      showFullPageStatus(stepCount > 1 ? `Capturing full page… (${i + 1}/${stepCount})` : "Capturing full page…");
+
+      // Clamped so the final step aligns to the true bottom of the page
+      // instead of overshooting past it.
+      const targetY = Math.min(i * viewportHeight, Math.max(0, pageHeight - viewportHeight));
+      window.scrollTo({ top: targetY, left: 0, behavior: "instant" });
+      await new Promise((resolve) => setTimeout(resolve, FULL_PAGE_STEP_DELAY_MS));
+
+      const response = await chrome.runtime.sendMessage({ action: "CAPTURE_VIEWPORT_FRAME" });
+      if (!response?.dataUrl) {
+        throw new Error(response?.error || "Capturing a section of the page failed.");
+      }
+      shots.push({ dataUrl: response.dataUrl, y: window.scrollY });
+    }
+
+    chrome.runtime.sendMessage({
+      action: "FULL_PAGE_CAPTURED",
+      shots,
+      dpr,
+      viewportWidth,
+      viewportHeight,
+      totalHeight: shots[shots.length - 1].y + viewportHeight,
+      extractedText: extractFullPageText(),
+      pageTitle: document.title,
+      pageUrl: location.href,
+      note: meta.note,
+      tags: meta.tags,
+      collectionIds: meta.collectionIds,
+    });
+  } catch (err) {
+    chrome.runtime.sendMessage({
+      action: "FULL_PAGE_CAPTURE_FAILED",
+      message: err instanceof Error ? err.message : "Full page capture failed.",
+    });
+  } finally {
+    removeFullPageStatus();
+    window.scrollTo({ top: originalScrollY, left: originalScrollX, behavior: "instant" });
+  }
+}
+
+/** The whole page's rendered text, not just what's on screen right now — extractTextInRect (below) is viewport-relative and can't answer "what does the whole page say" since getClientRects() is meaningless for scrolled-away content. */
+function extractFullPageText(): string {
+  return (document.body.innerText || "").replace(/\s+/g, " ").trim().slice(0, MAX_EXTRACTED_TEXT_LENGTH);
+}
 
 /** Collects the rendered text of every text node whose on-screen position intersects `rect` — the same "what's actually visible here" signal a human eye would read off the selected area, not a DOM-structural guess. */
 function extractTextInRect(rect: { x: number; y: number; width: number; height: number }): string {
