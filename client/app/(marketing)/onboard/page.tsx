@@ -12,6 +12,8 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { completeOnboarding } from "@/lib/user";
 import { useCurrentUserQuery, useSetCurrentUser } from "@/context/UserContext";
+import { useCreateMemoryMutation } from "@/context/MemoryContext";
+import { detectMemoryType, deriveTitle, splitLinkAndCaption } from "@/lib/detect-memory-type";
 
 // Step 2 Interests
 const interests = [
@@ -67,6 +69,7 @@ export default function OnboardingPage() {
     mutationFn: completeOnboarding,
     onSuccess: setCurrentUser,
   });
+  const createMemoryMutation = useCreateMemoryMutation();
 
   // Update progress bar
   useEffect(() => {
@@ -99,6 +102,24 @@ export default function OnboardingPage() {
         contentTypes: saveMost,
         organizeMode: orgMode,
       });
+      // Whatever the user typed/pasted in the "save something" box is a real
+      // memory, not just onboarding decoration — save it the same way
+      // capture/page.tsx does, so it's not silently discarded once onboarding
+      // completes.
+      const detectedType = detectMemoryType({ text: customLink, attachmentMimeType: null });
+      const { url: extractedUrl, caption } = splitLinkAndCaption(customLink);
+      const isLink = detectedType === "web" || detectedType === "video";
+      try {
+        await createMemoryMutation.mutateAsync({
+          type: detectedType,
+          title: deriveTitle(detectedType, customLink, null),
+          url: isLink ? extractedUrl?.href : undefined,
+          content: detectedType === "note" ? customLink.trim() || undefined : isLink ? caption || undefined : undefined,
+        });
+      } catch {
+        // Onboarding itself already succeeded — don't block entry to the app
+        // over the bonus first-memory save failing.
+      }
       setStep(7);
     } catch (err) {
       setSubmitError(err instanceof Error ? err.message : "Couldn't save your preferences. Please try again.");
