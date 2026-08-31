@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
-  Sparkles, Check, Bookmark, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert
+  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Loader2
 } from "lucide-react";
 import { apiFetch, ApiError } from "../lib/api";
 import { WEB_APP_URL } from "../lib/config";
@@ -22,15 +22,52 @@ interface CreatedMemory {
   duplicateOf: { id: string; title: string } | null;
 }
 
+interface Collection {
+  id: string;
+  name: string;
+  icon: string;
+}
+
 export default function Popup() {
   const [state, setState] = useState<ExtensionState>("checking");
   const [pageInfo, setPageInfo] = useState<PageInfo | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [savedMemory, setSavedMemory] = useState<CreatedMemory | null>(null);
   const [note, setNote] = useState("");
-  const [selectedCollection, setSelectedCollection] = useState("None");
-  const [suggestedTags, setSuggestedTags] = useState<string[]>(["Design", "SaaS", "Inspiration"]);
-  const [activeTags, setActiveTags] = useState<string[]>([]);
+  const [collections, setCollections] = useState<Collection[]>([]);
+  const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
+  const [tags, setTags] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState("");
+  const [saveChangesState, setSaveChangesState] = useState<"idle" | "saving" | "error">("idle");
+
+  // Real collections, fetched once the memory exists — the picker below
+  // used to list 3 hardcoded names; this is the user's actual collection
+  // set, same GET /collections the dashboard's capture page uses.
+  useEffect(() => {
+    if (state !== "saved") return;
+    apiFetch<Collection[]>("/collections")
+      .then(setCollections)
+      .catch(() => {
+        // Non-fatal — the picker just stays empty; the memory itself is
+        // already saved regardless of whether collections load.
+      });
+  }, [state]);
+
+  const toggleCollection = (id: string) => {
+    setSelectedCollectionIds((prev) => (prev.includes(id) ? prev.filter((c) => c !== id) : [...prev, id]));
+  };
+
+  const addTagFromDraft = () => {
+    const value = tagDraft.trim();
+    if (value && !tags.includes(value)) {
+      setTags((prev) => [...prev, value]);
+    }
+    setTagDraft("");
+  };
+
+  const removeTag = (tag: string) => {
+    setTags((prev) => prev.filter((t) => t !== tag));
+  };
 
   useEffect(() => {
     if (typeof chrome === "undefined" || !chrome.storage) {
@@ -124,13 +161,6 @@ export default function Popup() {
         }),
       });
 
-      const lowTitle = info.title.toLowerCase();
-      if (lowTitle.includes("design") || lowTitle.includes("ui") || lowTitle.includes("landing")) {
-        setSuggestedTags(["Design", "Inspo", "SaaS"]);
-      } else if (lowTitle.includes("postgre") || lowTitle.includes("sql") || lowTitle.includes("code")) {
-        setSuggestedTags(["Development", "Database", "Backend"]);
-      }
-
       setSavedMemory(memory);
       setState("saved");
     } catch (err) {
@@ -143,13 +173,26 @@ export default function Popup() {
     }
   };
 
-  // Note/tags/collection selection below are local-only for now — the
-  // create-time save (above) is the fix this pass targets. Persisting edits
-  // to an existing memory would need a real collections list (GET
-  // /collections) wired in, which is a bigger surface than this pass's
-  // "fix Popup.tsx's initiateSave" scope covers.
-  const handleManualSave = () => {
-    window.close();
+  const handleSaveChanges = async () => {
+    if (!savedMemory) return;
+    if (!note.trim() && tags.length === 0 && selectedCollectionIds.length === 0) {
+      window.close();
+      return;
+    }
+    setSaveChangesState("saving");
+    try {
+      await apiFetch(`/memories/${savedMemory.id}`, {
+        method: "PATCH",
+        body: JSON.stringify({
+          content: note.trim() || undefined,
+          tags: tags.length > 0 ? tags : undefined,
+          collectionIds: selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined,
+        }),
+      });
+      window.close();
+    } catch {
+      setSaveChangesState("error");
+    }
   };
 
   const handleSignIn = () => {
@@ -165,14 +208,6 @@ export default function Popup() {
       chrome.tabs.create({ url: `${WEB_APP_URL}${path}` });
     } else {
       alert(`Redirecting to ${WEB_APP_URL}${path}`);
-    }
-  };
-
-  const toggleTag = (tag: string) => {
-    if (activeTags.includes(tag)) {
-      setActiveTags(prev => prev.filter(t => t !== tag));
-    } else {
-      setActiveTags(prev => [...prev, tag]);
     }
   };
 
@@ -275,50 +310,74 @@ export default function Popup() {
             />
           </div>
 
-          {/* Suggested Tags selection */}
+          {/* Tags — free-entry, no fake "AI suggestions" that don't
+              persist; real AI tags land on the memory async via ingestion
+              and show up on the dashboard once ready. */}
           <div style={styles.fieldGroup}>
-            <label style={styles.fieldLabel}>SUGGESTED TAGS</label>
+            <label style={styles.fieldLabel}>TAGS</label>
             <div style={styles.tagsContainer}>
-              {suggestedTags.map((tag, idx) => {
-                const isActive = activeTags.includes(tag);
-                return (
-                  <button
-                    key={idx}
-                    onClick={() => toggleTag(tag)}
-                    style={{
-                      ...styles.tagBadge,
-                      backgroundColor: isActive ? "rgba(20,71,230,0.15)" : "#f2f2f7",
-                      borderColor: isActive ? "#1447E6" : "transparent",
-                      color: isActive ? "#1447E6" : "#8e8e93"
-                    }}
-                  >
-                    {isActive ? `✓ ${tag}` : `+ ${tag}`}
-                  </button>
-                );
-              })}
+              {tags.map((tag) => (
+                <button key={tag} style={styles.tagBadgeActive} onClick={() => removeTag(tag)}>
+                  {tag}
+                  <X size={10} style={{ marginLeft: 4 }} />
+                </button>
+              ))}
+              <input
+                style={styles.tagInput}
+                placeholder={tags.length === 0 ? "Add a tag, press Enter" : "Add another..."}
+                value={tagDraft}
+                onChange={(e) => setTagDraft(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    addTagFromDraft();
+                  }
+                }}
+                onBlur={addTagFromDraft}
+              />
             </div>
           </div>
 
-          {/* Collection folder selection */}
-          <div style={styles.fieldGroup}>
-            <label style={styles.fieldLabel}>COLLECTION</label>
-            <select
-              style={styles.select}
-              value={selectedCollection}
-              onChange={(e) => setSelectedCollection(e.target.value)}
-            >
-              <option value="None">None</option>
-              <option value="Design">Design Inspiration</option>
-              <option value="Development">AI & Development</option>
-              <option value="Learning">Learning & Notes</option>
-            </select>
-          </div>
+          {/* Collection selection — real collections, multi-select to match
+              the dashboard's own capture flow. */}
+          {collections.length > 0 && (
+            <div style={styles.fieldGroup}>
+              <label style={styles.fieldLabel}>ADD TO COLLECTION</label>
+              <div style={styles.tagsContainer}>
+                {collections.map((collection) => {
+                  const isActive = selectedCollectionIds.includes(collection.id);
+                  return (
+                    <button
+                      key={collection.id}
+                      onClick={() => toggleCollection(collection.id)}
+                      style={{
+                        ...styles.tagBadge,
+                        backgroundColor: isActive ? "rgba(20,71,230,0.15)" : "#f2f2f7",
+                        borderColor: isActive ? "#1447E6" : "transparent",
+                        color: isActive ? "#1447E6" : "#8e8e93",
+                      }}
+                    >
+                      {isActive ? "✓ " : ""}{collection.icon} {collection.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {saveChangesState === "error" && (
+            <p style={styles.errorSub}>Couldn't save your changes. Try again.</p>
+          )}
 
           {/* Buttons footer */}
-          <button style={styles.primaryButton} onClick={handleManualSave}>
-            Save changes
+          <button style={styles.primaryButton} onClick={handleSaveChanges} disabled={saveChangesState === "saving"}>
+            {saveChangesState === "saving" ? (
+              <Loader2 size={13} className="animate-spin" style={{ verticalAlign: "middle" }} />
+            ) : (
+              "Save changes"
+            )}
           </button>
-          
+
           <button style={styles.openDashboardLink} onClick={() => handleOpenMemora()}>
             <span>Open Memora</span>
             <ExternalLink size={12} style={{ marginLeft: 4 }} />
@@ -550,15 +609,28 @@ const styles = {
     cursor: "pointer",
     transition: "all 0.15s ease",
   },
-  select: {
+  tagBadgeActive: {
+    display: "inline-flex",
+    alignItems: "center",
+    border: "1px solid #1447E6",
+    borderRadius: "6px",
+    padding: "4px 8px",
+    fontSize: "10px",
+    fontWeight: "bold" as const,
+    cursor: "pointer",
+    backgroundColor: "rgba(20,71,230,0.1)",
+    color: "#1447E6",
+  },
+  tagInput: {
     border: "1px solid #e5e5ea",
-    borderRadius: "8px",
-    padding: "6px 8px",
-    fontSize: "11px",
+    borderRadius: "6px",
+    padding: "4px 8px",
+    fontSize: "10px",
     color: "#1c1c1e",
     backgroundColor: "#f9f9f9",
     outline: "none",
-    cursor: "pointer",
+    minWidth: "110px",
+    flex: 1,
   },
   primaryButton: {
     backgroundColor: "#1447E6",
