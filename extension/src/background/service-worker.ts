@@ -159,12 +159,13 @@ function isRestrictedPage(url: string | undefined): boolean {
   return !url || RESTRICTED_URL_PREFIXES.some((prefix) => url.startsWith(prefix));
 }
 
-chrome.runtime.onMessage.addListener((request, sender) => {
+chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "START_SCREENSHOT_SELECTION") {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0];
       if (!tab?.id || isRestrictedPage(tab.url)) {
         notifyCannotCapture();
+        sendResponse({ ok: false });
         return;
       }
       // No callback here previously meant a failure (most commonly: this
@@ -184,13 +185,26 @@ chrome.runtime.onMessage.addListener((request, sender) => {
           if (chrome.runtime.lastError) {
             notifyCannotCapture();
           }
+          sendResponse({ ok: true });
         },
       );
     });
+    return true;
   }
 
   if (request.action === "SCREENSHOT_REGION_SELECTED" && sender.tab?.windowId != null) {
-    handleScreenshotRegion(request, sender.tab.windowId).catch(notifySaveError);
+    // Holding the message channel open (return true + an eventual
+    // sendResponse) isn't just etiquette — it's what stops Chrome from
+    // suspending this service worker mid-upload. Without it, nothing told
+    // the browser this multi-second chain (tab capture -> crop -> upload
+    // -> create memory) was still working, so a suspend here could
+    // silently kill a screenshot save partway through, and/or leave the
+    // worker in a state where the next message (e.g. the popup's own
+    // SYNC_AUTH on open) is slow to get a response.
+    handleScreenshotRegion(request, sender.tab.windowId)
+      .catch(notifySaveError)
+      .finally(() => sendResponse({ ok: true }));
+    return true;
   }
 
   return undefined;

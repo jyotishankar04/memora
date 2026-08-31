@@ -93,7 +93,10 @@ export default function Popup() {
     // Ask the background worker to re-read the auth cookie before trusting
     // storage — it may be stale if login/logout happened since the last
     // chrome.cookies.onChanged event (see background/service-worker.ts).
-    chrome.runtime.sendMessage({ action: "SYNC_AUTH" }, () => {
+    let settled = false;
+    const proceedFromStorage = () => {
+      if (settled) return;
+      settled = true;
       chrome.storage.local.get(["memora_token"], (result) => {
         if (!result.memora_token) {
           setState("unauthorized");
@@ -101,6 +104,18 @@ export default function Popup() {
           loadPageInfo();
         }
       });
+    };
+
+    // If the background worker doesn't respond in time (e.g. it's still
+    // waking up from being suspended, or busy with something else like an
+    // in-flight screenshot upload), fall back to whatever's already in
+    // storage from the last sync rather than leaving the popup stuck on
+    // this spinner forever — a slow background shouldn't look like the
+    // popup didn't open at all.
+    const timeout = setTimeout(proceedFromStorage, 1200);
+    chrome.runtime.sendMessage({ action: "SYNC_AUTH" }, () => {
+      clearTimeout(timeout);
+      proceedFromStorage();
     });
   }, []);
 
