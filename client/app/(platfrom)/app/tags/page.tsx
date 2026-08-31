@@ -6,6 +6,7 @@ import { Search, Tag as TagIcon } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTagsQuery } from "@/context/MemoryContext";
+import { QueryErrorState } from "@/components/query-error-state";
 
 const COLOR_PALETTE = [
   "bg-blue-500/10 text-blue-500 border-blue-500/20 hover:bg-blue-500/15",
@@ -23,7 +24,7 @@ function colorFor(id: string): string {
 }
 
 export default function TagsPage() {
-  const { data: tags = [], isLoading } = useTagsQuery();
+  const { data: tags = [], isLoading, isError, refetch } = useTagsQuery();
   const [searchQuery, setSearchQuery] = useState("");
 
   const filteredTags = searchQuery.trim()
@@ -54,7 +55,9 @@ export default function TagsPage() {
         )}
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <QueryErrorState onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="flex flex-wrap gap-3">
           {Array.from({ length: 10 }).map((_, i) => (
             <Skeleton key={i} className="h-9 w-24 rounded-full" />

@@ -8,13 +8,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useMemoriesQuery } from "@/context/MemoryContext";
 import { timeAgo } from "@/lib/time";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
+import { QueryErrorState } from "@/components/query-error-state";
 
 export default function TagDetailPage() {
   const params = useParams();
   const router = useRouter();
   const name = decodeURIComponent(params.name as string);
 
-  const { data, isLoading } = useMemoriesQuery({ tag: name, limit: 100 });
+  const { data, isLoading, isError, refetch } = useMemoriesQuery({ tag: name, limit: 100 });
   const memories = data?.items ?? [];
 
   return (
@@ -33,12 +34,18 @@ export default function TagDetailPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{name}</h1>
           <span className="text-[10px] font-mono text-muted-foreground mt-1 block font-semibold">
-            {isLoading ? "Loading…" : `${memories.length} saved ${memories.length === 1 ? "memory" : "memories"}`}
+            {isLoading ? (
+              <Skeleton className="h-2.5 w-24 inline-block align-middle" />
+            ) : (
+              `${memories.length} saved ${memories.length === 1 ? "memory" : "memories"}`
+            )}
           </span>
         </div>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <QueryErrorState onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">

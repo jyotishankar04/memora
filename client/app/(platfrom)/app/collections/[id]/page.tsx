@@ -32,6 +32,7 @@ import {
 import { useCollectionsQuery, useDeleteCollectionMutation, useMemoriesQuery } from "@/context/MemoryContext";
 import { timeAgo } from "@/lib/time";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
+import { QueryErrorState } from "@/components/query-error-state";
 
 export default function CollectionDetailPage() {
   const params = useParams();
@@ -45,7 +46,7 @@ export default function CollectionDetailPage() {
   const { data: collections = [] } = useCollectionsQuery();
   const collection = collections.find((c) => c.id === id);
 
-  const { data, isLoading } = useMemoriesQuery({ collectionId: id, q: searchQuery.trim() || undefined, limit: 100 });
+  const { data, isLoading, isError, refetch } = useMemoriesQuery({ collectionId: id, q: searchQuery.trim() || undefined, limit: 100 });
   const memories = data?.items ?? [];
 
   const deleteMutation = useDeleteCollectionMutation();
@@ -144,9 +145,17 @@ export default function CollectionDetailPage() {
                 <AlertDialogAction
                   className="bg-red-500 hover:bg-red-600 text-white"
                   onClick={async () => {
-                    await deleteMutation.mutateAsync(collection.id);
-                    toast.add({ title: "Collection deleted", type: "success" });
-                    router.push("/app/collections");
+                    try {
+                      await deleteMutation.mutateAsync(collection.id);
+                      toast.add({ title: "Collection deleted", type: "success" });
+                      router.push("/app/collections");
+                    } catch (err) {
+                      toast.add({
+                        title: "Couldn't delete this collection",
+                        description: err instanceof Error ? err.message : undefined,
+                        type: "error",
+                      });
+                    }
                   }}
                 >
                   Delete
@@ -189,7 +198,9 @@ export default function CollectionDetailPage() {
       </div>
 
       {/* Memories Grid list */}
-      {isLoading ? (
+      {isError ? (
+        <QueryErrorState onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {Array.from({ length: 6 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">

@@ -7,9 +7,10 @@ import { useMemoriesQuery } from "@/context/MemoryContext";
 import { timeAgo, timelineGroup } from "@/lib/time";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 import type { Memory } from "@/types/memory";
+import { QueryErrorState } from "@/components/query-error-state";
 
 export default function RecentPage() {
-  const { data, isLoading } = useMemoriesQuery({ limit: 40 });
+  const { data, isLoading, isError, refetch } = useMemoriesQuery({ limit: 40 });
   const items = data?.items ?? [];
 
   // Group into timeline buckets in the order items already arrive (createdAt desc from the API).
@@ -33,7 +34,9 @@ export default function RecentPage() {
         </p>
       </div>
 
-      {isLoading ? (
+      {isError ? (
+        <QueryErrorState onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="space-y-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="relative flex gap-5 pb-2 pl-8">

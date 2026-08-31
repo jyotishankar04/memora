@@ -12,6 +12,7 @@ import { useMemoriesQuery, useCollectionsQuery } from "@/context/MemoryContext";
 import { Skeleton } from "@/components/ui/skeleton";
 import { timeAgo } from "@/lib/time";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
+import { QueryErrorState } from "@/components/query-error-state";
 
 function greetingForHour(hour: number): string {
   if (hour < 12) return "Good morning";
@@ -26,8 +27,8 @@ export default function HomePage() {
   const firstName = (user.name ?? user.email).split(/\s+/)[0];
   const greeting = greetingForHour(new Date().getHours());
 
-  const { data: memoriesResult, isLoading: memoriesLoading } = useMemoriesQuery({ limit: 3 });
-  const { data: collections = [], isLoading: collectionsLoading } = useCollectionsQuery();
+  const { data: memoriesResult, isLoading: memoriesLoading, isError: memoriesError, refetch: refetchMemories } = useMemoriesQuery({ limit: 3 });
+  const { data: collections = [], isLoading: collectionsLoading, isError: collectionsError, refetch: refetchCollections } = useCollectionsQuery();
   const recentMemories = memoriesResult?.items ?? [];
 
   return (
@@ -130,6 +131,9 @@ export default function HomePage() {
           </Link>
         </div>
 
+        {memoriesError ? (
+          <QueryErrorState onRetry={() => refetchMemories()} />
+        ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
           {memoriesLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
@@ -205,6 +209,7 @@ export default function HomePage() {
             </Link>
           ))}
         </div>
+        )}
       </div>
 
       {/* Suggested memories (AI Revisit) */}
@@ -239,6 +244,9 @@ export default function HomePage() {
       <div className="space-y-4">
         <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Your collections</h3>
         
+        {collectionsError ? (
+          <QueryErrorState onRetry={() => refetchCollections()} />
+        ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-4 max-w-2xl text-xs">
           {collectionsLoading ? (
             Array.from({ length: 3 }).map((_, i) => (
@@ -261,6 +269,7 @@ export default function HomePage() {
             </Link>
           ))}
         </div>
+        )}
       </div>
 
       {/* Rediscovery Section */}

@@ -11,6 +11,7 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import type { Memory, MemoryType } from "@/types/memory";
 import { useMemoriesQuery, useToggleFavoriteMutation, useDeleteMemoryMutation } from "@/context/MemoryContext";
@@ -19,6 +20,7 @@ import { isMemoryProcessing } from "@/lib/memory-processing";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
 import { getPlatformFallback } from "@/lib/platform-fallback";
+import { QueryErrorState } from "@/components/query-error-state";
 
 const FILTER_TYPE: Record<string, MemoryType | undefined> = {
   all: undefined,
@@ -36,7 +38,7 @@ export default function MemoriesPage() {
   const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
   const [activeCardMenu, setActiveCardMenu] = useState<string | null>(null);
 
-  const { data, isLoading } = useMemoriesQuery({
+  const { data, isLoading, isError, refetch } = useMemoriesQuery({
     type: FILTER_TYPE[currentFilter],
     q: searchQuery.trim() || undefined,
     limit: 100,
@@ -51,13 +53,18 @@ export default function MemoriesPage() {
   const deleteMutation = useDeleteMemoryMutation();
 
   const handleDelete = (id: string) => {
-    deleteMutation.mutate(id);
+    deleteMutation.mutate(id, {
+      onError: (err) => toast.add({ title: "Couldn't delete that memory", description: err instanceof Error ? err.message : undefined, type: "error" }),
+    });
     if (selectedMemoryId === id) setSelectedMemoryId(null);
   };
 
   const toggleStar = (item: Memory, e: React.MouseEvent) => {
     e.stopPropagation();
-    toggleFavoriteMutation.mutate({ id: item.id, isFavorite: !item.isFavorite });
+    toggleFavoriteMutation.mutate(
+      { id: item.id, isFavorite: !item.isFavorite },
+      { onError: (err) => toast.add({ title: "Couldn't update favorite", description: err instanceof Error ? err.message : undefined, type: "error" }) },
+    );
   };
 
   // Group into timeline buckets in the order items already arrive (createdAt desc from the API).
@@ -163,7 +170,9 @@ export default function MemoriesPage() {
         </div>
 
         {/* Timeline body items */}
-        {isLoading ? (
+        {isError ? (
+          <QueryErrorState onRetry={() => refetch()} />
+        ) : isLoading ? (
           <div className="space-y-10 pt-2">
             <div className="space-y-4">
               <Skeleton className="h-3 w-20" />

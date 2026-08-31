@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { useCollectionsQuery, useCreateCollectionMutation } from "@/context/MemoryContext";
+import { QueryErrorState } from "@/components/query-error-state";
 
 const COLOR_PALETTE = [
   "bg-blue-500/10 text-blue-500 border-blue-500/20",
@@ -27,7 +28,7 @@ function colorFor(id: string): string {
 }
 
 export default function CollectionsPage() {
-  const { data: collections = [], isLoading } = useCollectionsQuery();
+  const { data: collections = [], isLoading, isError, refetch } = useCollectionsQuery();
   const createMutation = useCreateCollectionMutation();
 
   const [showAddModal, setShowAddModal] = useState(false);
@@ -71,7 +72,9 @@ export default function CollectionsPage() {
       </div>
 
       {/* Collections Grid */}
-      {isLoading ? (
+      {isError ? (
+        <QueryErrorState onRetry={() => refetch()} />
+      ) : isLoading ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           {Array.from({ length: 4 }).map((_, i) => (
             <div key={i} className="rounded-xl border border-border/45 bg-muted/75 p-1">
