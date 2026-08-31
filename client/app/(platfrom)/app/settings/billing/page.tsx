@@ -26,12 +26,12 @@ export default function BillingSettingsPage() {
           <div className="space-y-1">
             <h4 className="text-sm font-bold text-foreground">500 / 500 memories used</h4>
             <p className="text-[10px] text-muted-foreground leading-relaxed">
-              You've hit the memory limit for the free tier. Upgrade to Pro for unlimited saves, full RAG semantic search, and transcript auto-syncs.
+              You&apos;ve hit the memory limit for the free tier. Upgrade to Pro for unlimited saves, full RAG semantic search, and transcript auto-syncs.
             </p>
           </div>
 
-          <Button onClick={() => alert("Upgrade request sent...")} className="w-full h-9 rounded-full bg-primary text-white font-bold text-[10px]">
-            Upgrade to Pro — ₹499 / month
+          <Button disabled title="Coming soon" className="w-full h-9 rounded-full bg-primary text-white font-bold text-[10px] opacity-60 cursor-not-allowed">
+            Upgrade to Pro — Coming soon
           </Button>
         </div>
 
