@@ -139,11 +139,44 @@ interface ScreenshotRect {
   height: number;
 }
 
+// Pages content scripts can never run on, regardless of manifest
+// permissions — captureVisibleTab and tabs.sendMessage both fail here.
+// file:// is deliberately excluded: it CAN work, but only if the user has
+// flipped "Allow access to file URLs" for this extension, which we can't
+// detect in advance — better to let that one fail with the real error.
+const RESTRICTED_URL_PREFIXES = [
+  "chrome://",
+  "chrome-extension://",
+  "edge://",
+  "about:",
+  "devtools://",
+  "view-source:",
+  "https://chrome.google.com/webstore",
+  "https://chromewebstore.google.com",
+];
+
+function isRestrictedPage(url: string | undefined): boolean {
+  return !url || RESTRICTED_URL_PREFIXES.some((prefix) => url.startsWith(prefix));
+}
+
 chrome.runtime.onMessage.addListener((request, sender) => {
   if (request.action === "START_SCREENSHOT_SELECTION") {
     chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
       const tab = tabs[0];
-      if (tab?.id) chrome.tabs.sendMessage(tab.id, { action: "START_SELECTION" });
+      if (!tab?.id || isRestrictedPage(tab.url)) {
+        notifyCannotCapture();
+        return;
+      }
+      // No callback here previously meant a failure (most commonly: this
+      // tab was open before the extension was installed/reloaded, so it
+      // never got the content script) failed completely silently — the
+      // button would just do nothing with no indication why. Checking
+      // chrome.runtime.lastError is what surfaces that as a real message.
+      chrome.tabs.sendMessage(tab.id, { action: "START_SELECTION" }, () => {
+        if (chrome.runtime.lastError) {
+          notifyCannotCapture();
+        }
+      });
     });
   }
 
@@ -153,6 +186,17 @@ chrome.runtime.onMessage.addListener((request, sender) => {
 
   return undefined;
 });
+
+function notifyCannotCapture(): void {
+  chrome.notifications?.create({
+    type: "basic",
+    iconUrl: "src/popup/icon-128.png",
+    title: "Can't capture this page",
+    message:
+      "This page doesn't support screenshot capture — that's usually a browser system page (chrome://, the Web Store, PDF viewer), or a tab that was already open before Memora was installed or updated. Reloading the tab fixes the latter.",
+    priority: 1,
+  });
+}
 
 async function handleScreenshotRegion(
   msg: { rect: ScreenshotRect; dpr: number; extractedText: string; pageTitle: string; pageUrl: string },
