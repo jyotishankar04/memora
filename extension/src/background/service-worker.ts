@@ -244,21 +244,12 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return true;
   }
 
-  // The content script can't call captureVisibleTab itself, so during its
-  // scroll-and-shoot loop (captureFullPage() in content-script.ts) it asks
-  // for one frame at a time here instead.
-  if (request.action === "CAPTURE_VIEWPORT_FRAME" && sender.tab?.windowId != null) {
-    chrome.tabs
-      .captureVisibleTab(sender.tab.windowId, { format: "png" })
-      .then((dataUrl) => sendResponse({ dataUrl }))
-      .catch((err) => {
-        console.error("Memora: captureVisibleTab failed", err);
-        sendResponse({ error: err instanceof Error ? err.message : "Capture failed" });
-      });
-    return true;
-  }
-
   if (request.action === "SCREENSHOT_REGION_SELECTED" && sender.tab?.windowId != null) {
+    // Handles both a dragged region and a full-viewport capture — the
+    // content script sends the exact same message shape for "Full Shot"
+    // (rect = the whole viewport instead of one the user drew), so there's
+    // one save pipeline for both instead of two.
+    //
     // Holding the message channel open (return true + an eventual
     // sendResponse) isn't just etiquette — it's what stops Chrome from
     // suspending this service worker mid-upload. Without it, nothing told
@@ -271,20 +262,6 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
       .catch(notifySaveError)
       .finally(() => sendResponse({ ok: true }));
     return true;
-  }
-
-  if (request.action === "FULL_PAGE_CAPTURED") {
-    console.log(`Memora: FULL_PAGE_CAPTURED received, ${request.shots?.length ?? 0} shots to stitch`);
-    handleFullPageCaptured(request)
-      .catch(notifySaveError)
-      .finally(() => sendResponse({ ok: true }));
-    return true;
-  }
-
-  if (request.action === "FULL_PAGE_CAPTURE_FAILED") {
-    console.error("Memora: content script reported a full-page capture failure —", request.message);
-    notifySaveError(new Error(request.message || "Full page capture failed."));
-    return undefined;
   }
 
   // The floating on-page button's "Save this page" action — same real
@@ -392,68 +369,6 @@ async function cropToRect(dataUrl: string, rect: ScreenshotRect, dpr: number): P
   ctx.drawImage(bitmap, sx, sy, sw, sh, 0, 0, sw, sh);
 
   return canvas.convertToBlob({ type: "image/png" });
-}
-
-/** Stitches the per-step captures from captureFullPage() (content-script.ts) into one tall image and saves it, same as handleScreenshotRegion() but with a stitch step instead of a crop step. */
-async function handleFullPageCaptured(msg: {
-  shots: { dataUrl: string; y: number }[];
-  dpr: number;
-  viewportWidth: number;
-  totalHeight: number;
-  extractedText: string;
-  pageTitle: string;
-  pageUrl: string;
-  note?: string;
-  tags?: string[];
-  collectionIds?: string[];
-}): Promise<void> {
-  const token = await getStoredToken();
-  if (!token) {
-    notifySignInRequired();
-    return;
-  }
-  if (msg.shots.length === 0) {
-    throw new Error("Full page capture came back empty — try again.");
-  }
-
-  const bitmaps = await Promise.all(
-    msg.shots.map(async (shot) => ({
-      bitmap: await createImageBitmap(await (await fetch(shot.dataUrl)).blob()),
-      y: shot.y,
-    })),
-  );
-
-  const canvasWidth = Math.round(msg.viewportWidth * msg.dpr);
-  const canvasHeight = Math.round(msg.totalHeight * msg.dpr);
-  const canvas = new OffscreenCanvas(canvasWidth, canvasHeight);
-  const ctx = canvas.getContext("2d");
-  if (!ctx) throw new Error("Couldn't render the stitched screenshot.");
-
-  // Drawn in capture order (top of the page to bottom) — the last step's
-  // scroll position is clamped to the page's true bottom, so it overlaps
-  // the previous step where the page wasn't an exact multiple of the
-  // viewport height; drawing it last means that overlap correctly shows
-  // the true bottom content rather than a duplicate of what came before.
-  for (const { bitmap, y } of bitmaps) {
-    ctx.drawImage(bitmap, 0, Math.round(y * msg.dpr));
-  }
-
-  const blob = await canvas.convertToBlob({ type: "image/png" });
-  const uploaded = await uploadScreenshot(blob);
-
-  await createMemory({
-    type: "image",
-    url: msg.pageUrl,
-    title: (msg.pageTitle || "Full Page Screenshot").slice(0, 500),
-    // Same split as handleScreenshotRegion() — the note is only ever what
-    // the user actually typed; the page's extracted text is separate
-    // context, not appended to it.
-    content: msg.note?.trim() || undefined,
-    description: msg.extractedText || undefined,
-    tags: msg.tags && msg.tags.length > 0 ? msg.tags : undefined,
-    collectionIds: msg.collectionIds && msg.collectionIds.length > 0 ? msg.collectionIds : undefined,
-    attachments: [{ fileUrl: uploaded.fileUrl, fileSize: uploaded.fileSize, mimeType: uploaded.mimeType }],
-  });
 }
 
 async function uploadScreenshot(blob: Blob): Promise<{ fileUrl: string; mimeType: string; fileSize: number }> {

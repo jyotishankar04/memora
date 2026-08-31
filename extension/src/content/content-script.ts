@@ -30,34 +30,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     });
   }
 
-  // START_SELECTION and CAPTURE_FULL_PAGE both kick off multi-second work
-  // (a drag interaction, or the whole scroll-and-shoot loop) and report
-  // their real result later via a completely separate message
-  // (SCREENSHOT_REGION_SELECTED / FULL_PAGE_CAPTURED /
-  // FULL_PAGE_CAPTURE_FAILED) — they must acknowledge THIS message right
-  // away rather than leaving its channel open for all of that. Chrome
-  // eventually times out a channel nothing ever responds on and reports it
-  // to the sender as chrome.runtime.lastError, which dispatchCaptureToActiveTab
-  // (service-worker.ts) was reading as "capture failed" — even after the
-  // real capture had already succeeded independently. That's what caused
-  // "Can't capture this page" to fire alongside an actually-successful save.
+  // START_SELECTION kicks off multi-second work (the drag interaction) and
+  // reports its real result later via a completely separate
+  // SCREENSHOT_REGION_SELECTED message — it must acknowledge THIS message
+  // right away rather than leaving its channel open for all of that.
+  // Chrome eventually times out a channel nothing ever responds on and
+  // reports it to the sender as chrome.runtime.lastError, which
+  // dispatchCaptureToActiveTab (service-worker.ts) was reading as "capture
+  // failed" — even after the real capture had already succeeded
+  // independently. That's what caused "Can't capture this page" to fire
+  // alongside an actually-successful save.
   if (request.action === "START_SELECTION") {
     startRegionSelection({ note: request.note, tags: request.tags, collectionIds: request.collectionIds });
     sendResponse({ received: true });
   }
 
   if (request.action === "CAPTURE_FULL_PAGE") {
-    // Belt-and-suspenders on top of captureFullPage's own try/catch — an
-    // async function called without awaiting or catching turns any escaped
-    // exception into an invisible unhandled rejection, so this makes sure
-    // nothing from here can fail completely silently.
-    captureFullPage({ note: request.note, tags: request.tags, collectionIds: request.collectionIds }).catch((err) => {
-      console.error("Memora: captureFullPage rejected", err);
-      chrome.runtime.sendMessage({
-        action: "FULL_PAGE_CAPTURE_FAILED",
-        message: err instanceof Error ? err.message : "Full page capture failed.",
-      });
-    });
+    captureFullViewport({ note: request.note, tags: request.tags, collectionIds: request.collectionIds });
     sendResponse({ received: true });
   }
 
@@ -200,119 +189,31 @@ function startRegionSelection(meta: SelectionMeta): void {
   }
 }
 
-// --- Full-page screenshot ------------------------------------------------
+// --- Full-viewport screenshot ---------------------------------------------
 //
-// chrome.tabs.captureVisibleTab only ever sees what's currently on screen,
-// so a genuinely full-page shot means scrolling through the page in
-// viewport-height steps, asking the background worker to capture each
-// step (only it can call captureVisibleTab), and stitching the results
-// into one tall image there. This file drives the scroll loop (only it
-// can); the background worker does the pixel work and the final save.
-
-const FULL_PAGE_STATUS_ID = "memora-fullpage-status";
-// captureVisibleTab is rate-limited (Chrome throttles rapid calls), and
-// this delay also gives the page a moment to repaint/settle after each
-// scroll (lazy-loaded images, sticky headers re-positioning, etc.) before
-// it's captured — too short and shots come out mid-scroll or half-loaded.
-const FULL_PAGE_STEP_DELAY_MS = 400;
-// Bounds how many shots a very tall (or infinite-scroll) page gets stitched
-// from — 15 steps covers most real pages; beyond that we stop rather than
-// hammering captureVisibleTab dozens of times for one capture.
-const MAX_FULL_PAGE_SHOTS = 15;
-
-function showFullPageStatus(text: string): void {
-  let el = document.getElementById(FULL_PAGE_STATUS_ID);
-  if (!el) {
-    el = document.createElement("div");
-    el.id = FULL_PAGE_STATUS_ID;
-    el.style.cssText =
-      "position:fixed;top:16px;left:50%;transform:translateX(-50%);z-index:2147483647;background:#1c1c1e;" +
-      "color:#fff;font:12px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;padding:6px 12px;border-radius:8px;pointer-events:none;";
-    document.documentElement.appendChild(el);
-  }
-  el.textContent = text;
-}
-
-function removeFullPageStatus(): void {
-  document.getElementById(FULL_PAGE_STATUS_ID)?.remove();
-}
-
-async function captureFullPage(meta: SelectionMeta): Promise<void> {
-  // Visible the instant this starts, before any computation below runs —
-  // if something after this throws, at least this much proves the click
-  // was received and the capture actually started, rather than the whole
-  // thing failing invisibly with nothing on screen to show for it.
-  showFullPageStatus("Capturing full page…");
-
-  const originalScrollX = window.scrollX;
-  const originalScrollY = window.scrollY;
-
-  try {
-    const dpr = window.devicePixelRatio || 1;
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const pageHeight = Math.max(
-      document.body.scrollHeight,
-      document.documentElement.scrollHeight,
-      document.body.offsetHeight,
-      document.documentElement.offsetHeight,
-    );
-    const stepCount = Math.min(MAX_FULL_PAGE_SHOTS, Math.max(1, Math.ceil(pageHeight / viewportHeight)));
-
-    const shots: { dataUrl: string; y: number }[] = [];
-
-    for (let i = 0; i < stepCount; i++) {
-      showFullPageStatus(stepCount > 1 ? `Capturing full page… (${i + 1}/${stepCount})` : "Capturing full page…");
-
-      // Clamped so the final step aligns to the true bottom of the page
-      // instead of overshooting past it.
-      const targetY = Math.min(i * viewportHeight, Math.max(0, pageHeight - viewportHeight));
-      window.scrollTo({ top: targetY, left: 0, behavior: "instant" });
-      await new Promise((resolve) => setTimeout(resolve, FULL_PAGE_STEP_DELAY_MS));
-
-      const response = await chrome.runtime.sendMessage({ action: "CAPTURE_VIEWPORT_FRAME" });
-      if (!response?.dataUrl) {
-        throw new Error(response?.error || "Capturing a section of the page failed.");
-      }
-      shots.push({ dataUrl: response.dataUrl, y: window.scrollY });
-    }
-
-    chrome.runtime.sendMessage({
-      action: "FULL_PAGE_CAPTURED",
-      shots,
-      dpr,
-      viewportWidth,
-      viewportHeight,
-      totalHeight: shots[shots.length - 1].y + viewportHeight,
-      extractedText: extractFullPageText(),
-      pageTitle: document.title,
-      pageUrl: location.href,
-      note: meta.note,
-      tags: meta.tags,
-      collectionIds: meta.collectionIds,
-    });
-  } catch (err) {
-    // Everything above is now inside this try — including the page-height
-    // computation that used to run before it, unprotected. A throw there
-    // used to become a silent unhandled promise rejection (visible only in
-    // the page's own DevTools console, never as a toast or notification),
-    // which is exactly the "nothing happens at all" failure mode this is
-    // fixing: any failure from here on is now guaranteed to reach the
-    // background worker and surface as a real notification.
-    console.error("Memora: full page capture failed", err);
-    chrome.runtime.sendMessage({
-      action: "FULL_PAGE_CAPTURE_FAILED",
-      message: err instanceof Error ? err.message : "Full page capture failed.",
-    });
-  } finally {
-    removeFullPageStatus();
-    window.scrollTo({ top: originalScrollY, left: originalScrollX, behavior: "instant" });
-  }
-}
-
-/** The whole page's rendered text, not just what's on screen right now — extractTextInRect (below) is viewport-relative and can't answer "what does the whole page say" since getClientRects() is meaningless for scrolled-away content. */
-function extractFullPageText(): string {
-  return (document.body.innerText || "").replace(/\s+/g, " ").trim().slice(0, MAX_EXTRACTED_TEXT_LENGTH);
+// "Full page" here means the visible viewport, not the whole scrollable
+// page. An earlier version scrolled through the page and stitched every
+// section together, but that meant one chrome.tabs.captureVisibleTab call
+// per section — Chrome hard-caps how many of those can happen per second
+// (MAX_CAPTURE_VISIBLE_TAB_CALLS_PER_SECOND), and any page taller than a
+// few screens reliably tripped it. This reuses the exact same
+// SCREENSHOT_REGION_SELECTED message (and so the exact same crop/upload/
+// save pipeline in the background worker) as a dragged region — the
+// "rect" is just the whole current viewport instead of one the user drew,
+// which is also exactly one captureVisibleTab call, same as Region mode.
+function captureFullViewport(meta: SelectionMeta): void {
+  const rect = { x: 0, y: 0, width: window.innerWidth, height: window.innerHeight };
+  chrome.runtime.sendMessage({
+    action: "SCREENSHOT_REGION_SELECTED",
+    rect,
+    dpr: window.devicePixelRatio || 1,
+    extractedText: extractTextInRect(rect),
+    pageTitle: document.title,
+    pageUrl: location.href,
+    note: meta.note,
+    tags: meta.tags,
+    collectionIds: meta.collectionIds,
+  });
 }
 
 /** Collects the rendered text of every text node whose on-screen position intersects `rect` — the same "what's actually visible here" signal a human eye would read off the selected area, not a DOM-structural guess. */
@@ -429,15 +330,7 @@ function openFloatingMenu(): void {
     { label: "Screenshot an area", onClick: () => startRegionSelection({}) },
     {
       label: "Full page screenshot",
-      onClick: () => {
-        captureFullPage({}).catch((err) => {
-          console.error("Memora: captureFullPage rejected", err);
-          chrome.runtime.sendMessage({
-            action: "FULL_PAGE_CAPTURE_FAILED",
-            message: err instanceof Error ? err.message : "Full page capture failed.",
-          });
-        });
-      },
+      onClick: () => captureFullViewport({}),
     },
   ];
 

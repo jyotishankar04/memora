@@ -259,9 +259,9 @@ export default function Popup() {
 
   const handleFullPageScreenshot = () => {
     if (typeof chrome === "undefined" || !chrome.runtime) return;
-    // The content script scrolls through the whole page, capturing and
-    // stitching every section together (see content-script.ts's
-    // captureFullPage) — not just what's currently visible.
+    // "Full page" means the visible viewport, not the whole scrollable
+    // page (see content-script.ts's captureFullViewport) — one
+    // captureVisibleTab call, same as Region mode.
     chrome.runtime.sendMessage({ action: "CAPTURE_FULL_PAGE_SCREENSHOT", ...buildCaptureContext() });
     window.close();
   };
@@ -356,11 +356,11 @@ export default function Popup() {
         <div style={styles.savedForm}>
           {/* Quick capture-mode buttons — "Page" saves the tab as-is;
               "Region" hands off to the drag-select overlay on the page
-              itself; "Full Shot" scrolls through and stitches the entire
-              page, not just what's currently visible. Room for more modes
-              here later without touching anything below, since
-              note/tags/collections apply regardless of which mode is
-              picked. */}
+              itself; "Full Shot" screenshots the whole current viewport
+              (not the whole scrollable page — see content-script.ts's
+              captureFullViewport). Room for more modes here later without
+              touching anything below, since note/tags/collections apply
+              regardless of which mode is picked. */}
           <div style={styles.modeRow}>
             <button
               type="button"
@@ -382,7 +382,7 @@ export default function Popup() {
             </button>
             <button
               type="button"
-              title="Screenshot the whole page, scrolling included"
+              title="Screenshot the entire visible page"
               style={captureMode === "fullscreenshot" ? styles.modeButtonActive : styles.modeButton}
               onClick={() => setCaptureMode("fullscreenshot")}
             >
