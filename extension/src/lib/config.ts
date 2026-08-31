@@ -12,3 +12,10 @@ export const ACCESS_TOKEN_COOKIE = "memora_access_token";
 // storage (not the cookie itself) is what the popup/content script read,
 // since only the background service worker has the "cookies" permission.
 export const TOKEN_STORAGE_KEY = "memora_token";
+
+// chrome.storage.local key for the floating on-page quick-actions button —
+// local only for now (extension-only scope; syncing this from the web
+// app's own settings page is a separate follow-up). Defaults to shown
+// (see content-script.ts) when unset, so a fresh install doesn't need an
+// explicit opt-in to see it.
+export const SHOW_FLOATING_ICON_STORAGE_KEY = "memora_show_floating_icon";

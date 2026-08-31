@@ -3,6 +3,19 @@
 // the web app's auth cookie is httpOnly, so page-context JS (this file)
 // can never read it directly; a prior version tried a localStorage read here
 // and could never have worked.
+//
+// No imports in this file, deliberately — content scripts always run as
+// classic scripts (manifest.json's content_scripts has no "type: module"
+// option, unlike the background service worker), so an `import` statement
+// here is a hard runtime failure, not just a style choice. Vite will
+// happily emit one anyway if this file imports from a module shared with
+// another entry point (it did, the first time this constant was pulled in
+// from ../lib/config — silently broke the whole content script, since
+// nothing in the build catches "this chunk must stay import-free").
+// TOKEN_STORAGE_KEY and SHOW_FLOATING_ICON_STORAGE_KEY below must be kept
+// in sync with ../lib/config.ts by hand.
+const TOKEN_STORAGE_KEY = "memora_token";
+const SHOW_FLOATING_ICON_STORAGE_KEY = "memora_show_floating_icon";
 
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.action === "GET_METADATA") {
@@ -334,3 +347,152 @@ function extractTextInRect(rect: { x: number; y: number; width: number; height: 
 
   return pieces.join(" ").replace(/\s+/g, " ").trim().slice(0, MAX_EXTRACTED_TEXT_LENGTH);
 }
+
+// --- Floating quick-actions button ----------------------------------------
+//
+// A small always-on-page button (bottom-right, the same pattern as
+// Grammarly/Notion-style clippers) for triggering a capture without
+// reaching for the toolbar icon. Shown only when signed in AND the user
+// hasn't turned it off (SHOW_FLOATING_ICON_STORAGE_KEY, toggled from the
+// popup) — both read directly from chrome.storage.local, which content
+// scripts can access without a round trip through the background worker.
+// Reacts live to both changing (storage.onChanged), so signing in makes
+// it appear immediately rather than needing a page reload.
+
+const FLOATING_BUTTON_ID = "memora-floating-button";
+const FLOATING_MENU_ID = "memora-floating-menu";
+
+let floatingButtonEl: HTMLButtonElement | null = null;
+let floatingMenuEl: HTMLDivElement | null = null;
+
+function shouldShowFloatingButton(): Promise<boolean> {
+  return new Promise((resolve) => {
+    chrome.storage.local.get([TOKEN_STORAGE_KEY, SHOW_FLOATING_ICON_STORAGE_KEY], (result) => {
+      const signedIn = !!result[TOKEN_STORAGE_KEY];
+      const enabled = result[SHOW_FLOATING_ICON_STORAGE_KEY] ?? true; // defaults on
+      resolve(signedIn && enabled);
+    });
+  });
+}
+
+async function refreshFloatingButtonVisibility(): Promise<void> {
+  if (await shouldShowFloatingButton()) {
+    createFloatingButton();
+  } else {
+    removeFloatingButton();
+  }
+}
+
+function createFloatingButton(): void {
+  if (floatingButtonEl || !document.body) return;
+
+  const button = document.createElement("button");
+  button.id = FLOATING_BUTTON_ID;
+  button.type = "button";
+  button.setAttribute("aria-label", "Memora quick actions");
+  button.title = "Memora quick actions";
+  button.textContent = "M";
+  button.style.cssText =
+    "position:fixed;right:20px;bottom:20px;width:44px;height:44px;border-radius:50%;border:none;" +
+    "background:#1447E6;color:#fff;cursor:pointer;z-index:2147483646;box-shadow:0 4px 14px rgba(20,71,230,0.4);" +
+    "display:flex;align-items:center;justify-content:center;font:700 16px -apple-system,BlinkMacSystemFont,sans-serif;" +
+    "padding:0;transition:transform 0.15s ease;";
+  button.addEventListener("mouseenter", () => (button.style.transform = "scale(1.08)"));
+  button.addEventListener("mouseleave", () => (button.style.transform = "scale(1)"));
+  button.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (floatingMenuEl) closeFloatingMenu();
+    else openFloatingMenu();
+  });
+
+  document.documentElement.appendChild(button);
+  floatingButtonEl = button;
+}
+
+function removeFloatingButton(): void {
+  closeFloatingMenu();
+  floatingButtonEl?.remove();
+  floatingButtonEl = null;
+}
+
+function openFloatingMenu(): void {
+  if (floatingMenuEl) return;
+
+  const menu = document.createElement("div");
+  menu.id = FLOATING_MENU_ID;
+  menu.style.cssText =
+    "position:fixed;right:20px;bottom:72px;z-index:2147483646;display:flex;flex-direction:column;gap:2px;" +
+    "background:#1c1c1e;border-radius:12px;padding:6px;box-shadow:0 8px 24px rgba(0,0,0,0.35);min-width:180px;";
+
+  const actions: { label: string; onClick: () => void }[] = [
+    { label: "Save this page", onClick: quickSavePage },
+    { label: "Screenshot an area", onClick: () => startRegionSelection({}) },
+    {
+      label: "Full page screenshot",
+      onClick: () => {
+        captureFullPage({}).catch((err) => {
+          console.error("Memora: captureFullPage rejected", err);
+          chrome.runtime.sendMessage({
+            action: "FULL_PAGE_CAPTURE_FAILED",
+            message: err instanceof Error ? err.message : "Full page capture failed.",
+          });
+        });
+      },
+    },
+  ];
+
+  for (const action of actions) {
+    const item = document.createElement("button");
+    item.type = "button";
+    item.textContent = action.label;
+    item.style.cssText =
+      "display:block;width:100%;text-align:left;white-space:nowrap;border:none;background:transparent;color:#fff;" +
+      "font:12px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;padding:9px 12px;border-radius:8px;cursor:pointer;";
+    item.addEventListener("mouseenter", () => (item.style.background = "rgba(255,255,255,0.1)"));
+    item.addEventListener("mouseleave", () => (item.style.background = "transparent"));
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      closeFloatingMenu();
+      action.onClick();
+    });
+    menu.appendChild(item);
+  }
+
+  document.documentElement.appendChild(menu);
+  floatingMenuEl = menu;
+
+  // Capture phase so this reliably sees the click before any page script
+  // might stop it, same reasoning as the selection overlay's own listeners.
+  document.addEventListener("click", closeFloatingMenu, true);
+  document.addEventListener("keydown", onFloatingMenuKeyDown, true);
+}
+
+function closeFloatingMenu(): void {
+  floatingMenuEl?.remove();
+  floatingMenuEl = null;
+  document.removeEventListener("click", closeFloatingMenu, true);
+  document.removeEventListener("keydown", onFloatingMenuKeyDown, true);
+}
+
+function onFloatingMenuKeyDown(e: KeyboardEvent): void {
+  if (e.key === "Escape") closeFloatingMenu();
+}
+
+/** No note/tags/collections here (unlike the popup's flows) — this is the fast path, not the customizable one; the popup is still there for that. */
+function quickSavePage(): void {
+  chrome.runtime.sendMessage({
+    action: "QUICK_SAVE_PAGE",
+    title: document.title || "Untitled Webpage",
+    url: location.href,
+    description: getMetaTag("description") || getMetaTag("og:description") || undefined,
+  });
+}
+
+chrome.storage.onChanged.addListener((changes, area) => {
+  if (area !== "local") return;
+  if (TOKEN_STORAGE_KEY in changes || SHOW_FLOATING_ICON_STORAGE_KEY in changes) {
+    refreshFloatingButtonVisibility();
+  }
+});
+
+refreshFloatingButtonVisibility();

@@ -287,6 +287,31 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
     return undefined;
   }
 
+  // The floating on-page button's "Save this page" action — same real
+  // save path as everything else, just triggered from the page itself
+  // instead of the popup, and with no note/tags/collections form behind
+  // it (that's what the popup is still for).
+  if (request.action === "QUICK_SAVE_PAGE") {
+    (async () => {
+      const token = await getStoredToken();
+      if (!token) {
+        notifySignInRequired();
+        return;
+      }
+      try {
+        await createMemory({
+          type: "web",
+          url: request.url,
+          title: (request.title || "Untitled Webpage").slice(0, 500),
+          description: request.description || undefined,
+        });
+      } catch (err) {
+        notifySaveError(err);
+      }
+    })();
+    return undefined;
+  }
+
   return undefined;
 });
 

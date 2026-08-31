@@ -1,9 +1,9 @@
 import React, { useEffect, useRef, useState } from "react";
 import {
-  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Camera, FileText, ChevronDown, Maximize
+  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Camera, FileText, ChevronDown, Maximize, Eye, EyeOff
 } from "lucide-react";
 import { apiFetch, ApiError } from "../lib/api";
-import { WEB_APP_URL } from "../lib/config";
+import { SHOW_FLOATING_ICON_STORAGE_KEY, WEB_APP_URL } from "../lib/config";
 
 type ExtensionState = "checking" | "unauthorized" | "ready" | "saving" | "saved" | "error";
 
@@ -48,6 +48,23 @@ export default function Popup() {
   // background's query can land on the wrong window, e.g. if a DevTools
   // window is focused at that exact moment) that this sidesteps entirely.
   const activeTabIdRef = useRef<number | null>(null);
+  const [showFloatingIcon, setShowFloatingIcon] = useState(true);
+
+  // The floating on-page button defaults to shown, so it only needs
+  // reading here (not writing) unless the user actually toggles it —
+  // content-script.ts applies the same default independently.
+  useEffect(() => {
+    if (typeof chrome === "undefined" || !chrome.storage) return;
+    chrome.storage.local.get([SHOW_FLOATING_ICON_STORAGE_KEY], (result) => {
+      setShowFloatingIcon(result[SHOW_FLOATING_ICON_STORAGE_KEY] ?? true);
+    });
+  }, []);
+
+  const toggleFloatingIcon = () => {
+    const next = !showFloatingIcon;
+    setShowFloatingIcon(next);
+    chrome.storage.local.set({ [SHOW_FLOATING_ICON_STORAGE_KEY]: next });
+  };
 
   // Closes the collections dropdown on an outside click.
   useEffect(() => {
@@ -274,9 +291,20 @@ export default function Popup() {
           <Sparkles size={16} color="#1447E6" fill="#1447E6" />
           <span style={styles.logoText}>memora</span>
         </div>
-        <button style={styles.iconButton} onClick={() => handleOpenMemora()}>
-          <Settings size={14} color="#8e8e93" />
-        </button>
+        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+          {state !== "checking" && state !== "unauthorized" && (
+            <button
+              style={styles.iconButton}
+              onClick={toggleFloatingIcon}
+              title={showFloatingIcon ? "Hide the floating quick-actions button on pages" : "Show the floating quick-actions button on pages"}
+            >
+              {showFloatingIcon ? <Eye size={14} color="#8e8e93" /> : <EyeOff size={14} color="#8e8e93" />}
+            </button>
+          )}
+          <button style={styles.iconButton} onClick={() => handleOpenMemora()}>
+            <Settings size={14} color="#8e8e93" />
+          </button>
+        </div>
       </div>
 
       {/* State Renderers */}
