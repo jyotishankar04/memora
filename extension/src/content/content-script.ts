@@ -18,7 +18,7 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   }
 
   if (request.action === "START_SELECTION") {
-    startRegionSelection();
+    startRegionSelection({ note: request.note, tags: request.tags, collectionIds: request.collectionIds });
   }
 
   return true;
@@ -42,7 +42,13 @@ function getMetaTag(nameOrProperty: string): string | null {
 
 const OVERLAY_ID = "memora-screenshot-selection-overlay";
 
-function startRegionSelection(): void {
+interface SelectionMeta {
+  note?: string;
+  tags?: string[];
+  collectionIds?: string[];
+}
+
+function startRegionSelection(meta: SelectionMeta): void {
   // Self-heals from a selection that didn't clean up properly (see the
   // window-level mouseup/blur listeners below for why that could happen) —
   // checking the DOM directly instead of a separate boolean flag means
@@ -107,6 +113,9 @@ function startRegionSelection(): void {
       extractedText: extractTextInRect(rect),
       pageTitle: document.title,
       pageUrl: location.href,
+      note: meta.note,
+      tags: meta.tags,
+      collectionIds: meta.collectionIds,
     });
   };
 

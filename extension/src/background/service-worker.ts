@@ -172,11 +172,20 @@ chrome.runtime.onMessage.addListener((request, sender) => {
       // never got the content script) failed completely silently — the
       // button would just do nothing with no indication why. Checking
       // chrome.runtime.lastError is what surfaces that as a real message.
-      chrome.tabs.sendMessage(tab.id, { action: "START_SELECTION" }, () => {
-        if (chrome.runtime.lastError) {
-          notifyCannotCapture();
-        }
-      });
+      chrome.tabs.sendMessage(
+        tab.id,
+        {
+          action: "START_SELECTION",
+          note: request.note,
+          tags: request.tags,
+          collectionIds: request.collectionIds,
+        },
+        () => {
+          if (chrome.runtime.lastError) {
+            notifyCannotCapture();
+          }
+        },
+      );
     });
   }
 
@@ -199,7 +208,16 @@ function notifyCannotCapture(): void {
 }
 
 async function handleScreenshotRegion(
-  msg: { rect: ScreenshotRect; dpr: number; extractedText: string; pageTitle: string; pageUrl: string },
+  msg: {
+    rect: ScreenshotRect;
+    dpr: number;
+    extractedText: string;
+    pageTitle: string;
+    pageUrl: string;
+    note?: string;
+    tags?: string[];
+    collectionIds?: string[];
+  },
   windowId: number,
 ): Promise<void> {
   const token = await getStoredToken();
@@ -212,11 +230,17 @@ async function handleScreenshotRegion(
   const blob = await cropToRect(dataUrl, msg.rect, msg.dpr);
   const uploaded = await uploadScreenshot(blob);
 
+  // The user's own note (if any) leads, with the region's extracted DOM
+  // text right behind it as grounding for the AI ingestion pipeline.
+  const content = [msg.note?.trim(), msg.extractedText].filter(Boolean).join("\n\n");
+
   await createMemory({
     type: "image",
     url: msg.pageUrl,
     title: (msg.pageTitle || "Screenshot").slice(0, 500),
-    content: msg.extractedText || undefined,
+    content: content || undefined,
+    tags: msg.tags && msg.tags.length > 0 ? msg.tags : undefined,
+    collectionIds: msg.collectionIds && msg.collectionIds.length > 0 ? msg.collectionIds : undefined,
     attachments: [{ fileUrl: uploaded.fileUrl, fileSize: uploaded.fileSize, mimeType: uploaded.mimeType }],
   });
 }
@@ -261,6 +285,8 @@ interface MemoryCreatePayload {
   url?: string;
   title: string;
   content?: string;
+  tags?: string[];
+  collectionIds?: string[];
   attachments?: { fileUrl: string; fileSize?: number; mimeType?: string }[];
 }
 

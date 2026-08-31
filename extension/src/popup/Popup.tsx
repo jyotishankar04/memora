@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
-  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Camera
+  Sparkles, Check, AlertCircle, RefreshCw, Settings, ExternalLink, ShieldAlert, X, Camera, FileText, ChevronDown
 } from "lucide-react";
 import { apiFetch, ApiError } from "../lib/api";
 import { WEB_APP_URL } from "../lib/config";
@@ -38,6 +38,21 @@ export default function Popup() {
   const [selectedCollectionIds, setSelectedCollectionIds] = useState<string[]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagDraft, setTagDraft] = useState("");
+  const [captureMode, setCaptureMode] = useState<"page" | "screenshot">("page");
+  const [collectionsOpen, setCollectionsOpen] = useState(false);
+  const collectionsRef = useRef<HTMLDivElement>(null);
+
+  // Closes the collections dropdown on an outside click.
+  useEffect(() => {
+    if (!collectionsOpen) return;
+    const onClickOutside = (e: MouseEvent) => {
+      if (collectionsRef.current && !collectionsRef.current.contains(e.target as Node)) {
+        setCollectionsOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, [collectionsOpen]);
 
   // Real collections, fetched as soon as the page is loaded and ready to
   // save — the picker used to list 3 hardcoded names; this is the user's
@@ -180,7 +195,15 @@ export default function Popup() {
 
   const handleTakeScreenshot = () => {
     if (typeof chrome === "undefined" || !chrome.runtime) return;
-    chrome.runtime.sendMessage({ action: "START_SCREENSHOT_SELECTION" });
+    // Whatever the user already filled in here travels with the
+    // screenshot too — the background worker attaches it to the memory it
+    // creates once the region is picked (see service-worker.ts).
+    chrome.runtime.sendMessage({
+      action: "START_SCREENSHOT_SELECTION",
+      note: note.trim() || undefined,
+      tags: tags.length > 0 ? tags : undefined,
+      collectionIds: selectedCollectionIds.length > 0 ? selectedCollectionIds : undefined,
+    });
     // The selection overlay lives on the page itself, so the popup just
     // gets out of the way — the background worker handles capture/upload/
     // save and reports back via a desktop notification. Nothing else was
@@ -213,16 +236,9 @@ export default function Popup() {
           <Sparkles size={16} color="#1447E6" fill="#1447E6" />
           <span style={styles.logoText}>memora</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
-          {state !== "checking" && state !== "unauthorized" && (
-            <button style={styles.iconButton} onClick={handleTakeScreenshot} title="Take screenshot">
-              <Camera size={14} color="#8e8e93" />
-            </button>
-          )}
-          <button style={styles.iconButton} onClick={() => handleOpenMemora()}>
-            <Settings size={14} color="#8e8e93" />
-          </button>
-        </div>
+        <button style={styles.iconButton} onClick={() => handleOpenMemora()}>
+          <Settings size={14} color="#8e8e93" />
+        </button>
       </div>
 
       {/* State Renderers */}
@@ -272,6 +288,30 @@ export default function Popup() {
           Memora" below is the only thing that writes anything. */}
       {state === "ready" && (
         <div style={styles.savedForm}>
+          {/* Quick capture-mode buttons — "Full Page" saves the tab as-is;
+              "Screenshot" hands off to the region-select overlay on the
+              page itself. Room for more modes here later without touching
+              anything below, since note/tags/collections apply regardless
+              of which mode is picked. */}
+          <div style={styles.modeRow}>
+            <button
+              type="button"
+              style={captureMode === "page" ? styles.modeButtonActive : styles.modeButton}
+              onClick={() => setCaptureMode("page")}
+            >
+              <FileText size={13} />
+              Full Page
+            </button>
+            <button
+              type="button"
+              style={captureMode === "screenshot" ? styles.modeButtonActive : styles.modeButton}
+              onClick={() => setCaptureMode("screenshot")}
+            >
+              <Camera size={13} />
+              Screenshot
+            </button>
+          </div>
+
           <div style={styles.previewBox}>
             <TextTruncate text={pageInfo?.title || "Untitled"} lines={2} style={styles.previewTitle} />
             <span style={styles.previewDomain}>{getDomain(pageInfo?.url)}</span>
@@ -289,6 +329,10 @@ export default function Popup() {
               onChange={(e) => setNote(e.target.value)}
             />
           </div>
+
+          <button style={styles.primaryButton} onClick={captureMode === "page" ? handleSave : handleTakeScreenshot}>
+            {captureMode === "page" ? "Save to Memora" : "Select Area & Save"}
+          </button>
 
           <div style={styles.fieldGroup}>
             <label style={styles.fieldLabel}>TAGS</label>
@@ -315,36 +359,48 @@ export default function Popup() {
             </div>
           </div>
 
-          {/* Collection selection — real collections, multi-select to match
-              the dashboard's own capture flow. */}
-          {collections.length > 0 && (
-            <div style={styles.fieldGroup}>
-              <label style={styles.fieldLabel}>ADD TO COLLECTION</label>
-              <div style={styles.tagsContainer}>
-                {collections.map((collection) => {
-                  const isActive = selectedCollectionIds.includes(collection.id);
-                  return (
-                    <button
-                      key={collection.id}
-                      onClick={() => toggleCollection(collection.id)}
-                      style={{
-                        ...styles.tagBadge,
-                        backgroundColor: isActive ? "rgba(20,71,230,0.15)" : "#f2f2f7",
-                        borderColor: isActive ? "#1447E6" : "transparent",
-                        color: isActive ? "#1447E6" : "#8e8e93",
-                      }}
-                    >
-                      {isActive ? "✓ " : ""}{collection.icon} {collection.name}
-                    </button>
-                  );
-                })}
-              </div>
+          {/* Collection selection — a dropdown instead of a chip row, so it
+              doesn't grow with the user's collection count. */}
+          <div style={styles.fieldGroup} ref={collectionsRef}>
+            <label style={styles.fieldLabel}>ADD TO COLLECTION</label>
+            <div style={{ position: "relative" }}>
+              <button type="button" style={styles.dropdownTrigger} onClick={() => setCollectionsOpen((open) => !open)}>
+                <span style={styles.dropdownTriggerText}>
+                  {selectedCollectionIds.length === 0
+                    ? "None"
+                    : collections
+                        .filter((c) => selectedCollectionIds.includes(c.id))
+                        .map((c) => c.name)
+                        .join(", ")}
+                </span>
+                <ChevronDown size={12} color="#8e8e93" />
+              </button>
+              {collectionsOpen && (
+                <div style={styles.dropdownMenu}>
+                  {collections.length === 0 ? (
+                    <div style={styles.dropdownEmpty}>No collections yet</div>
+                  ) : (
+                    collections.map((collection) => {
+                      const isActive = selectedCollectionIds.includes(collection.id);
+                      return (
+                        <button
+                          type="button"
+                          key={collection.id}
+                          style={styles.dropdownItem}
+                          onClick={() => toggleCollection(collection.id)}
+                        >
+                          <Check size={12} color="#1447E6" style={{ visibility: isActive ? "visible" : "hidden" }} />
+                          <span>
+                            {collection.icon} {collection.name}
+                          </span>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              )}
             </div>
-          )}
-
-          <button style={styles.primaryButton} onClick={handleSave}>
-            Save to Memora
-          </button>
+          </div>
         </div>
       )}
 
@@ -633,6 +689,94 @@ const styles = {
     outline: "none",
     minWidth: "110px",
     flex: 1,
+  },
+  modeRow: {
+    display: "flex",
+    gap: "8px",
+  },
+  modeButton: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    flex: 1,
+    border: "1px solid #e5e5ea",
+    borderRadius: "10px",
+    padding: "8px",
+    fontSize: "11px",
+    fontWeight: "bold" as const,
+    color: "#8e8e93",
+    backgroundColor: "#f9f9f9",
+    cursor: "pointer",
+  },
+  modeButtonActive: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "6px",
+    flex: 1,
+    border: "1px solid #1447E6",
+    borderRadius: "10px",
+    padding: "8px",
+    fontSize: "11px",
+    fontWeight: "bold" as const,
+    color: "#1447E6",
+    backgroundColor: "rgba(20,71,230,0.1)",
+    cursor: "pointer",
+  },
+  dropdownTrigger: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "space-between",
+    width: "100%",
+    border: "1px solid #e5e5ea",
+    borderRadius: "8px",
+    padding: "7px 10px",
+    fontSize: "11px",
+    color: "#1c1c1e",
+    backgroundColor: "#f9f9f9",
+    outline: "none",
+    cursor: "pointer",
+    boxSizing: "border-box" as const,
+  },
+  dropdownTriggerText: {
+    overflow: "hidden",
+    textOverflow: "ellipsis",
+    whiteSpace: "nowrap" as const,
+  },
+  dropdownMenu: {
+    position: "absolute" as const,
+    top: "calc(100% + 4px)",
+    left: 0,
+    right: 0,
+    zIndex: 10,
+    display: "flex",
+    flexDirection: "column" as const,
+    maxHeight: "140px",
+    overflowY: "auto" as const,
+    border: "1px solid #e5e5ea",
+    borderRadius: "8px",
+    backgroundColor: "#ffffff",
+    boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+    padding: "4px",
+  },
+  dropdownItem: {
+    display: "flex",
+    alignItems: "center",
+    gap: "6px",
+    border: "none",
+    background: "transparent",
+    borderRadius: "6px",
+    padding: "6px 8px",
+    fontSize: "11px",
+    color: "#1c1c1e",
+    cursor: "pointer",
+    textAlign: "left" as const,
+  },
+  dropdownEmpty: {
+    fontSize: "11px",
+    color: "#8e8e93",
+    padding: "6px 8px",
   },
   primaryButton: {
     backgroundColor: "#1447E6",
