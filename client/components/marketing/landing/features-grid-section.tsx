@@ -2,6 +2,7 @@
 
 import React from "react";
 import Image from "next/image";
+import { motion, useReducedMotion } from "motion/react";
 
 const alsoIncluded = [
   "Search by meaning",
@@ -57,6 +58,8 @@ const featureRows: FeatureCard[][] = [
 ];
 
 export default function FeaturesGridSection() {
+  const reduceMotion = useReducedMotion();
+
   return (
     <section className="mx-auto flex max-w-6xl flex-col px-6 py-20 bg-background border-t border-border/20">
       <div className="text-center max-w-2xl mx-auto mb-16">
@@ -76,22 +79,30 @@ export default function FeaturesGridSection() {
         {featureRows.map((row, rowIdx) => (
           <div key={rowIdx} className="flex flex-col gap-6 sm:flex-row">
             {row.map((feature) => (
-              <div
+              <motion.div
                 key={feature.title}
+                whileHover={reduceMotion ? undefined : { y: -4 }}
+                transition={{ type: "spring", stiffness: 400, damping: 28 }}
                 className={
-                  "rounded-2xl border border-border/45 bg-muted/75 p-1.5 shadow-xs dark:border-border/65 hover:border-primary/20 transition-all duration-300 " +
+                  "group rounded-2xl border border-border/45 bg-muted/75 p-1.5 shadow-xs dark:border-border/65 hover:border-primary/20 hover:shadow-md " +
                   (feature.span === "wide" ? "sm:flex-[3]" : "sm:flex-[2]")
                 }
               >
                 <div className="flex h-full flex-col rounded-xl border border-border/75 bg-card overflow-hidden">
-                  <div className="relative w-full aspect-[16/10] bg-muted/50">
-                    <Image
-                      src={feature.image}
-                      alt={feature.title}
-                      fill
-                      sizes="(min-width: 640px) 50vw, 100vw"
-                      className="object-cover"
-                    />
+                  <div className="relative w-full aspect-[16/10] bg-muted/50 overflow-hidden">
+                    <motion.div
+                      className="absolute inset-0"
+                      whileHover={reduceMotion ? undefined : { scale: 1.04 }}
+                      transition={{ type: "spring", stiffness: 300, damping: 25 }}
+                    >
+                      <Image
+                        src={feature.image}
+                        alt={feature.title}
+                        fill
+                        sizes="(min-width: 640px) 50vw, 100vw"
+                        className="object-cover"
+                      />
+                    </motion.div>
                   </div>
 
                   <div className="px-6 py-6 text-center">
@@ -103,7 +114,7 @@ export default function FeaturesGridSection() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         ))}
