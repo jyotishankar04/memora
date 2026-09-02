@@ -1,6 +1,7 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { JsonOutputParser } from "@langchain/core/output_parsers";
 import { getChatModel } from "../../ai.providers";
+import { createUsageCallback } from "../../../ai-usage/usage-logger";
 import { extractUrl } from "../extract-url";
 import { logNode } from "../log";
 import type { IngestionStateType, IngestionUpdate } from "../state";
@@ -49,7 +50,10 @@ export async function detectContentType(state: IngestionStateType): Promise<Inge
   }
 
   const chain = prompt.pipe(getChatModel("fast")).pipe(new JsonOutputParser<ContentTypeExtraction>());
-  const result = await chain.invoke({ content: state.rawContent.slice(0, 4000) });
+  const result = await chain.invoke(
+    { content: state.rawContent.slice(0, 4000) },
+    { callbacks: [createUsageCallback({ userId: state.userId, requestType: "ingestion:detect_content_type", memoryId: state.memoryId })] },
+  );
 
   logNode(state.memoryId, "detectContentType", {
     contentType: result.contentType,

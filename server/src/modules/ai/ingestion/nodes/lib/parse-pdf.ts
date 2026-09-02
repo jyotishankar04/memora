@@ -1,6 +1,6 @@
 import { PDFParse } from "pdf-parse";
 import { ChatPromptTemplate } from "@langchain/core/prompts";
-import { getTextFallbackModels, invokeWithFallback } from "../../../ai.providers";
+import { getTextFallbackModels, invokeWithFallback, type UsageContext } from "../../../ai.providers";
 import { logger } from "../../../../../shared/utils/logger";
 
 const MAX_CONTENT_LENGTH = 20000;
@@ -22,13 +22,13 @@ Page 1 text:
 Summary:`,
 );
 
-async function summarizeFirstPage(pageOneText: string, totalPages: number, caption?: string): Promise<string> {
+async function summarizeFirstPage(pageOneText: string, totalPages: number, usage: UsageContext, caption?: string): Promise<string> {
   const messages = await summaryPrompt.formatMessages({
     totalPages,
     captionContext: caption ? ` titled/captioned "${caption}"` : "",
     pageOneText: pageOneText.slice(0, MAX_CONTENT_LENGTH),
   });
-  return (await invokeWithFallback(getTextFallbackModels(), messages)).trim();
+  return (await invokeWithFallback(getTextFallbackModels(), messages, usage)).trim();
 }
 
 /**
@@ -40,7 +40,7 @@ async function summarizeFirstPage(pageOneText: string, totalPages: number, capti
  * a corrupt/unreadable PDF degrades to "", same as every other ingestion
  * step in this pipeline.
  */
-export async function extractPdfContent(data: ArrayBuffer | Buffer, caption?: string): Promise<string> {
+export async function extractPdfContent(data: ArrayBuffer | Buffer, usage: UsageContext, caption?: string): Promise<string> {
   const parser = new PDFParse({ data });
   try {
     const { total } = await parser.getInfo({ parsePageInfo: true });
@@ -51,7 +51,7 @@ export async function extractPdfContent(data: ArrayBuffer | Buffer, caption?: st
     }
 
     const firstPage = await parser.getText({ first: 1 });
-    return await summarizeFirstPage(firstPage.text, total, caption);
+    return await summarizeFirstPage(firstPage.text, total, usage, caption);
   } catch (err) {
     logger.warn({ err }, "extractPdfContent: failed to parse PDF");
     return "";

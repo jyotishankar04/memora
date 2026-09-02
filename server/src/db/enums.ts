@@ -46,3 +46,9 @@ export enum MemoryStatus {
   PARTIAL = "partial",
   FAILED = "failed",
 }
+
+export enum AnnouncementType {
+  COUNTDOWN = "countdown",
+  ANNOUNCEMENT = "announcement",
+  UPDATE = "update",
+}

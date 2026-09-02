@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "../../../../db";
 import { collections } from "../../../../db/schema";
 import { getChatModel } from "../../ai.providers";
+import { createUsageCallback } from "../../../ai-usage/usage-logger";
 import { logNode } from "../log";
 import type { IngestionStateType, IngestionUpdate } from "../state";
 
@@ -47,12 +48,15 @@ export async function organizeCollection(state: IngestionStateType): Promise<Ing
       : "(none yet)";
 
   const chain = prompt.pipe(getChatModel("fast")).pipe(new JsonOutputParser<CollectionDecision>());
-  const decision = await chain.invoke({
-    title: state.aiTitle ?? state.existingTitle,
-    summary: state.aiSummary ?? "",
-    resourceCategory: state.resourceCategory ?? "",
-    existingCollections: existingCollectionsText,
-  });
+  const decision = await chain.invoke(
+    {
+      title: state.aiTitle ?? state.existingTitle,
+      summary: state.aiSummary ?? "",
+      resourceCategory: state.resourceCategory ?? "",
+      existingCollections: existingCollectionsText,
+    },
+    { callbacks: [createUsageCallback({ userId: state.userId, requestType: "ingestion:organize_collection", memoryId: state.memoryId })] },
+  );
 
   logNode(state.memoryId, "organizeCollection", decision as unknown as Record<string, unknown>);
 

@@ -5,6 +5,7 @@ import { getEmbeddings } from "../ai.providers";
 import { getVectorStore } from "../vector-store";
 import { rrfMerge, SEMANTIC_SIMILARITY_FLOOR } from "../search/rrf";
 import { MIN_SEMANTIC_QUERY_LENGTH } from "../search/semantic-search";
+import { logAiUsage } from "../../ai-usage/usage-logger";
 import { logger } from "../../../shared/utils/logger";
 
 export interface RetrievedMemory {
@@ -66,6 +67,7 @@ async function chunkSemanticSearch(userId: string, queryText: string, limit: num
 
   try {
     const embedding = await getEmbeddings().embedQuery(queryText);
+    void logAiUsage({ userId, requestType: "embedding:query", provider: "openai", model: "text-embedding-3-small" });
     const results = await getVectorStore().searchChunksByEmbedding(userId, embedding, limit);
     return results.map((r) => ({ chunkId: r.chunkId, memoryId: r.memoryId, content: r.content, score: r.score }));
   } catch (err) {

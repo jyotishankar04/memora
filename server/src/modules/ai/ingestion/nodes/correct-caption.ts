@@ -1,6 +1,7 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { StringOutputParser } from "@langchain/core/output_parsers";
 import { getChatModel } from "../../ai.providers";
+import { createUsageCallback } from "../../../ai-usage/usage-logger";
 import { logNode } from "../log";
 import type { IngestionStateType, IngestionUpdate } from "../state";
 
@@ -20,7 +21,12 @@ export async function correctCaption(state: IngestionStateType): Promise<Ingesti
   }
 
   const chain = prompt.pipe(getChatModel("fast")).pipe(new StringOutputParser());
-  const corrected = (await chain.invoke({ caption: state.caption })).trim();
+  const corrected = (
+    await chain.invoke(
+      { caption: state.caption },
+      { callbacks: [createUsageCallback({ userId: state.userId, requestType: "ingestion:correct_caption", memoryId: state.memoryId })] },
+    )
+  ).trim();
 
   logNode(state.memoryId, "correctCaption", { original: state.caption, corrected });
 

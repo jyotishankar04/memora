@@ -17,6 +17,7 @@ import { defineRelations } from "drizzle-orm";
 import { vector, tsvector, EMBEDDING_DIMENSIONS } from "./pgvector-type";
 import {
   AccentColor,
+  AnnouncementType,
   MemoryStatus,
   MemoryType,
   OrganizeMode,
@@ -70,6 +71,12 @@ export const memoryStatusEnum = pgEnum("memory_status", [
   MemoryStatus.READY,
   MemoryStatus.PARTIAL,
   MemoryStatus.FAILED,
+]);
+
+export const announcementTypeEnum = pgEnum("announcement_type", [
+  AnnouncementType.COUNTDOWN,
+  AnnouncementType.ANNOUNCEMENT,
+  AnnouncementType.UPDATE,
 ]);
 
 // -----------------------------------------------------------------------------
@@ -551,7 +558,112 @@ export const threads = pgTable(
 );
 
 // -----------------------------------------------------------------------------
-// 20. Relations
+// 20. Feature Flags Table (global config as key/value — auth toggles,
+//     signups toggle, maintenance mode, and any future flag, all without a
+//     migration per flag. Read via feature-flags.service.ts's typed getters,
+//     never raw, by callers like auth.service.ts and the maintenance guard.)
+// -----------------------------------------------------------------------------
+export const featureFlags = pgTable(
+  "feature_flags",
+  {
+    key: varchar("key", { length: 100 }).primaryKey(),
+    value: jsonb("value").notNull(),
+    description: text("description"),
+    category: varchar("category", { length: 50 }), // e.g. "auth", "system", "experimental"
+    updatedBy: uuid("updated_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index("idx_feature_flags_category").on(table.category)]
+);
+
+// -----------------------------------------------------------------------------
+// 21. Announcements Table (launch/update countdowns and banners — a history,
+//     not a singleton; "only one active" is enforced in the service layer)
+// -----------------------------------------------------------------------------
+export const announcements = pgTable(
+  "announcements",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    type: announcementTypeEnum("type").notNull().default(AnnouncementType.ANNOUNCEMENT),
+    title: varchar("title", { length: 200 }).notNull(),
+    message: text("message").notNull(),
+    targetDate: timestamp("target_date", { withTimezone: true }),
+    ctaLabel: varchar("cta_label", { length: 100 }),
+    ctaUrl: text("cta_url"),
+    isActive: boolean("is_active").notNull().default(false),
+    startsAt: timestamp("starts_at", { withTimezone: true }),
+    endsAt: timestamp("ends_at", { withTimezone: true }),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("idx_announcements_active").on(table.isActive),
+    index("idx_announcements_created_at").on(table.createdAt),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 22. AI Usage Logs Table (per-call token/cost record for the admin AI-usage
+//     dashboard. FKs use "set null" rather than this schema's usual cascade —
+//     aggregate cost history should survive a user/thread/memory deletion.)
+// -----------------------------------------------------------------------------
+export const aiUsageLogs = pgTable(
+  "ai_usage_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    requestType: varchar("request_type", { length: 100 }).notNull(), // e.g. "ingestion:classify_intent", "rag:agent", "embedding:document"
+    provider: varchar("provider", { length: 50 }).notNull(), // "groq" | "openai" — distinct from the OAuth providerEnum
+    model: varchar("model", { length: 100 }).notNull(),
+    promptTokens: integer("prompt_tokens"),
+    completionTokens: integer("completion_tokens"),
+    totalTokens: integer("total_tokens"),
+    costEstimateUsd: real("cost_estimate_usd"),
+    threadId: uuid("thread_id").references(() => threads.id, { onDelete: "set null" }),
+    memoryId: uuid("memory_id").references(() => memories.id, { onDelete: "set null" }),
+    metadata: jsonb("metadata"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_ai_usage_logs_user_created").on(table.userId, table.createdAt),
+    index("idx_ai_usage_logs_created_at").on(table.createdAt),
+    index("idx_ai_usage_logs_request_type_created").on(table.requestType, table.createdAt),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 23. Admin Audit Logs Table (who did what admin action, to what, when —
+//     written from every mutating admin endpoint)
+// -----------------------------------------------------------------------------
+export const adminAuditLogs = pgTable(
+  "admin_audit_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    adminUserId: uuid("admin_user_id").references(() => users.id, { onDelete: "set null" }),
+    action: varchar("action", { length: 100 }).notNull(), // e.g. "user.role.granted", "flag.updated"
+    targetType: varchar("target_type", { length: 50 }), // e.g. "user", "feature_flag", "announcement"
+    targetId: varchar("target_id", { length: 255 }), // polymorphic — not a strict FK
+    beforeValue: jsonb("before_value"),
+    afterValue: jsonb("after_value"),
+    ipAddress: varchar("ip_address", { length: 45 }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_admin_audit_logs_admin_user_created").on(table.adminUserId, table.createdAt),
+    index("idx_admin_audit_logs_target").on(table.targetType, table.targetId),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 24. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {
@@ -560,6 +672,21 @@ export const  relations = defineRelations({
     sessions: { relation: "hasMany", foreignKey: "userId" },
     devices: { relation: "hasMany", foreignKey: "userId" },
     userRoles: { relation: "hasMany", foreignKey: "userId" },
+    aiUsageLogs: { relation: "hasMany", foreignKey: "userId" },
+  },
+  featureFlags: {
+    updatedByUser: { relation: "belongsTo", foreignKey: "updatedBy" },
+  },
+  announcements: {
+    createdByUser: { relation: "belongsTo", foreignKey: "createdBy" },
+  },
+  aiUsageLogs: {
+    user: { relation: "belongsTo", foreignKey: "userId" },
+    thread: { relation: "belongsTo", foreignKey: "threadId" },
+    memory: { relation: "belongsTo", foreignKey: "memoryId" },
+  },
+  adminAuditLogs: {
+    adminUser: { relation: "belongsTo", foreignKey: "adminUserId" },
   },
   roles: {
     userRoles: { relation: "hasMany", foreignKey: "roleId" },

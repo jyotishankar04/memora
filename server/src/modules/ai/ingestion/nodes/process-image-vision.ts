@@ -8,7 +8,11 @@ export async function processImageVision(state: IngestionStateType): Promise<Ing
     return { rawContent: "" };
   }
 
-  const rawContent = await analyzeImage(state.attachmentUrl);
+  const rawContent = await analyzeImage(state.attachmentUrl, {
+    userId: state.userId,
+    requestType: "ingestion:vision",
+    memoryId: state.memoryId,
+  });
   logNode(state.memoryId, "processImageVision", { attachmentUrl: state.attachmentUrl, contentLength: rawContent.length });
   return { rawContent };
 }

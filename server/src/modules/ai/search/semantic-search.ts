@@ -1,5 +1,6 @@
 import { getEmbeddings } from "../ai.providers";
 import { getVectorStore } from "../vector-store";
+import { logAiUsage } from "../../ai-usage/usage-logger";
 import { logger } from "../../../shared/utils/logger";
 import type { SearchLegResult } from "./types";
 
@@ -18,6 +19,7 @@ export async function semanticSearch(userId: string, queryText: string, limit: n
 
   try {
     const embedding = await getEmbeddings().embedQuery(queryText);
+    void logAiUsage({ userId, requestType: "embedding:query", provider: "openai", model: "text-embedding-3-small" });
     return await getVectorStore().searchByEmbedding(userId, embedding, limit);
   } catch (err) {
     logger.error({ err, userId }, "semanticSearch: leg failed, degrading to lexical-only");

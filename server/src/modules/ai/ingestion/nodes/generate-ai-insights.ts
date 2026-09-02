@@ -1,6 +1,7 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { JsonOutputParser } from "@langchain/core/output_parsers";
 import { getChatModel } from "../../ai.providers";
+import { createUsageCallback } from "../../../ai-usage/usage-logger";
 import { logNode } from "../log";
 import type { IngestionStateType, IngestionUpdate } from "../state";
 
@@ -58,14 +59,17 @@ export async function generateAiInsights(state: IngestionStateType): Promise<Ing
       .join(" | ") || "(none available)";
 
   const chain = prompt.pipe(getChatModel("fast")).pipe(new JsonOutputParser<Insights>());
-  const insights = await chain.invoke({
-    content: (state.rawContent || "(none captured)").slice(0, 4000),
-    context,
-    inferredIntent: state.inferredIntent ?? "",
-    resourceCategory: state.resourceCategory ?? "",
-    contentType: state.contentType ?? "",
-    extractedFields: Object.keys(state.extractedFields).length > 0 ? JSON.stringify(state.extractedFields) : "",
-  });
+  const insights = await chain.invoke(
+    {
+      content: (state.rawContent || "(none captured)").slice(0, 4000),
+      context,
+      inferredIntent: state.inferredIntent ?? "",
+      resourceCategory: state.resourceCategory ?? "",
+      contentType: state.contentType ?? "",
+      extractedFields: Object.keys(state.extractedFields).length > 0 ? JSON.stringify(state.extractedFields) : "",
+    },
+    { callbacks: [createUsageCallback({ userId: state.userId, requestType: "ingestion:generate_insights", memoryId: state.memoryId })] },
+  );
 
   logNode(state.memoryId, "generateAiInsights", {
     title: insights.title,

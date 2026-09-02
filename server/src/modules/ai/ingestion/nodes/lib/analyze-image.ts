@@ -1,5 +1,5 @@
 import { HumanMessage } from "@langchain/core/messages";
-import { getVisionModels, invokeWithFallback } from "../../../ai.providers";
+import { getVisionModels, invokeWithFallback, type UsageContext } from "../../../ai.providers";
 import { logger } from "../../../../../shared/utils/logger";
 
 // "Screen type" exists so a generic query like "terminal images" or "code
@@ -38,7 +38,7 @@ Visual description: <structured description>`;
  * Never throws — degrades to "" on any failure (including every model in
  * the fallback list failing), same convention as every other ingestion step.
  */
-export async function analyzeImage(imageUrl: string): Promise<string> {
+export async function analyzeImage(imageUrl: string, usage: UsageContext): Promise<string> {
   try {
     const message = new HumanMessage({
       content: [
@@ -46,7 +46,7 @@ export async function analyzeImage(imageUrl: string): Promise<string> {
         { type: "image_url", image_url: { url: imageUrl } },
       ],
     });
-    return (await invokeWithFallback(getVisionModels(), [message])).trim();
+    return (await invokeWithFallback(getVisionModels(), [message], usage)).trim();
   } catch (err) {
     logger.warn({ err, imageUrl }, "analyzeImage: failed to analyze image");
     return "";

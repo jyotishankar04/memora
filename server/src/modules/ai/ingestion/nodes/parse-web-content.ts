@@ -41,7 +41,11 @@ export async function parseWebContent(state: IngestionStateType): Promise<Ingest
   // status falls straight through to the existing HTML-oriented logic below,
   // unchanged.
   if (fetchResult.status === "success" && fetchResult.contentType?.includes("application/pdf") && fetchResult.binaryData) {
-    const rawContent = await extractPdfContent(fetchResult.binaryData, state.caption || undefined);
+    const rawContent = await extractPdfContent(
+      fetchResult.binaryData,
+      { userId: state.userId, requestType: "ingestion:pdf_summary", memoryId: state.memoryId },
+      state.caption || undefined,
+    );
     logNode(state.memoryId, "parseWebContent", { url: state.url, fetchStatus: fetchResult.status, kind: "pdf", contentLength: rawContent.length });
     return {
       rawContent,
@@ -64,7 +68,7 @@ export async function parseWebContent(state: IngestionStateType): Promise<Ingest
 
   if (fetchResult.status === "success" && fetchResult.contentType?.includes("image/")) {
     const imageUrl = fetchResult.finalUrl ?? state.url;
-    const rawContent = await analyzeImage(imageUrl);
+    const rawContent = await analyzeImage(imageUrl, { userId: state.userId, requestType: "ingestion:vision", memoryId: state.memoryId });
     logNode(state.memoryId, "parseWebContent", { url: state.url, fetchStatus: fetchResult.status, kind: "image", contentLength: rawContent.length });
     return {
       rawContent,
