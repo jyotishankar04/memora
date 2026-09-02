@@ -21,7 +21,9 @@ import {
   SheetTitle,
   SheetDescription,
 } from "@/components/ui/sheet";
-import { ChevronRight, Menu, Moon, Sun } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ChevronRightIcon as ChevronRight, Menu01Icon as Menu, MoonIcon as Moon, Sun01Icon as Sun, LayoutDashboardIcon as LayoutDashboard } from "@hugeicons/core-free-icons";
+import { useCurrentUserQuery } from "@/context/UserContext";
 
 const features = [
   {
@@ -66,6 +68,8 @@ export function Navbar() {
   const [mounted, setMounted] = React.useState(false);
   const [isScrolled, setIsScrolled] = React.useState(false);
   const pathname = usePathname();
+  const { data: currentUser, isLoading: isUserLoading } = useCurrentUserQuery();
+  const isAuthenticated = !!currentUser;
 
   const isHomePage = pathname === "/";
   const useWhiteText = isHomePage && !isScrolled;
@@ -147,7 +151,7 @@ export function Navbar() {
                               {feature.title}
                             </span>
 
-                            <ChevronRight
+                            <HugeiconsIcon icon={ChevronRight} strokeWidth={2.25}
                               className="
                                 h-4 w-4
                                 text-muted-foreground/40
@@ -249,38 +253,63 @@ export function Navbar() {
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
             {mounted && theme === "dark" ? (
-              <Sun className="h-[18px] w-[18px] transition-all" />
+              <HugeiconsIcon icon={Sun} strokeWidth={2.25} className="h-[18px] w-[18px] transition-all" />
             ) : (
-              <Moon className="h-[18px] w-[18px] transition-all" />
+              <HugeiconsIcon icon={Moon} strokeWidth={2.25} className="h-[18px] w-[18px] transition-all" />
             )}
             <span className="sr-only">Toggle theme</span>
           </Button>
 
-          <Link
-            href="/auth/login"
-            className={cn(
-              "rounded-full px-4 py-2 text-sm font-medium transition-colors duration-300",
-              useWhiteText 
-                ? "text-zinc-300 hover:text-white hover:bg-white/10" 
-                : "text-muted-foreground hover:text-foreground hover:bg-muted"
-            )}
-          >
-            Sign in
-          </Link>
+          {isUserLoading ? (
+            <div
+              className={cn(
+                "h-9 w-28 rounded-full animate-pulse",
+                useWhiteText ? "bg-white/10" : "bg-muted"
+              )}
+            />
+          ) : isAuthenticated ? (
+            <Link
+              href="/app"
+              className={cn(
+                buttonVariants({ variant: "default", size: "sm" }),
+                "h-9 rounded-full px-4 text-sm font-medium shadow-sm transition-all duration-200 flex items-center",
+                useWhiteText
+                  ? "bg-white text-zinc-950 hover:bg-zinc-100"
+                  : "bg-primary text-primary-foreground hover:bg-primary/95"
+              )}
+            >
+              <HugeiconsIcon icon={LayoutDashboard} strokeWidth={2.25} className="mr-1.5 h-4 w-4" />
+              Go to Dashboard
+            </Link>
+          ) : (
+            <>
+              <Link
+                href="/auth/login"
+                className={cn(
+                  "rounded-full px-4 py-2 text-sm font-medium transition-colors duration-300",
+                  useWhiteText
+                    ? "text-zinc-300 hover:text-white hover:bg-white/10"
+                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                )}
+              >
+                Sign in
+              </Link>
 
-          <Link
-            href="/auth/signup"
-            className={cn(
-              buttonVariants({ variant: "default", size: "sm" }),
-              "h-9 rounded-full px-4 text-sm font-medium shadow-sm transition-all duration-200 flex items-center",
-              useWhiteText 
-                ? "bg-white text-zinc-950 hover:bg-zinc-100" 
-                : "bg-primary text-primary-foreground hover:bg-primary/95"
-            )}
-          >
-            Get started
-            <ChevronRight className="ml-1 h-4 w-4" />
-          </Link>
+              <Link
+                href="/auth/signup"
+                className={cn(
+                  buttonVariants({ variant: "default", size: "sm" }),
+                  "h-9 rounded-full px-4 text-sm font-medium shadow-sm transition-all duration-200 flex items-center",
+                  useWhiteText
+                    ? "bg-white text-zinc-950 hover:bg-zinc-100"
+                    : "bg-primary text-primary-foreground hover:bg-primary/95"
+                )}
+              >
+                Get started
+                <HugeiconsIcon icon={ChevronRight} strokeWidth={2.25} className="ml-1 h-4 w-4" />
+              </Link>
+            </>
+          )}
         </div>
 
         {/* Mobile Navigation */}
@@ -298,26 +327,28 @@ export function Navbar() {
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
           >
             {mounted && theme === "dark" ? (
-              <Sun className="h-[18px] w-[18px] transition-all" />
+              <HugeiconsIcon icon={Sun} strokeWidth={2.25} className="h-[18px] w-[18px] transition-all" />
             ) : (
-              <Moon className="h-[18px] w-[18px] transition-all" />
+              <HugeiconsIcon icon={Moon} strokeWidth={2.25} className="h-[18px] w-[18px] transition-all" />
             )}
             <span className="sr-only">Toggle theme</span>
           </Button>
 
-          {/* Get Started (Mobile sm+) */}
-          <Link
-            href="/auth/signup"
-            className={cn(
-              buttonVariants({ variant: "default", size: "sm" }),
-              "hidden sm:inline-flex h-9 rounded-full px-4 text-xs font-medium shadow-sm transition-all duration-200 flex items-center",
-              useWhiteText 
-                ? "bg-white text-zinc-950 hover:bg-zinc-100" 
-                : "bg-primary text-primary-foreground hover:bg-primary/95"
-            )}
-          >
-            Get started
-          </Link>
+          {/* Auth CTA (Mobile sm+) */}
+          {!isUserLoading && (
+            <Link
+              href={isAuthenticated ? "/app" : "/auth/signup"}
+              className={cn(
+                buttonVariants({ variant: "default", size: "sm" }),
+                "hidden sm:inline-flex h-9 rounded-full px-4 text-xs font-medium shadow-sm transition-all duration-200 flex items-center",
+                useWhiteText
+                  ? "bg-white text-zinc-950 hover:bg-zinc-100"
+                  : "bg-primary text-primary-foreground hover:bg-primary/95"
+              )}
+            >
+              {isAuthenticated ? "Dashboard" : "Get started"}
+            </Link>
+          )}
 
           {/* Hamburger Sheet */}
           <Sheet>
@@ -335,7 +366,7 @@ export function Navbar() {
                 />
               }
             >
-              <Menu className="h-5 w-5" />
+              <HugeiconsIcon icon={Menu} strokeWidth={2.25} className="h-5 w-5" />
               <span className="sr-only">Open menu</span>
             </SheetTrigger>
             <SheetContent
@@ -414,26 +445,41 @@ export function Navbar() {
               </div>
 
               <div className="space-y-3 pt-6 border-t border-border mt-auto">
-                <Link
-                  href="/auth/login"
-                  className="
-                    flex h-10 items-center justify-center rounded-full
-                    text-sm font-medium text-foreground border border-border
-                    hover:bg-muted transition-colors
-                  "
-                >
-                  Sign in
-                </Link>
-                <Link
-                  href="/auth/signup"
-                  className={cn(
-                    buttonVariants({ variant: "default", size: "default" }),
-                    "w-full h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/95 flex items-center justify-center font-medium"
-                  )}
-                >
-                  Get started
-                  <ChevronRight className="ml-1 h-4 w-4" />
-                </Link>
+                {isAuthenticated ? (
+                  <Link
+                    href="/app"
+                    className={cn(
+                      buttonVariants({ variant: "default", size: "default" }),
+                      "w-full h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/95 flex items-center justify-center font-medium"
+                    )}
+                  >
+                    <HugeiconsIcon icon={LayoutDashboard} strokeWidth={2.25} className="mr-1.5 h-4 w-4" />
+                    Go to Dashboard
+                  </Link>
+                ) : (
+                  <>
+                    <Link
+                      href="/auth/login"
+                      className="
+                        flex h-10 items-center justify-center rounded-full
+                        text-sm font-medium text-foreground border border-border
+                        hover:bg-muted transition-colors
+                      "
+                    >
+                      Sign in
+                    </Link>
+                    <Link
+                      href="/auth/signup"
+                      className={cn(
+                        buttonVariants({ variant: "default", size: "default" }),
+                        "w-full h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/95 flex items-center justify-center font-medium"
+                      )}
+                    >
+                      Get started
+                      <HugeiconsIcon icon={ChevronRight} strokeWidth={2.25} className="ml-1 h-4 w-4" />
+                    </Link>
+                  </>
+                )}
               </div>
             </SheetContent>
           </Sheet>
