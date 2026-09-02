@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useMemo, useRef, useState } from "react";
-import { Plus, X, Check, FileText, Paperclip, UploadCloud } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { PlusIcon as Plus, XIcon as X, CheckIcon as Check, FileTextIcon as FileText, PaperclipIcon as Paperclip, CloudUploadIcon as UploadCloud } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import {
   InputGroup,
@@ -172,7 +173,7 @@ export default function CapturePage() {
         <div className="relative w-14 h-14 flex items-center justify-center mb-6">
           <div className="absolute inset-0 bg-emerald-500/20 rounded-full blur-xl animate-pulse" />
           <div className="w-12 h-12 rounded-2xl border border-emerald-500/30 flex items-center justify-center bg-card shadow-md text-emerald-600">
-            <Check className="h-6 w-6 stroke-[3]" />
+            <HugeiconsIcon icon={Check} strokeWidth={2.25} className="h-6 w-6 stroke-[3]" />
           </div>
         </div>
 
@@ -220,7 +221,7 @@ export default function CapturePage() {
         <div className="relative">
           {isDraggingOver && (
             <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-background/90 backdrop-blur-sm">
-              <UploadCloud className="h-5 w-5 text-primary" />
+              <HugeiconsIcon icon={UploadCloud} strokeWidth={2.25} className="h-5 w-5 text-primary" />
               <p className="text-[10px] font-bold text-primary uppercase tracking-wide">Drop to attach</p>
             </div>
           )}
@@ -257,7 +258,7 @@ export default function CapturePage() {
                       // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain preview image
                       <img src={captureAttachment.fileUrl} alt="" />
                     ) : (
-                      <FileText />
+                      <HugeiconsIcon icon={FileText} strokeWidth={2.25} />
                     )}
                   </AttachmentMedia>
                   <AttachmentContent>
@@ -273,7 +274,7 @@ export default function CapturePage() {
                   </AttachmentContent>
                   <AttachmentActions>
                     <AttachmentAction type="button" aria-label={`Remove ${captureAttachmentName ?? "attachment"}`} onClick={clearAttachment}>
-                      <X />
+                      <HugeiconsIcon icon={X} strokeWidth={2.25} />
                     </AttachmentAction>
                   </AttachmentActions>
                 </Attachment>
@@ -282,12 +283,12 @@ export default function CapturePage() {
 
             <InputGroupAddon align="block-end" className="w-full justify-between border-t border-border/40 bg-muted/20 px-3 py-2">
               <InputGroupButton type="button" onClick={() => fileInputRef.current?.click()}>
-                <Paperclip className="h-3.5 w-3.5" />
+                <HugeiconsIcon icon={Paperclip} strokeWidth={2.25} className="h-3.5 w-3.5" />
                 Attach
               </InputGroupButton>
 
               <InputGroupText className="rounded-full bg-primary/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-primary">
-                <DetectedTypeIcon className="h-3 w-3" />
+                <HugeiconsIcon icon={DetectedTypeIcon} strokeWidth={2.25} className="h-3 w-3" />
                 {detectedTypeLabel}
               </InputGroupText>
             </InputGroupAddon>
@@ -320,7 +321,7 @@ export default function CapturePage() {
                   >
                     <span>{col.icon}</span>
                     {col.name}
-                    {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                    {isSelected && <HugeiconsIcon icon={Check} strokeWidth={2.25} className="h-2.5 w-2.5 stroke-[3]" />}
                   </button>
                 );
               })
@@ -347,7 +348,7 @@ export default function CapturePage() {
           >
             {isSaving ? "Saving..." : (
               <>
-                <Plus className="h-4 w-4" /> Save Memory
+                <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" /> Save Memory
               </>
             )}
           </Button>

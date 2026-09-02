@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Globe, Video, Code, Image, FileText, StickyNote } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { GlobeIcon as Globe, Video01Icon as Video, ChefHatIcon as ChefHat, Image01Icon as Image, FileTextIcon as FileText, StickyNote01Icon as StickyNote } from "@hugeicons/core-free-icons";
 
 const items = [
   {
@@ -36,19 +37,17 @@ const items = [
     ),
   },
   {
-    title: "GitHub",
-    desc: "Never lose that repository again.",
-    icon: Code,
-    color: "bg-foreground/10 text-foreground border-foreground/10",
+    title: "Recipes",
+    desc: "Save the recipe, skip the life story.",
+    icon: ChefHat,
+    color: "bg-orange-500/10 text-orange-600 border-orange-500/10",
     visual: (
       <div className="space-y-1.5 w-full">
-        <div className="h-3.5 w-full bg-muted rounded flex items-center px-1.5 gap-1 border border-border/30">
-          <span className="text-[8px] font-mono text-muted-foreground">package.json</span>
-        </div>
-        <div className="font-mono text-[7px]/relaxed text-muted-foreground/80 space-y-0.5">
-          <div><span className="text-primary">"dependencies"</span>: &#123;</div>
-          <div className="pl-3"><span className="text-emerald-500">"next"</span>: <span className="text-amber-600">"^16.3.2"</span></div>
-          <div>&#125;</div>
+        <div className="h-2 w-2/3 bg-orange-500/30 rounded" />
+        <div className="space-y-1">
+          <div className="h-1.5 w-full bg-muted/60 rounded" />
+          <div className="h-1.5 w-[85%] bg-muted/60 rounded" />
+          <div className="h-1.5 w-[70%] bg-muted/60 rounded" />
         </div>
       </div>
     ),
@@ -123,23 +122,37 @@ export default function ContentTypesSection() {
           <p className="mt-4 text-balance text-muted-foreground text-base md:text-lg">
             Every format is formatted, indexed, and semantic-search optimized automatically.
           </p>
+
+          {/* Inline colored-pill sentence, mymind-style */}
+          <p className="mt-6 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-2 text-sm text-muted-foreground">
+            <span>All your</span>
+            {items.map((item, idx) => (
+              <span
+                key={item.title}
+                className={`inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-medium ${item.color}`}
+              >
+                {item.title.toLowerCase()}
+              </span>
+            ))}
+            <span>in one searchable place.</span>
+          </p>
         </div>
 
         {/* Asymmetrical Cards Grid (Double Bordered Cards!) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto items-start">
           {items.map((item, idx) => {
             const Icon = item.icon;
             return (
-              <div 
+              <div
                 key={idx}
                 className="rounded-2xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65 hover:border-primary/20 transition-all duration-300"
               >
-                <div className="p-6 rounded-xl border border-border/75 bg-card flex flex-col justify-between h-full group">
+                <div className="p-6 rounded-xl border border-border/75 bg-card flex flex-col group">
                   <div>
                     {/* Category Header */}
                     <div className="flex items-center justify-between mb-6">
                       <div className={`p-2 rounded-xl border ${item.color}`}>
-                        <Icon className="h-4.5 w-4.5" />
+                        <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-4.5 w-4.5" />
                       </div>
                       <span className="text-[10px] text-muted-foreground/60 tracking-widest font-bold font-mono">
                         TYPE_0{idx + 1}

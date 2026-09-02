@@ -1,11 +1,22 @@
 import LandingSlideButton from "@/components/custom/button/landing-slide-button"
 import { Button } from "@/components/ui/button"
-import { ArrowUpRight } from "lucide-react"
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowUpRight01Icon as ArrowUpRight, StarIcon as Star } from "@hugeicons/core-free-icons";
 
 const HeroSection = () => {
   return (
     <div className="bg-[url('/marketing/hero-landing.png')] bg-cover bg-center h-screen  object-cover object-center flex items-center justify-center">
       <div className="mx-auto flex max-w-5xl flex-col items-center px-6 py-12 text-center">
+        {/* Social proof pill */}
+        <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs font-medium text-white/90">
+          <div className="flex items-center gap-0.5">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <HugeiconsIcon icon={Star} strokeWidth={2.25} key={i} className="h-3 w-3 fill-amber-400 text-amber-400" />
+            ))}
+          </div>
+          <span className="text-white/40">·</span>
+          <span>Loved by early users saving their digital brain</span>
+        </div>
         <h2 className="text-balance font-medium text-5xl leading-[1.4] tracking-tighter sm:text-5xl md:text-6xl lg:text-8xl text-white">
           Save Anything.
           <br />

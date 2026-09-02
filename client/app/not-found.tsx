@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Compass } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CompassIcon as Compass } from "@hugeicons/core-free-icons";
 
 export default function NotFound() {
   return (
@@ -7,7 +8,7 @@ export default function NotFound() {
       <div className="relative w-14 h-14 flex items-center justify-center mb-6">
         <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl" />
         <div className="w-12 h-12 rounded-2xl border border-primary/30 flex items-center justify-center bg-card shadow-md">
-          <Compass className="h-6 w-6 text-primary" />
+          <HugeiconsIcon icon={Compass} strokeWidth={2.25} className="h-6 w-6 text-primary" />
         </div>
       </div>
 

@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Network, Sparkles, Database, Code, Brain } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { NetworkIcon as Network, PaletteIcon as Palette, ArmchairIcon as Armchair, LightbulbIcon as Lightbulb, Home01Icon as Home } from "@hugeicons/core-free-icons";
 
 export default function ConnectionsSection() {
   return (
@@ -102,8 +103,8 @@ export default function ConnectionsSection() {
             {/* Top Node (Root) */}
             <div className="float-card rounded-full border border-primary/20 bg-muted/75 p-0.5 shadow-sm">
               <div className="flex items-center gap-2 px-4 py-1.5 border border-primary/25 bg-card rounded-full">
-                <Brain className="h-4 w-4 text-primary fill-current/10" />
-                <span className="text-xs font-semibold text-foreground">AI Agents</span>
+                <HugeiconsIcon icon={Home} strokeWidth={2.25} className="h-4 w-4 text-primary fill-current/10" />
+                <span className="text-xs font-semibold text-foreground">Home Renovation</span>
               </div>
             </div>
 
@@ -111,20 +112,20 @@ export default function ConnectionsSection() {
             <div className="w-full flex justify-between max-w-lg px-2">
               <div className="float-card-delay-1 rounded-lg border border-border/45 bg-muted/75 p-0.5 shadow-sm">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 border border-border/75 bg-card rounded-md">
-                  <Database className="h-3.5 w-3.5 text-blue-500" />
-                  <span className="text-[11px] font-medium text-foreground">RAG</span>
+                  <HugeiconsIcon icon={Palette} strokeWidth={2.25} className="h-3.5 w-3.5 text-blue-500" />
+                  <span className="text-[11px] font-medium text-foreground">Paint</span>
                 </div>
               </div>
               <div className="float-card rounded-lg border border-border/45 bg-muted/75 p-0.5 shadow-sm">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 border border-border/75 bg-card rounded-md">
-                  <Sparkles className="h-3.5 w-3.5 text-primary fill-current/10" />
-                  <span className="text-[11px] font-medium text-foreground">Memory</span>
+                  <HugeiconsIcon icon={Armchair} strokeWidth={2.25} className="h-3.5 w-3.5 text-primary fill-current/10" />
+                  <span className="text-[11px] font-medium text-foreground">Furniture</span>
                 </div>
               </div>
               <div className="float-card-delay-2 rounded-lg border border-border/45 bg-muted/75 p-0.5 shadow-sm">
                 <div className="flex items-center gap-1.5 px-3 py-1.5 border border-border/75 bg-card rounded-md">
-                  <Code className="h-3.5 w-3.5 text-emerald-500" />
-                  <span className="text-[11px] font-medium text-foreground">Tools</span>
+                  <HugeiconsIcon icon={Lightbulb} strokeWidth={2.25} className="h-3.5 w-3.5 text-emerald-500" />
+                  <span className="text-[11px] font-medium text-foreground">Lighting</span>
                 </div>
               </div>
             </div>
@@ -133,17 +134,17 @@ export default function ConnectionsSection() {
             <div className="w-full flex justify-between max-w-lg px-2">
               <div className="float-card-delay-2 rounded-lg border border-border/45 bg-muted/75 p-0.5 shadow-xs">
                 <div className="flex items-center gap-1 px-2.5 py-1.5 border border-border/75 bg-card rounded-md">
-                  <span className="text-[10px] text-muted-foreground">Embeddings</span>
+                  <span className="text-[10px] text-muted-foreground">Budget</span>
                 </div>
               </div>
               <div className="float-card-delay-1 rounded-lg border border-border/45 bg-muted/75 p-0.5 shadow-xs">
                 <div className="flex items-center gap-1 px-2.5 py-1.5 border border-border/75 bg-card rounded-md">
-                  <span className="text-[10px] text-muted-foreground">Context</span>
+                  <span className="text-[10px] text-muted-foreground">Style</span>
                 </div>
               </div>
               <div className="float-card rounded-lg border border-border/45 bg-muted/75 p-0.5 shadow-xs">
                 <div className="flex items-center gap-1 px-2.5 py-1.5 border border-border/75 bg-card rounded-md">
-                  <span className="text-[10px] text-muted-foreground">APIs</span>
+                  <span className="text-[10px] text-muted-foreground">Stores</span>
                 </div>
               </div>
             </div>
@@ -151,8 +152,8 @@ export default function ConnectionsSection() {
             {/* Bottom Node (Outcome) */}
             <div className="float-card-delay-1 rounded-full border border-primary/20 bg-muted/75 p-0.5 shadow-sm">
               <div className="flex items-center gap-2 px-4 py-1.5 border border-primary/25 bg-card rounded-full">
-                <Network className="h-4 w-4 text-primary" />
-                <span className="text-xs font-semibold text-foreground">AI Applications</span>
+                <HugeiconsIcon icon={Network} strokeWidth={2.25} className="h-4 w-4 text-primary" />
+                <span className="text-xs font-semibold text-foreground">Dream Living Room</span>
               </div>
             </div>
 

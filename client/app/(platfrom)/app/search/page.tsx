@@ -3,7 +3,8 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
-import { Search, X, Check } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon as Search, XIcon as X, CheckIcon as Check } from "@hugeicons/core-free-icons";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
 import { listMemories, type ListMemoriesParams } from "@/lib/memories";
@@ -90,7 +91,7 @@ export default function SearchPage() {
       {/* Search Input */}
       <form onSubmit={handleSubmit} className="space-y-4 max-w-2xl">
         <div className="relative flex items-center">
-          <Search className="absolute left-4.5 h-5 w-5 text-primary stroke-[2.5]" />
+          <HugeiconsIcon icon={Search} strokeWidth={2.25} className="absolute left-4.5 h-5 w-5 text-primary stroke-[2.5]" />
           <input
             type="text"
             placeholder="What are you looking for?"
@@ -100,7 +101,7 @@ export default function SearchPage() {
           />
           {query && (
             <button type="button" onClick={() => { setQuery(""); router.push("/app/search"); }} className="absolute right-4.5 text-muted-foreground hover:text-foreground">
-              <X className="h-4 w-4" />
+              <HugeiconsIcon icon={X} strokeWidth={2.25} className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -141,7 +142,7 @@ export default function SearchPage() {
               : "border-transparent text-muted-foreground hover:text-foreground hover:bg-muted",
           )}
         >
-          Favorites {favoriteOnly && <Check className="h-3 w-3 stroke-[3]" />}
+          Favorites {favoriteOnly && <HugeiconsIcon icon={Check} strokeWidth={2.25} className="h-3 w-3 stroke-[3]" />}
         </button>
 
         {collections.length > 0 && (
@@ -167,7 +168,7 @@ export default function SearchPage() {
             onClick={() => { setTypeFilter("all"); setFavoriteOnly(false); setCollectionId(undefined); }}
             className="px-3 py-1.5 rounded-full text-muted-foreground hover:text-foreground flex items-center gap-1 select-none"
           >
-            <X className="h-3 w-3" /> Clear
+            <HugeiconsIcon icon={X} strokeWidth={2.25} className="h-3 w-3" /> Clear
           </button>
         )}
       </div>

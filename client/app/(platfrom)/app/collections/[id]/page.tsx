@@ -3,10 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import {
-  Search,
-  ArrowLeft, MoreHorizontal, Edit, Share2, Grid, List, Trash2, Copy
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon as Search, ArrowLeft01Icon as ArrowLeft, MoreHorizontalIcon as MoreHorizontal, Edit01Icon as Edit, Share02Icon as Share2, GridIcon as Grid, ListIcon as List, Delete02Icon as Trash2, Copy01Icon as Copy } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -70,7 +68,7 @@ export default function CollectionDetailPage() {
         onClick={() => router.push("/app/collections")}
         className="text-xs font-semibold hover:text-primary flex items-center gap-1 text-muted-foreground transition-colors"
       >
-        <ArrowLeft className="h-4 w-4" /> Back to collections
+        <HugeiconsIcon icon={ArrowLeft} strokeWidth={2.25} className="h-4 w-4" /> Back to collections
       </button>
 
       {/* Header Info */}
@@ -98,7 +96,7 @@ export default function CollectionDetailPage() {
             onClick={() => toast.add({ title: "Rename collection", description: "Editing collection details isn't available yet.", type: "info" })}
             className="h-9 px-3 rounded-full text-xs font-semibold"
           >
-            <Edit className="h-3.5 w-3.5" /> Edit
+            <HugeiconsIcon icon={Edit} strokeWidth={2.25} className="h-3.5 w-3.5" /> Edit
           </Button>
           <Button
             variant="outline"
@@ -110,24 +108,24 @@ export default function CollectionDetailPage() {
             }}
             className="h-9 px-3 rounded-full text-xs font-semibold"
           >
-            <Share2 className="h-3.5 w-3.5" /> Share
+            <HugeiconsIcon icon={Share2} strokeWidth={2.25} className="h-3.5 w-3.5" /> Share
           </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <Button variant="outline" size="icon" className="h-9 w-9 rounded-full text-muted-foreground">
-                  <MoreHorizontal className="h-4 w-4" />
+                  <HugeiconsIcon icon={MoreHorizontal} strokeWidth={2.25} className="h-4 w-4" />
                 </Button>
               }
             />
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => toast.add({ title: "Duplicating collections isn't available yet.", type: "info" })}>
-                <Copy className="h-3.5 w-3.5" /> Duplicate
+                <HugeiconsIcon icon={Copy} strokeWidth={2.25} className="h-3.5 w-3.5" /> Duplicate
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-                <Trash2 className="h-3.5 w-3.5" /> Delete collection
+                <HugeiconsIcon icon={Trash2} strokeWidth={2.25} className="h-3.5 w-3.5" /> Delete collection
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -169,7 +167,7 @@ export default function CollectionDetailPage() {
       {/* Toolbar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
         <div className="relative flex items-center max-w-xs w-full">
-          <Search className="absolute left-3.5 h-4 w-4 text-primary stroke-[2.5] z-10" />
+          <HugeiconsIcon icon={Search} strokeWidth={2.25} className="absolute left-3.5 h-4 w-4 text-primary stroke-[2.5] z-10" />
           <Input
             type="text"
             placeholder="Search this collection..."
@@ -185,13 +183,13 @@ export default function CollectionDetailPage() {
               onClick={() => setViewMode("grid")}
               className={cn("p-1.5 hover:bg-muted transition-colors", viewMode === "grid" ? "text-primary bg-primary/5" : "text-muted-foreground")}
             >
-              <Grid className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={Grid} strokeWidth={2.25} className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={() => setViewMode("list")}
               className={cn("p-1.5 hover:bg-muted transition-colors", viewMode === "list" ? "text-primary bg-primary/5" : "text-muted-foreground")}
             >
-              <List className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={List} strokeWidth={2.25} className="h-3.5 w-3.5" />
             </button>
           </div>
         </div>

@@ -2,7 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { Sparkles, ArrowLeft } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, ArrowLeft01Icon as ArrowLeft } from "@hugeicons/core-free-icons";
 import { getProviderLoginUrl } from "@/lib/auth";
 import { Logo } from "@/components/logo";
 
@@ -45,7 +46,7 @@ export default function ForgotPasswordPage() {
         {/* Brand Copy */}
         <div className="relative z-10 max-w-md space-y-4">
           <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold text-primary bg-primary/10 border border-primary/15">
-            <Sparkles className="h-3.5 w-3.5 fill-current" />
+            <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-3.5 w-3.5 fill-current" />
             <span>AI Powered Memory</span>
           </span>
           <h1 className="text-4xl font-semibold tracking-tight leading-tight text-card-foreground">
@@ -68,7 +69,7 @@ export default function ForgotPasswordPage() {
         
         {/* Back Link */}
         <Link href="/auth/login" className="flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors w-fit">
-          <ArrowLeft className="h-3.5 w-3.5" /> Back to sign in
+          <HugeiconsIcon icon={ArrowLeft} strokeWidth={2.25} className="h-3.5 w-3.5" /> Back to sign in
         </Link>
 
         {/* Form Container */}
@@ -84,7 +85,7 @@ export default function ForgotPasswordPage() {
           {/* Explanation Box */}
           <div className="p-4 rounded-xl border border-border/50 bg-muted/30 space-y-3">
             <div className="flex items-center gap-2 text-primary font-semibold text-xs">
-              <Sparkles className="h-3.5 w-3.5 fill-current animate-pulse" />
+              <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-3.5 w-3.5 fill-current animate-pulse" />
               <span>Passwordless OAuth Active</span>
             </div>
             <p className="text-xs text-muted-foreground leading-relaxed">

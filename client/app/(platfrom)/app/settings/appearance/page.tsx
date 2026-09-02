@@ -2,7 +2,8 @@
 
 import React from "react";
 import { useTheme } from "next-themes";
-import { Loader2 } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { LoaderCircleIcon as Loader2 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { useSettingsGroup } from "@/hooks/use-settings-group";
 
@@ -18,7 +19,7 @@ export default function AppearanceSettingsPage() {
         <p className="text-[10px] text-muted-foreground">Adjust visual themes and accents.</p>
       </div>
 
-      {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+      {loading && <HugeiconsIcon icon={Loader2} strokeWidth={2.25} className="h-4 w-4 animate-spin text-muted-foreground" />}
       {error && <p className="text-[10px] text-destructive">{error}</p>}
 
       <div className="space-y-4">

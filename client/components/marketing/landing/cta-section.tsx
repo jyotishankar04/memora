@@ -2,7 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ChevronRightIcon as ChevronRight } from "@hugeicons/core-free-icons";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -35,7 +36,7 @@ export default function CtaSection() {
               )}
             >
               Get started for free
-              <ChevronRight className="h-4 w-4" />
+              <HugeiconsIcon icon={ChevronRight} strokeWidth={2.25} className="h-4 w-4" />
             </Link>
             <Link
               href="/how-it-works"

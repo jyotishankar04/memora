@@ -2,11 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import {
-  Sparkles, Plus, Search,
-  X, Trash2,
-  MoreHorizontal, Star, Grid, List, Copy
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, PlusIcon as Plus, Search01Icon as Search, XIcon as X, Delete02Icon as Trash2, MoreHorizontalIcon as MoreHorizontal, StarIcon as Star, GridIcon as Grid, ListIcon as List, Copy01Icon as Copy } from "@hugeicons/core-free-icons";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -87,7 +84,7 @@ export default function MemoriesPage() {
       <div className="px-6 py-10 space-y-8">
 
         {/* Header Title */}
-        <div className="flex md:max-w-10/12 m-auto items-center justify-between border-b border-border/20 pb-4">
+        <div className="flex md:max-w-10/12 m-auto items-center justify-between border-b border-border/20 pb-4" data-tour="memories-header">
           <div>
             <h1 className="text-2xl font-bold tracking-tight">Memories</h1>
             <p className="text-xs text-muted-foreground mt-1">
@@ -102,14 +99,14 @@ export default function MemoriesPage() {
               "rounded-full px-4 text-xs font-bold bg-primary text-white flex items-center gap-1.5"
             )}
           >
-            <Plus className="h-4 w-4" /> Save
+            <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" /> Save
           </Link>
         </div>
 
         {/* Toolbar */}
         <div className="flex flex-col gap-4 pt-2 md:max-w-10/12 m-auto">
           <div className="relative flex items-center max-w-xs w-full">
-            <Search className="absolute left-3.5 h-4 w-4 text-primary stroke-[2.5] z-10" />
+            <HugeiconsIcon icon={Search} strokeWidth={2.25} className="absolute left-3.5 h-4 w-4 text-primary stroke-[2.5] z-10" />
             <Input
               type="text"
               placeholder="Search your memories..."
@@ -155,13 +152,13 @@ export default function MemoriesPage() {
                 onClick={() => setViewMode("grid")}
                 className={cn("p-1.5 hover:bg-muted transition-colors", viewMode === "grid" ? "text-primary bg-primary/5" : "text-muted-foreground")}
               >
-                <Grid className="h-3.5 w-3.5" />
+                <HugeiconsIcon icon={Grid} strokeWidth={2.25} className="h-3.5 w-3.5" />
               </button>
               <button
                 onClick={() => setViewMode("list")}
                 className={cn("p-1.5 hover:bg-muted transition-colors", viewMode === "list" ? "text-primary bg-primary/5" : "text-muted-foreground")}
               >
-                <List className="h-3.5 w-3.5" />
+                <HugeiconsIcon icon={List} strokeWidth={2.25} className="h-3.5 w-3.5" />
               </button>
             </div>
 
@@ -243,7 +240,7 @@ export default function MemoriesPage() {
                             <>
                               <div className="flex items-center justify-between text-[7px] font-mono text-muted-foreground relative">
                                 <span className="bg-primary/5 border border-primary/15 px-1.5 py-0.5 rounded text-primary uppercase font-bold flex items-center gap-1">
-                                  <TypeIcon className="h-2 w-2" /> {item.type}
+                                  <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className="h-2 w-2" /> {item.type}
                                 </span>
 
                                 <div className="flex items-center gap-1">
@@ -251,14 +248,14 @@ export default function MemoriesPage() {
                                     onClick={(e) => toggleStar(item, e)}
                                     className="text-muted-foreground hover:text-amber-500 transition-colors"
                                   >
-                                    <Star className={cn("h-3 w-3", item.isFavorite ? "fill-amber-500 text-amber-500" : "")} />
+                                    <HugeiconsIcon icon={Star} strokeWidth={2.25} className={cn("h-3 w-3", item.isFavorite ? "fill-amber-500 text-amber-500" : "")} />
                                   </button>
 
                                   <button
                                     onClick={(e) => { e.stopPropagation(); setActiveCardMenu(activeCardMenu === item.id ? null : item.id); }}
                                     className="text-muted-foreground hover:text-foreground h-5 w-5 rounded-full flex items-center justify-center hover:bg-muted"
                                   >
-                                    <MoreHorizontal className="h-3 w-3" />
+                                    <HugeiconsIcon icon={MoreHorizontal} strokeWidth={2.25} className="h-3 w-3" />
                                   </button>
                                 </div>
 
@@ -273,7 +270,7 @@ export default function MemoriesPage() {
                                         onClick={(e) => { e.stopPropagation(); m.action(); setActiveCardMenu(null); }}
                                         className="w-full px-3 py-1.5 hover:bg-muted text-left flex items-center gap-2"
                                       >
-                                        <m.icon className="h-3 w-3 opacity-60" />
+                                        <HugeiconsIcon icon={m.icon} strokeWidth={2.25} className="h-3 w-3 opacity-60" />
                                         <span>{m.label}</span>
                                       </button>
                                     ))}
@@ -315,7 +312,7 @@ export default function MemoriesPage() {
                             <div className="flex-1 flex items-center justify-between gap-4">
                               <div className="flex items-center gap-3 min-w-0">
                                 <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                                  <TypeIcon className="h-4 w-4" />
+                                  <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className="h-4 w-4" />
                                 </div>
                                 <div className="min-w-0">
                                   <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
@@ -330,7 +327,7 @@ export default function MemoriesPage() {
                                   onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
                                   className="h-8 w-8 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-500 flex items-center justify-center transition-colors"
                                 >
-                                  <Trash2 className="h-3.5 w-3.5" />
+                                  <HugeiconsIcon icon={Trash2} strokeWidth={2.25} className="h-3.5 w-3.5" />
                                 </button>
                               </div>
                             </div>
@@ -368,7 +365,7 @@ export default function MemoriesPage() {
               onClick={() => setSelectedMemoryId(null)}
               className="h-7 w-7 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center"
             >
-              <X className="h-4 w-4" />
+              <HugeiconsIcon icon={X} strokeWidth={2.25} className="h-4 w-4" />
             </button>
           </div>
 
@@ -416,7 +413,7 @@ export default function MemoriesPage() {
 
             <div className="space-y-3 border-t border-border/20 pt-4">
               <div className="flex items-center gap-1 text-primary">
-                <Sparkles className="h-3.5 w-3.5 fill-current" />
+                <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-3.5 w-3.5 fill-current" />
                 <span className="text-[9px] font-bold uppercase tracking-wider">AI Summary</span>
               </div>
               <p className="text-[10px] text-muted-foreground">

@@ -3,7 +3,8 @@
 import React from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
-import { ArrowLeft, Tag as TagIcon } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowLeft01Icon as ArrowLeft, Tag01Icon as TagIcon } from "@hugeicons/core-free-icons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemoriesQuery } from "@/context/MemoryContext";
 import { timeAgo } from "@/lib/time";
@@ -24,12 +25,12 @@ export default function TagDetailPage() {
         onClick={() => router.push("/app/tags")}
         className="text-xs font-semibold hover:text-primary flex items-center gap-1 text-muted-foreground transition-colors"
       >
-        <ArrowLeft className="h-4 w-4" /> Back to tags
+        <HugeiconsIcon icon={ArrowLeft} strokeWidth={2.25} className="h-4 w-4" /> Back to tags
       </button>
 
       <div className="flex items-center gap-4 border-b border-border/20 pb-6">
         <div className="h-14 w-14 border rounded-2xl bg-primary/5 border-primary/20 text-primary flex items-center justify-center shrink-0">
-          <TagIcon className="h-6 w-6" />
+          <HugeiconsIcon icon={TagIcon} strokeWidth={2.25} className="h-6 w-6" />
         </div>
         <div>
           <h1 className="text-2xl font-bold tracking-tight">{name}</h1>

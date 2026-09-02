@@ -1,16 +1,17 @@
 "use client";
 
 import React from "react";
-import { ArrowDown, ArrowRight, Sparkles, Globe, Video, Image, Code } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowDown01Icon as ArrowDown, ArrowRight01Icon as ArrowRight, SparklesIcon as Sparkles, GlobeIcon as Globe, Video01Icon as Video, Image01Icon as Image, ShoppingBag01Icon as ShoppingBag } from "@hugeicons/core-free-icons";
 
 const examples = [
-  { type: "Website", icon: Globe, color: "text-blue-500 bg-blue-500/10 border-blue-500/20", tags: ["Design", "SaaS", "Inspiration"] },
-  { type: "Video", icon: Video, color: "text-red-500 bg-red-500/10 border-red-500/20", tags: ["AI", "Tutorial", "Education"] },
-  { type: "Screenshot", icon: Image, color: "text-purple-500 bg-purple-500/10 border-purple-500/20", tags: ["Dashboard", "UI", "Reference"] },
-  { type: "GitHub repo", icon: Code, color: "text-foreground bg-foreground/10 border-foreground/20", tags: ["React", "Open Source", "Development"] },
+  { type: "Website", icon: Globe, color: "text-blue-500 bg-blue-500/10 border-blue-500/20", tags: ["Design", "Ideas", "Inspiration"] },
+  { type: "Video", icon: Video, color: "text-red-500 bg-red-500/10 border-red-500/20", tags: ["Recipe", "Tutorial", "How-to"] },
+  { type: "Screenshot", icon: Image, color: "text-purple-500 bg-purple-500/10 border-purple-500/20", tags: ["Mood board", "Before & after", "Inspiration"] },
+  { type: "Product", icon: ShoppingBag, color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", tags: ["Wishlist", "Shopping", "Gift idea"] },
 ];
 
-const structuredTags = ["SaaS", "Landing Page", "Design Inspiration", "Pricing", "Product Design"];
+const structuredTags = ["Home Decor", "Kitchen", "Renovation", "Budget Tips", "Before & After"];
 
 export default function UnderstandingSection() {
   return (
@@ -53,9 +54,9 @@ export default function UnderstandingSection() {
                     <div className="h-2 w-2 rounded-full bg-border" />
                   </div>
                   <div className="h-24 w-full bg-muted/65 rounded-lg border border-border/30 flex flex-col justify-center items-center p-3 relative overflow-hidden">
-                    <Globe className="h-8 w-8 text-muted-foreground/45 mb-1" />
-                    <span className="text-[10px] font-semibold text-muted-foreground tracking-wider uppercase">SaaS Landing Page</span>
-                    <span className="text-[8px] text-muted-foreground/60 mt-0.5 font-mono">stripe.com/billing</span>
+                    <HugeiconsIcon icon={Globe} strokeWidth={2.25} className="h-8 w-8 text-muted-foreground/45 mb-1" />
+                    <span className="text-[10px] font-semibold text-muted-foreground tracking-wider uppercase">Kitchen Remodel Ideas</span>
+                    <span className="text-[8px] text-muted-foreground/60 mt-0.5 font-mono">houzz.com/kitchens</span>
                     
                     {/* Mock card layout details */}
                     <div className="absolute bottom-1 right-2 left-2 h-1.5 bg-border/20 rounded" />
@@ -67,15 +68,15 @@ export default function UnderstandingSection() {
               {/* Transform Arrow */}
               <div className="flex flex-col items-center justify-center text-primary font-medium text-xs">
                 <div className="flex items-center gap-1 text-primary bg-primary/10 px-3 py-1.5 rounded-full border border-primary/10 shadow-xs animate-pulse">
-                  <Sparkles className="h-3.5 w-3.5 fill-current" />
+                  <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-3.5 w-3.5 fill-current" />
                   <span>SaveForLatter understands</span>
                 </div>
                 
                 {/* Desktop arrow */}
-                <ArrowRight className="hidden md:block h-6 w-6 mt-3 text-primary stroke-[1.5]" />
+                <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="hidden md:block h-6 w-6 mt-3 text-primary stroke-[1.5]" />
                 
                 {/* Mobile arrow */}
-                <ArrowDown className="block md:hidden h-6 w-6 mt-3 text-primary stroke-[1.5]" />
+                <HugeiconsIcon icon={ArrowDown} strokeWidth={2.25} className="block md:hidden h-6 w-6 mt-3 text-primary stroke-[1.5]" />
               </div>
 
               {/* Destination card: Structured details */}
@@ -83,7 +84,7 @@ export default function UnderstandingSection() {
                 <div className="p-5 rounded-lg border border-primary/25 bg-card">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="h-5 w-5 rounded-md bg-primary/10 text-primary flex items-center justify-center">
-                      <Sparkles className="h-3 w-3 fill-current" />
+                      <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-3 w-3 fill-current" />
                     </div>
                     <span className="text-[10px] font-semibold tracking-wider text-primary uppercase">Structured Context</span>
                   </div>
@@ -105,7 +106,7 @@ export default function UnderstandingSection() {
                     <span className="text-[8px] bg-emerald-500/10 text-emerald-600 px-1.5 py-0.5 rounded font-mono">100% indexed</span>
                   </div>
                   <p className="text-[10px] text-muted-foreground mt-1.5 leading-normal">
-                    SaaS landing page detailing billing features, custom pricing structures, and visual layouts.
+                    Before-and-after kitchen remodel with a budget breakdown and paint color picks.
                   </p>
                 </div>
               </div>
@@ -126,7 +127,7 @@ export default function UnderstandingSection() {
                 <div className="p-4 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full">
                   <div className="flex items-center gap-2 mb-3">
                     <div className={`p-1.5 rounded-lg border ${item.color}`}>
-                      <Icon className="h-3.5 w-3.5" />
+                      <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-3.5 w-3.5" />
                     </div>
                     <span className="text-xs font-semibold text-foreground">{item.type}</span>
                   </div>

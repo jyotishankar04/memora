@@ -2,7 +2,9 @@
 
 import React from "react";
 import Link from "next/link";
-import { Box, CheckCircle, Gem, type LucideIcon, Users } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { BoxIcon as Box, CheckmarkCircle01Icon as CheckCircle, GemIcon as Gem, UsersIcon as Users } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 
@@ -12,7 +14,7 @@ interface PricingPlan {
   price: string;
   period?: string;
   isRecommended: boolean;
-  icon: LucideIcon;
+  icon: IconSvgElement;
   features: string[];
   cta: string;
   href: string;
@@ -74,11 +76,11 @@ const pricingPlans: PricingPlan[] = [
 
 export default function PricingTableSection() {
   return (
-    <section id="pricing" className="mx-auto max-w-6xl px-6 py-20 bg-background border-t border-border/20">
+    <section id="pricing" className="mx-auto max-w-6xl px-6 py-20 border-t border-border/20">
       <h2 className="text-balance text-center font-medium text-4xl tracking-[-0.04em] sm:text-[2.75rem] text-foreground">
         Plans & Pricing
       </h2>
-      <p className="mt-2 text-balance text-center text-lg text-muted-foreground -tracking-[0.01em] sm:mt-4 sm:text-2xl">
+      <p className="mt-2 text-balance text-center text-lg text-muted-foreground tracking-[-0.01em] sm:mt-4 sm:text-2xl">
         Flexible pricing designed to grow with you ready
       </p>
 
@@ -100,7 +102,7 @@ const PlanCard = ({ plan }: { plan: PricingPlan }) => {
         </Badge>
       )}
       <div className="rounded-t-lg border-b border-dashed border-border/80 p-6 flex-1">
-        <plan.icon className="mb-5 text-primary h-6 w-6 stroke-[2]" />
+        <HugeiconsIcon icon={plan.icon} strokeWidth={2.25} className="mb-5 text-primary h-6 w-6 stroke-[2]" />
         <div className="flex items-center gap-1">
           <h3 className="font-medium text-2xl tracking-tight text-foreground">{plan.name}</h3>
         </div>
@@ -132,7 +134,7 @@ const PlanCard = ({ plan }: { plan: PricingPlan }) => {
         <ul className="mt-4 space-y-2.5">
           {plan.features.map((feature) => (
             <li className="flex items-start gap-2 text-xs text-foreground/80" key={feature}>
-              <CheckCircle className="size-4 shrink-0 text-primary mt-0.5" />
+              <HugeiconsIcon icon={CheckCircle} strokeWidth={2.25} className="size-4 shrink-0 text-primary mt-0.5" />
               <span>{feature}</span>
             </li>
           ))}

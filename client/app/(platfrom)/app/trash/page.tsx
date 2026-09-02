@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Trash2, RotateCcw } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Delete02Icon as Trash2, RotateCcwIcon as RotateCcw } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
@@ -119,7 +120,7 @@ export default function TrashPage() {
                     onClick={() => handleRestore(item.id, item.title)}
                     className="flex-1 h-8 rounded-full text-[10px] font-semibold"
                   >
-                    <RotateCcw className="h-3 w-3" /> Restore
+                    <HugeiconsIcon icon={RotateCcw} strokeWidth={2.25} className="h-3 w-3" /> Restore
                   </Button>
 
                   <AlertDialog>
@@ -129,7 +130,7 @@ export default function TrashPage() {
                           variant="outline"
                           className="flex-1 h-8 rounded-full bg-red-500/10 text-red-500 border-red-500/20 hover:bg-red-500/15 text-[10px] font-semibold"
                         >
-                          <Trash2 className="h-3 w-3" /> Delete permanently
+                          <HugeiconsIcon icon={Trash2} strokeWidth={2.25} className="h-3 w-3" /> Delete permanently
                         </Button>
                       }
                     />

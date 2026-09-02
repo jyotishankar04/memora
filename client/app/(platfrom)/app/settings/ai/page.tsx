@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Check, Loader2 } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CheckIcon as Check, LoaderCircleIcon as Loader2 } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { useSettingsGroup } from "@/hooks/use-settings-group";
 
@@ -16,7 +17,7 @@ export default function AISettingsPage() {
         <p className="text-[10px] text-muted-foreground">Manage personal memory models settings.</p>
       </div>
 
-      {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+      {loading && <HugeiconsIcon icon={Loader2} strokeWidth={2.25} className="h-4 w-4 animate-spin text-muted-foreground" />}
       {error && <p className="text-[10px] text-destructive">{error}</p>}
 
       {ai && (
@@ -46,7 +47,7 @@ export default function AISettingsPage() {
                   ai[item.key] ? "bg-primary border-primary text-white" : "border-border bg-background"
                 )}
               >
-                {ai[item.key] && <Check className="h-3.5 w-3.5 stroke-[2.5]" />}
+                {ai[item.key] && <HugeiconsIcon icon={Check} strokeWidth={2.25} className="h-3.5 w-3.5 stroke-[2.5]" />}
               </div>
             </button>
           ))}

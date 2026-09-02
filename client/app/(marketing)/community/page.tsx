@@ -3,7 +3,8 @@
 import React from "react";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
-import { Users, MessageSquare, Code, HelpCircle, ArrowUpRight } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { UsersIcon as Users, MessageSquareIcon as MessageSquare, CodeIcon as Code, HelpCircleIcon as HelpCircle, ArrowUpRight01Icon as ArrowUpRight } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 
 const communityLinks = [
@@ -45,7 +46,7 @@ export default function CommunityPage() {
                 <div className="p-6 rounded-xl border border-border/75 bg-card flex flex-col justify-between h-full group">
                   <div className="space-y-4">
                     <div className="p-2 rounded-xl bg-primary/10 text-primary w-fit">
-                      <Icon className="h-5 w-5" />
+                      <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-5 w-5" />
                     </div>
                     
                     <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors">
@@ -64,7 +65,7 @@ export default function CommunityPage() {
                     className="mt-6 w-full h-10 rounded-full font-semibold flex items-center justify-center gap-1 opacity-60 cursor-not-allowed"
                     variant="outline"
                   >
-                    {item.cta} <ArrowUpRight className="h-4 w-4" />
+                    {item.cta} <HugeiconsIcon icon={ArrowUpRight} strokeWidth={2.25} className="h-4 w-4" />
                   </Button>
                 </div>
               </div>

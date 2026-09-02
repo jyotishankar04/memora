@@ -1,13 +1,14 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Globe, FileText, Code, Video, Clock } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, GlobeIcon as Globe, FileTextIcon as FileText, Video01Icon as Video, Clock01Icon as Clock } from "@hugeicons/core-free-icons";
 
 const oldMemories = [
-  { type: "Website", title: "agent-frameworks.dev", icon: Globe, color: "text-blue-500 bg-blue-500/10", excerpt: "Collection of orchestration patterns and multi-agent libraries." },
-  { type: "Article", title: "State of Prompt Engineering", icon: FileText, color: "text-amber-500 bg-amber-500/10", excerpt: "Core prompt formatting tips and structure recommendations for LLMs." },
-  { type: "GitHub", title: "langchain-agents", icon: Code, color: "text-foreground bg-foreground/10", excerpt: "Official template repositories for conversational retrieval setups." },
-  { type: "Video", title: "AI Agent Dev Day Talk", icon: Video, color: "text-red-500 bg-red-500/10", excerpt: "Deep dive talk covering long-term memory configurations." },
+  { type: "Website", title: "houzz.com/kitchen-remodel", icon: Globe, color: "text-blue-500 bg-blue-500/10", excerpt: "Budget-friendly kitchen upgrades that still feel high-end." },
+  { type: "Article", title: "Best Paint Colors for 2026", icon: FileText, color: "text-amber-500 bg-amber-500/10", excerpt: "Warm neutrals and earthy tones are trending this year." },
+  { type: "Website", title: "wayfair.com/lighting", icon: Globe, color: "text-foreground bg-foreground/10", excerpt: "Pendant lights and lamps that instantly warm up a room." },
+  { type: "Video", title: "IKEA Shelving Hacks", icon: Video, color: "text-red-500 bg-red-500/10", excerpt: "Simple mods to make basic shelves look custom-built." },
 ];
 
 export default function RediscoverSection() {
@@ -43,7 +44,7 @@ export default function RediscoverSection() {
           {/* Timeline header */}
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-1.5 text-xs font-bold text-muted-foreground tracking-widest uppercase">
-              <Clock className="h-4 w-4 text-primary" />
+              <HugeiconsIcon icon={Clock} strokeWidth={2.25} className="h-4 w-4 text-primary" />
               <span>6 months ago</span>
             </div>
             <div className="h-px flex-1 bg-gradient-to-r from-border/80 to-transparent" />
@@ -62,7 +63,7 @@ export default function RediscoverSection() {
                     <div>
                       <div className="flex items-center gap-2 mb-3">
                         <div className={`p-1.5 rounded-lg ${mem.color}`}>
-                          <Icon className="h-3.5 w-3.5" />
+                          <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-3.5 w-3.5" />
                         </div>
                         <span className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                           {mem.type}
@@ -91,7 +92,7 @@ export default function RediscoverSection() {
           {/* AI suggestion banner */}
           <div className="relative p-5 rounded-2xl border border-primary/20 bg-primary/5 max-w-2xl mx-auto text-center space-y-2">
             <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-primary text-primary-foreground shadow-[0_2px_8px_rgba(20,71,230,0.2)]">
-              <Sparkles className="h-4.5 w-4.5 fill-current" />
+              <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-4.5 w-4.5 fill-current" />
             </div>
             
             <h4 className="text-sm font-semibold text-foreground">
@@ -99,9 +100,9 @@ export default function RediscoverSection() {
             </h4>
             
             <p className="text-xs text-muted-foreground leading-relaxed">
-              You saved these while exploring <span className="font-semibold text-foreground">AI agents</span>. 
+              You saved these while exploring <span className="font-semibold text-foreground">home renovation</span>.
               <br />
-              <span className="text-primary font-medium">3 of them relate directly</span> to your recent searches for "embeddings" and "agent workflows".
+              <span className="text-primary font-medium">3 of them relate directly</span> to your recent searches for "kitchen ideas" and "paint colors".
             </p>
           </div>
 

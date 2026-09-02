@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Shield, Download, Eye } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Shield01Icon as Shield, Download01Icon as Download, EyeIcon as Eye } from "@hugeicons/core-free-icons";
 
 const policies = [
   {
@@ -51,7 +52,7 @@ export default function PrivacySection() {
                 <div className="p-5 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full">
                   <div>
                     <div className="h-9 w-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center mb-4">
-                      <Icon className="h-4.5 w-4.5" />
+                      <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-4.5 w-4.5" />
                     </div>
                     <h3 className="text-sm font-semibold text-foreground">{p.title}</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{p.desc}</p>

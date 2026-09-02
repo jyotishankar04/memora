@@ -4,10 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
-import { 
-  Sparkles, ArrowRight, ArrowLeft, Plus, Globe, Smartphone, 
-  Laptop, StickyNote, Video, Image, Code, ArrowUpRight, Zap 
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, ArrowRight01Icon as ArrowRight, ArrowLeft01Icon as ArrowLeft, PlusIcon as Plus, GlobeIcon as Globe, SmartPhone01Icon as Smartphone, LaptopIcon as Laptop, StickyNote01Icon as StickyNote, Video01Icon as Video, Image01Icon as Image, CodeIcon as Code, ArrowUpRight01Icon as ArrowUpRight, ZapIcon as Zap } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -55,7 +53,7 @@ export function FeaturesNavigator({ current }: { current: string }) {
                 </div>
                 {!isCurrent && (
                   <span className="text-[9px] font-bold text-primary flex items-center gap-0.5 mt-4 group-hover:translate-x-0.5 transition-transform">
-                    Learn more <ArrowRight className="h-3 w-3" />
+                    Learn more <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-3 w-3" />
                   </span>
                 )}
               </div>
@@ -98,7 +96,7 @@ export default function QuickCapturePage() {
               nativeButton={false}
               className="h-10 px-6 rounded-full font-semibold text-xs bg-primary text-white hover:bg-primary/95"
             >
-              Start Capturing <ArrowRight className="h-3.5 w-3.5" />
+              Start Capturing <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-3.5 w-3.5" />
             </Button>
             
             <Button
@@ -117,7 +115,7 @@ export default function QuickCapturePage() {
               <div className="p-6 md:p-8 rounded-xl border border-border/75 bg-card text-left space-y-6">
                 
                 <div className="flex items-center gap-1.5 text-xs text-primary font-bold">
-                  <Sparkles className="h-4 w-4 fill-current animate-pulse" />
+                  <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-4 w-4 fill-current animate-pulse" />
                   <span>Quick Capture</span>
                 </div>
 
@@ -379,7 +377,7 @@ export default function QuickCapturePage() {
             nativeButton={false}
             className="h-11 px-8 rounded-full bg-primary text-white hover:bg-primary/95 text-xs font-semibold flex items-center gap-1 shadow-sm"
           >
-            Start Capturing <ArrowRight className="h-4 w-4" />
+            Start Capturing <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-4 w-4" />
           </Button>
         </div>
       </section>

@@ -1,14 +1,8 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Globe, Smartphone, Laptop, Code, Video, Image } from "lucide-react";
-
-const channels = [
-  { name: "Web", desc: "Save any page instantly.", icon: Globe },
-  { name: "Mobile", desc: "Share anything directly to SaveForLatter.", icon: Smartphone },
-  { name: "Extension", desc: "Save without leaving the page.", icon: Globe },
-  { name: "Desktop", desc: "Capture from anywhere with a shortcut.", icon: Laptop },
-];
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, GlobeIcon as Globe, Camera01Icon as Camera, StickyNote01Icon as StickyNote, Video01Icon as Video, Image01Icon as Image } from "@hugeicons/core-free-icons";
 
 export default function CaptureSection() {
   return (
@@ -73,65 +67,42 @@ export default function CaptureSection() {
           {/* Central Logo Core Node */}
           <div className="float-central z-10 p-5 rounded-2xl border border-primary/30 bg-background shadow-[0_12px_40px_rgba(20,71,230,0.18)] text-center flex flex-col items-center">
             <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-[0_2px_10px_rgba(20,71,230,0.3)] mb-2">
-              <Sparkles className="h-5.5 w-5.5 fill-current" />
+              <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-5.5 w-5.5 fill-current" />
             </div>
             <span className="text-[10px] font-bold tracking-[0.2em] text-foreground uppercase">SAVEFORLATTER</span>
           </div>
 
-          {/* Orbital Nodes */}
-          {/* Top: Browser Extension */}
+          {/* Orbital Nodes — content sources, not platforms (platforms live in their own section) */}
+          {/* Top: Websites */}
           <div className="absolute top-2 left-1/2 -translate-x-1/2 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card shadow-xs text-xs font-semibold text-foreground">
-            <Globe className="h-3.5 w-3.5 text-blue-500" />
-            <span>Extension</span>
+            <HugeiconsIcon icon={Globe} strokeWidth={2.25} className="h-3.5 w-3.5 text-blue-500" />
+            <span>Websites</span>
           </div>
 
-          {/* Left-Top: Social Images */}
+          {/* Left-Top: Photos */}
           <div className="absolute top-12 left-6 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card shadow-xs text-xs font-semibold text-foreground">
-            <Image className="h-3.5 w-3.5 text-pink-500" />
-            <span>Instagram / Web</span>
+            <HugeiconsIcon icon={Image} strokeWidth={2.25} className="h-3.5 w-3.5 text-pink-500" />
+            <span>Instagram / Photos</span>
           </div>
 
           {/* Right-Top: Videos */}
           <div className="absolute top-12 right-6 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card shadow-xs text-xs font-semibold text-foreground">
-            <Video className="h-3.5 w-3.5 text-red-500" />
+            <HugeiconsIcon icon={Video} strokeWidth={2.25} className="h-3.5 w-3.5 text-red-500" />
             <span>YouTube / Video</span>
           </div>
 
-          {/* Bottom-Left: Code repositories */}
+          {/* Bottom-Left: Notes and ideas */}
           <div className="absolute bottom-6 left-12 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card shadow-xs text-xs font-semibold text-foreground">
-            <Code className="h-3.5 w-3.5 text-foreground" />
-            <span>GitHub / Dev</span>
+            <HugeiconsIcon icon={StickyNote} strokeWidth={2.25} className="h-3.5 w-3.5 text-amber-500" />
+            <span>Notes / Ideas</span>
           </div>
 
-          {/* Bottom-Right: Mobile apps */}
+          {/* Bottom-Right: Screenshots */}
           <div className="absolute bottom-6 right-12 flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-border bg-card shadow-xs text-xs font-semibold text-foreground">
-            <Smartphone className="h-3.5 w-3.5 text-primary" />
-            <span>Mobile App</span>
+            <HugeiconsIcon icon={Camera} strokeWidth={2.25} className="h-3.5 w-3.5 text-primary" />
+            <span>Screenshots</span>
           </div>
 
-        </div>
-
-        {/* Channels Cards Grid (Double Bordered Cards!) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          {channels.map((chan, idx) => {
-            const Icon = chan.icon;
-            return (
-              <div 
-                key={idx}
-                className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65 hover:border-primary/20 transition-all duration-300"
-              >
-                <div className="p-5 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full">
-                  <div>
-                    <div className="p-2 rounded-xl bg-primary/10 text-primary w-fit mb-4">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <h4 className="text-sm font-semibold text-foreground">{chan.name}</h4>
-                    <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{chan.desc}</p>
-                  </div>
-                </div>
-              </div>
-            );
-          })}
         </div>
 
       </div>

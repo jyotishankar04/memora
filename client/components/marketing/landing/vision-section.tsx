@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Sparkles, Brain, FileText, Video, Code, Globe } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, PlaneIcon as Plane, FileTextIcon as FileText, Video01Icon as Video, Image01Icon as ImageIcon, GlobeIcon as Globe } from "@hugeicons/core-free-icons";
 
 export default function VisionSection() {
   return (
@@ -78,14 +79,14 @@ export default function VisionSection() {
                 <div className="w-full flex justify-around max-w-lg">
                   <div className="rounded-lg border border-border/45 bg-muted/75 p-0.5 shadow-xs">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 border border-border/75 bg-card rounded-md">
-                      <Globe className="h-3.5 w-3.5 text-blue-500" />
+                      <HugeiconsIcon icon={Globe} strokeWidth={2.25} className="h-3.5 w-3.5 text-blue-500" />
                       <span className="text-[11px] font-medium text-foreground">Website</span>
                     </div>
                   </div>
 
                   <div className="rounded-lg border border-border/45 bg-muted/75 p-0.5 shadow-xs">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 border border-border/75 bg-card rounded-md">
-                      <Video className="h-3.5 w-3.5 text-red-500" />
+                      <HugeiconsIcon icon={Video} strokeWidth={2.25} className="h-3.5 w-3.5 text-red-500" />
                       <span className="text-[11px] font-medium text-foreground">Video</span>
                     </div>
                   </div>
@@ -94,8 +95,8 @@ export default function VisionSection() {
                 {/* Row 2 (Unified Concept) */}
                 <div className="rounded-2xl border border-primary/20 bg-muted/75 p-0.5 shadow-md">
                   <div className="flex items-center gap-2 px-5 py-2.5 border border-primary/35 bg-card rounded-xl">
-                    <Brain className="h-4.5 w-4.5 text-primary fill-current/10" />
-                    <span className="text-xs font-bold text-foreground">AI Agents</span>
+                    <HugeiconsIcon icon={Plane} strokeWidth={2.25} className="h-4.5 w-4.5 text-primary fill-current/10" />
+                    <span className="text-xs font-bold text-foreground">Japan Trip</span>
                   </div>
                 </div>
 
@@ -103,14 +104,14 @@ export default function VisionSection() {
                 <div className="w-full flex justify-around max-w-lg">
                   <div className="rounded-lg border border-border/45 bg-muted/75 p-0.5 shadow-xs">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 border border-border/75 bg-card rounded-md">
-                      <Code className="h-3.5 w-3.5 text-foreground" />
-                      <span className="text-[11px] font-medium text-foreground">GitHub</span>
+                      <HugeiconsIcon icon={ImageIcon} strokeWidth={2.25} className="h-3.5 w-3.5 text-foreground" />
+                      <span className="text-[11px] font-medium text-foreground">Screenshot</span>
                     </div>
                   </div>
 
                   <div className="rounded-lg border border-border/45 bg-muted/75 p-0.5 shadow-xs">
                     <div className="flex items-center gap-1.5 px-3 py-1.5 border border-border/75 bg-card rounded-md">
-                      <FileText className="h-3.5 w-3.5 text-amber-500" />
+                      <HugeiconsIcon icon={FileText} strokeWidth={2.25} className="h-3.5 w-3.5 text-amber-500" />
                       <span className="text-[11px] font-medium text-foreground">Article</span>
                     </div>
                   </div>

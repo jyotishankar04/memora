@@ -1,7 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { Sparkles } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import type { Memory } from "@/types/memory";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
@@ -43,7 +44,7 @@ export function MemoryThumbnail({ item, className }: { item: Memory; className?:
                 className
               )}
             >
-              <TypeIcon className="h-4 w-4" />
+              <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className="h-4 w-4" />
               <span className="text-[9px] font-bold tracking-wide">{fallback.label}</span>
             </div>
           );
@@ -66,7 +67,7 @@ export function MemoryThumbnail({ item, className }: { item: Memory; className?:
             className
           )}
         >
-          <TypeIcon className={cn("h-3.5 w-3.5", item.type === "video" ? "text-red-500" : "text-primary")} />
+          <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className={cn("h-3.5 w-3.5", item.type === "video" ? "text-red-500" : "text-primary")} />
           <span>{item.type === "web" ? "No preview" : item.type}</span>
         </div>
       )}
@@ -79,7 +80,7 @@ export function MemoryThumbnail({ item, className }: { item: Memory; className?:
           </div>
 
           <div className="absolute top-1.5 right-1.5 flex items-center gap-1 rounded-full border border-primary/20 bg-background/90 px-1.5 py-0.5 text-[8px] font-bold text-primary shadow-sm backdrop-blur-sm">
-            <Sparkles className="h-2.5 w-2.5 animate-pulse" />
+            <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-2.5 w-2.5 animate-pulse" />
             <span>Processing</span>
           </div>
         </>

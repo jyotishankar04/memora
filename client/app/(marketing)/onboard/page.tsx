@@ -3,10 +3,8 @@
 import React, { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { 
-  Sparkles, Check, ArrowRight, Globe, Laptop, Smartphone, 
-  Video, Code, Image, FileText, StickyNote, Sliders, Plus
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, CheckIcon as Check, ArrowRight01Icon as ArrowRight, GlobeIcon as Globe, LaptopIcon as Laptop, SmartPhone01Icon as Smartphone, Video01Icon as Video, CodeIcon as Code, Image01Icon as Image, FileTextIcon as FileText, StickyNote01Icon as StickyNote, SlidersHorizontalIcon as Sliders, PlusIcon as Plus } from "@hugeicons/core-free-icons";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -245,7 +243,7 @@ export default function OnboardingPage() {
                           backgroundColor: isSelected ? "var(--color-primary)" : "transparent"
                         }}
                       >
-                        {isSelected && <Check className="h-2.5 w-2.5 text-white stroke-[3.5]" />}
+                        {isSelected && <HugeiconsIcon icon={Check} strokeWidth={2.25} className="h-2.5 w-2.5 text-white stroke-[3.5]" />}
                       </div>
                     </div>
                   </div>
@@ -359,7 +357,7 @@ export default function OnboardingPage() {
                 >
                   <div className="flex items-start gap-3.5">
                     <div className="p-1 rounded-lg bg-primary/10 text-primary mt-0.5 shrink-0">
-                      <Sparkles className="h-4.5 w-4.5 fill-current" />
+                      <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-4.5 w-4.5 fill-current" />
                     </div>
                     <div className="pr-6">
                       <div className="flex items-center gap-2">
@@ -405,7 +403,7 @@ export default function OnboardingPage() {
                 >
                   <div className="flex items-start gap-3.5">
                     <div className="p-1 rounded-lg bg-muted text-muted-foreground mt-0.5 shrink-0">
-                      <Sliders className="h-4.5 w-4.5" />
+                      <HugeiconsIcon icon={Sliders} strokeWidth={2.25} className="h-4.5 w-4.5" />
                     </div>
                     <div>
                       <h4 className="text-xs font-bold text-foreground">My way</h4>
@@ -467,7 +465,7 @@ export default function OnboardingPage() {
                     <div className="p-3.5 rounded-lg border border-border/75 bg-card flex items-center justify-between">
                       <div className="flex items-center gap-3">
                         <div className="p-1.5 rounded-lg bg-primary/10 text-primary shrink-0">
-                          <Icon className="h-4.5 w-4.5" />
+                          <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-4.5 w-4.5" />
                         </div>
                         <div>
                           <h4 className="text-xs font-bold text-foreground leading-none">{item.label}</h4>
@@ -476,7 +474,7 @@ export default function OnboardingPage() {
                       </div>
 
                       <button className="h-7 w-7 rounded-full border border-border flex items-center justify-center hover:bg-muted text-muted-foreground hover:text-foreground transition-colors cursor-pointer">
-                        <Plus className="h-3.5 w-3.5" />
+                        <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-3.5 w-3.5" />
                       </button>
                     </div>
                   </div>
@@ -541,7 +539,7 @@ export default function OnboardingPage() {
             <div className="relative w-16 h-16 flex items-center justify-center">
               <div className="absolute inset-0 bg-primary/25 rounded-full blur-xl animate-pulse" />
               <div className="w-14 h-14 rounded-2xl border border-primary/40 flex items-center justify-center bg-card shadow-md">
-                <Sparkles className="h-7 w-7 text-primary" />
+                <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-7 w-7 text-primary" />
               </div>
             </div>
 
@@ -560,7 +558,7 @@ export default function OnboardingPage() {
               onClick={() => router.push("/app")}
               className="w-full max-w-xs h-11 rounded-full font-medium flex items-center justify-center gap-1.5 shadow-md"
             >
-              Enter SaveForLatter <ArrowRight className="h-4 w-4" />
+              Enter SaveForLatter <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-4 w-4" />
             </Button>
           </div>
         )}

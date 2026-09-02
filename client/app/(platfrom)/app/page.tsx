@@ -3,10 +3,8 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  StickyNote, Search,
-  ArrowRight, X, ArrowUpRight, ChevronRight, Link as LinkIcon, Upload
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { StickyNote01Icon as StickyNote, Search01Icon as Search, ArrowRight01Icon as ArrowRight, XIcon as X, ArrowUpRight01Icon as ArrowUpRight, ChevronRightIcon as ChevronRight, Link01Icon as LinkIcon, Upload01Icon as Upload } from "@hugeicons/core-free-icons";
 import { useUser } from "@/context/UserContext";
 import { useMemoriesQuery, useCollectionsQuery } from "@/context/MemoryContext";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -35,7 +33,7 @@ export default function HomePage() {
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-12 animate-fade-in">
       
       {/* Dynamic Greeting */}
-      <div className="space-y-1">
+      <div className="space-y-1" data-tour="greeting">
         <h1 className="text-3xl md:text-4xl font-bold tracking-tight text-foreground">
           {greeting}, {firstName}.
         </h1>
@@ -45,9 +43,9 @@ export default function HomePage() {
       </div>
 
       {/* Main Search Component */}
-      <div className="space-y-4 max-w-2xl">
+      <div className="space-y-4 max-w-2xl" data-tour="home-search">
         <div className="relative flex items-center">
-          <Search className="absolute left-4.5 h-5 w-5 text-primary stroke-[2.5]" />
+          <HugeiconsIcon icon={Search} strokeWidth={2.25} className="absolute left-4.5 h-5 w-5 text-primary stroke-[2.5]" />
           <input
             type="text"
             placeholder="Search your memory..."
@@ -62,7 +60,7 @@ export default function HomePage() {
           />
           {searchQuery && (
             <button onClick={() => setSearchQuery("")} className="absolute right-4.5 text-muted-foreground hover:text-foreground">
-              <X className="h-4 w-4" />
+              <HugeiconsIcon icon={X} strokeWidth={2.25} className="h-4 w-4" />
             </button>
           )}
         </div>
@@ -110,7 +108,7 @@ export default function HomePage() {
             >
               <div className="p-4 rounded-lg border border-border/75 bg-card flex flex-col justify-between min-h-[110px] select-none">
                 <div className="p-2 rounded-lg bg-primary/10 text-primary w-fit group-hover:bg-primary group-hover:text-white transition-colors">
-                  <cap.icon className="h-4 w-4" />
+                  <HugeiconsIcon icon={cap.icon} strokeWidth={2.25} className="h-4 w-4" />
                 </div>
                 <div>
                   <h4 className="text-xs font-bold text-foreground">{cap.label}</h4>
@@ -127,7 +125,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between">
           <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Recently saved</h3>
           <Link href="/app/memories" className="text-xs font-semibold text-primary hover:underline flex items-center gap-0.5">
-            View all <ArrowRight className="h-3.5 w-3.5" />
+            View all <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-3.5 w-3.5" />
           </Link>
         </div>
 
@@ -194,15 +192,15 @@ export default function HomePage() {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between pt-2.5 border-t border-border/20">
-                  <div className="flex gap-1">
-                    {item.tags.map(t => (
-                      <span key={t} className="text-[7.5px] font-bold uppercase tracking-wider bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
+                <div className="flex items-center justify-between gap-2 pt-2.5 border-t border-border/20">
+                  <div className="flex min-w-0 flex-wrap gap-1">
+                    {item.tags.slice(0, 2).map(t => (
+                      <span key={t} className="max-w-20 truncate text-[7.5px] font-bold uppercase tracking-wider bg-muted text-muted-foreground px-1.5 py-0.5 rounded">
                         {t}
                       </span>
                     ))}
                   </div>
-                  <span className="text-[9px] text-muted-foreground font-mono">{timeAgo(item.createdAt)}</span>
+                  <span className="text-[9px] text-muted-foreground font-mono shrink-0">{timeAgo(item.createdAt)}</span>
                 </div>
 
               </div>
@@ -234,7 +232,7 @@ export default function HomePage() {
               href="/app/search?q=AI"
               className="text-[10px] font-bold text-primary flex items-center gap-0.5 hover:underline w-fit"
             >
-              Explore connections <ChevronRight className="h-3 w-3" />
+              Explore connections <HugeiconsIcon icon={ChevronRight} strokeWidth={2.25} className="h-3 w-3" />
             </Link>
           </div>
         </div>

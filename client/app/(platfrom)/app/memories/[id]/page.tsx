@@ -3,10 +3,8 @@
 import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import {
-  Sparkles, Globe, Video, FileText, StickyNote, Image as ImageIcon,
-  Trash2, FolderOpen, MoreHorizontal, Star, Archive, ExternalLink, ArrowLeft,
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, GlobeIcon as Globe, Video01Icon as Video, FileTextIcon as FileText, StickyNote01Icon as StickyNote, Image01Icon as ImageIcon, Delete02Icon as Trash2, FolderOpenIcon as FolderOpen, MoreHorizontalIcon as MoreHorizontal, StarIcon as Star, Archive01Icon as Archive, ExternalLinkIcon as ExternalLink, ArrowLeft01Icon as ArrowLeft } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
@@ -134,7 +132,7 @@ export default function MemoryDetailPage() {
           onClick={() => router.back()}
           className="text-xs font-semibold hover:text-primary flex items-center gap-1 text-muted-foreground transition-colors"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to library
+          <HugeiconsIcon icon={ArrowLeft} strokeWidth={2.25} className="h-4 w-4" /> Back to library
         </button>
 
         <div className="flex items-center gap-3">
@@ -142,31 +140,31 @@ export default function MemoryDetailPage() {
             onClick={() => toggleFavoriteMutation.mutate({ id: memory.id, isFavorite: !memory.isFavorite })}
             className="h-9 w-9 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-amber-500 transition-colors"
           >
-            <Star className={cn("h-4 w-4", memory.isFavorite ? "fill-amber-500 text-amber-500" : "")} />
+            <HugeiconsIcon icon={Star} strokeWidth={2.25} className={cn("h-4 w-4", memory.isFavorite ? "fill-amber-500 text-amber-500" : "")} />
           </button>
 
           <DropdownMenu>
             <DropdownMenuTrigger
               render={
                 <button className="h-9 w-9 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground">
-                  <MoreHorizontal className="h-4 w-4" />
+                  <HugeiconsIcon icon={MoreHorizontal} strokeWidth={2.25} className="h-4 w-4" />
                 </button>
               }
             />
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => router.push("/app/collections")}>
-                <FolderOpen className="h-3.5 w-3.5" /> Move to collection
+                <HugeiconsIcon icon={FolderOpen} strokeWidth={2.25} className="h-3.5 w-3.5" /> Move to collection
               </DropdownMenuItem>
               <DropdownMenuItem onClick={() => {
                 updateMutation.mutate({ id: memory.id, patch: { isArchived: true } });
                 toast.add({ title: "Moved to archive", description: memory.title, type: "success" });
                 router.push("/app/memories");
               }}>
-                <Archive className="h-3.5 w-3.5" /> Archive
+                <HugeiconsIcon icon={Archive} strokeWidth={2.25} className="h-3.5 w-3.5" /> Archive
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-                <Trash2 className="h-3.5 w-3.5" /> Move to trash
+                <HugeiconsIcon icon={Trash2} strokeWidth={2.25} className="h-3.5 w-3.5" /> Move to trash
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
@@ -224,26 +222,26 @@ export default function MemoryDetailPage() {
                     const fallback = getPlatformFallback(memory.platform);
                     return (
                       <div className={cn("absolute inset-0 flex flex-col items-center justify-center gap-2 text-white", fallback.gradientClassName)}>
-                        <TypeIcon className="h-8 w-8" />
+                        <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className="h-8 w-8" />
                         <span className="text-xs font-bold tracking-wide">{fallback.label}</span>
                       </div>
                     );
                   })()
                 ) : memory.type === "video" ? (
                   <>
-                    <Video className="h-10 w-10 text-red-500" />
+                    <HugeiconsIcon icon={Video} strokeWidth={2.25} className="h-10 w-10 text-red-500" />
                     <span>Video preview</span>
                   </>
                 ) : memory.type === "note" ? (
                   <>
-                    <StickyNote className="h-10 w-10 text-primary" />
+                    <HugeiconsIcon icon={StickyNote} strokeWidth={2.25} className="h-10 w-10 text-primary" />
                     <p className="max-w-sm px-6 text-[10px] font-medium text-foreground text-center whitespace-pre-wrap">
                       {memory.content}
                     </p>
                   </>
                 ) : (
                   <>
-                    <TypeIcon className="h-10 w-10 text-primary" />
+                    <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className="h-10 w-10 text-primary" />
                     <span>{memory.type === "web" ? "Website" : memory.type} preview</span>
                   </>
                 )}
@@ -260,7 +258,7 @@ export default function MemoryDetailPage() {
                     rel="noreferrer"
                     className="text-primary font-bold hover:underline flex items-center gap-0.5"
                   >
-                    Open original <ExternalLink className="h-3 w-3" />
+                    Open original <HugeiconsIcon icon={ExternalLink} strokeWidth={2.25} className="h-3 w-3" />
                   </a>
                 )}
               </div>
@@ -324,7 +322,7 @@ export default function MemoryDetailPage() {
                         // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain attachment thumbnail
                         <img src={attachment.fileUrl} alt="" />
                       ) : (
-                        <FileText />
+                        <HugeiconsIcon icon={FileText} strokeWidth={2.25} />
                       )}
                     </AttachmentMedia>
                     <AttachmentContent>
@@ -347,12 +345,12 @@ export default function MemoryDetailPage() {
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-1.5 text-primary">
-                <Sparkles className="h-4 w-4 fill-current" />
+                <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-4 w-4 fill-current" />
                 <h3 className="text-xs font-bold uppercase tracking-widest">SaveForLatter understood</h3>
               </div>
               {isMemoryProcessing(memory) && (
                 <span className="flex items-center gap-1 rounded-full border border-primary/20 bg-primary/5 px-2 py-0.5 text-[8px] font-bold text-primary">
-                  <Sparkles className="h-2.5 w-2.5 animate-pulse" />
+                  <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-2.5 w-2.5 animate-pulse" />
                   Processing
                 </span>
               )}

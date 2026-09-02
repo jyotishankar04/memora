@@ -2,7 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { BarChart2, ArrowLeft } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { BarChartIcon as BarChart2, ArrowLeft01Icon as ArrowLeft } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 
 export default function GraphPage() {
@@ -13,7 +14,7 @@ export default function GraphPage() {
       <div className="relative w-16 h-16 flex items-center justify-center mb-6">
         <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl animate-pulse" />
         <div className="w-14 h-14 rounded-2xl border border-primary/30 flex items-center justify-center bg-card shadow-md">
-          <BarChart2 className="h-7 w-7 text-primary" />
+          <HugeiconsIcon icon={BarChart2} strokeWidth={2.25} className="h-7 w-7 text-primary" />
         </div>
       </div>
 
@@ -36,7 +37,7 @@ export default function GraphPage() {
           className="h-10 px-6 rounded-full font-medium shadow-xs flex items-center gap-1.5"
           variant="outline"
         >
-          <ArrowLeft className="h-4 w-4" /> Back to home
+          <HugeiconsIcon icon={ArrowLeft} strokeWidth={2.25} className="h-4 w-4" /> Back to home
         </Button>
       </div>
 
