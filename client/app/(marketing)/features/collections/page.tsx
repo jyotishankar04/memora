@@ -4,7 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
-import { Sparkles, ArrowRight, ArrowLeft, Search, Plus, FolderPlus, Globe, Video, Image, StickyNote, HelpCircle, FileText, Check } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, ArrowRight01Icon as ArrowRight, ArrowLeft01Icon as ArrowLeft, Search01Icon as Search, PlusIcon as Plus, FolderPlusIcon as FolderPlus, GlobeIcon as Globe, Video01Icon as Video, Image01Icon as Image, StickyNote01Icon as StickyNote, HelpCircleIcon as HelpCircle, FileTextIcon as FileText, CheckIcon as Check } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FeaturesNavigator } from "../quick-capture/page";
@@ -48,7 +49,7 @@ export default function CollectionsPage() {
               nativeButton={false}
               className="h-10 px-6 rounded-full font-semibold text-xs bg-primary text-white hover:bg-primary/95"
             >
-              Create a Collection <ArrowRight className="h-3.5 w-3.5" />
+              Create a Collection <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-3.5 w-3.5" />
             </Button>
           </div>
 
@@ -185,7 +186,7 @@ export default function CollectionsPage() {
 
               <div className="p-4 bg-muted/40 border border-primary/20 rounded-xl space-y-3">
                 <div className="flex items-center gap-1.5 text-xs text-primary font-bold">
-                  <Sparkles className="h-4 w-4 fill-current animate-pulse" />
+                  <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-4 w-4 fill-current animate-pulse" />
                   <span>Looks related to</span>
                 </div>
                 
@@ -256,7 +257,7 @@ export default function CollectionsPage() {
             nativeButton={false}
             className="h-11 px-8 rounded-full bg-primary text-white hover:bg-primary/95 text-xs font-semibold flex items-center gap-1 shadow-sm"
           >
-            Create a Collection <ArrowRight className="h-4 w-4" />
+            Create a Collection <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-4 w-4" />
           </Button>
         </div>
       </section>

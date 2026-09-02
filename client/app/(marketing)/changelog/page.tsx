@@ -3,7 +3,8 @@
 import React from "react";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
-import { Sparkles, Calendar, ArrowRight, Zap, Code } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, Calendar01Icon as Calendar, ArrowRight01Icon as ArrowRight, ZapIcon as Zap, CodeIcon as Code } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -81,7 +82,7 @@ export default function ChangelogPage() {
                   <div className="flex flex-wrap items-center justify-between gap-4 border-b border-border/30 pb-4">
                     <div className="flex items-center gap-3">
                       <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                        <Icon className="h-4.5 w-4.5" />
+                        <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-4.5 w-4.5" />
                       </div>
                       <div>
                         <div className="flex items-center gap-2">
@@ -95,7 +96,7 @@ export default function ChangelogPage() {
                     </div>
 
                     <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
-                      <Calendar className="h-3.5 w-3.5" />
+                      <HugeiconsIcon icon={Calendar} strokeWidth={2.25} className="h-3.5 w-3.5" />
                       <span>{item.date}</span>
                     </div>
                   </div>

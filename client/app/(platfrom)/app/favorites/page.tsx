@@ -2,7 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { Star } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { StarIcon as Star } from "@hugeicons/core-free-icons";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemoriesQuery } from "@/context/MemoryContext";
 import { timeAgo } from "@/lib/time";
@@ -60,7 +61,7 @@ export default function FavoritesPage() {
                     <span className="text-[8px] font-mono text-primary font-bold bg-primary/10 px-2 py-0.5 rounded uppercase">
                       {item.type}
                     </span>
-                    <Star className="h-4.5 w-4.5 fill-amber-500 text-amber-500" />
+                    <HugeiconsIcon icon={Star} strokeWidth={2.25} className="h-4.5 w-4.5 fill-amber-500 text-amber-500" />
                   </div>
                   <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors leading-snug">
                     {item.title}

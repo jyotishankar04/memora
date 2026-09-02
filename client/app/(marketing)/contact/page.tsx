@@ -3,7 +3,8 @@
 import React, { useState } from "react";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
-import { Mail, MessageSquare, MapPin, Send } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Mail01Icon as Mail, MessageSquareIcon as MessageSquare, MapPinIcon as MapPin, SendIcon as Send } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 
 export default function ContactPage() {
@@ -48,21 +49,21 @@ export default function ContactPage() {
             <div className="space-y-4">
               <div className="flex items-center gap-3 text-xs text-foreground/80">
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                  <Mail className="h-4 w-4" />
+                  <HugeiconsIcon icon={Mail} strokeWidth={2.25} className="h-4 w-4" />
                 </div>
                 <span>support@saveforlatter.com</span>
               </div>
 
               <div className="flex items-center gap-3 text-xs text-foreground/80">
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                  <MessageSquare className="h-4 w-4" />
+                  <HugeiconsIcon icon={MessageSquare} strokeWidth={2.25} className="h-4 w-4" />
                 </div>
                 <span>Direct Slack support (Pro)</span>
               </div>
 
               <div className="flex items-center gap-3 text-xs text-foreground/80">
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                  <MapPin className="h-4 w-4" />
+                  <HugeiconsIcon icon={MapPin} strokeWidth={2.25} className="h-4 w-4" />
                 </div>
                 <span>Bengaluru, India</span>
               </div>
@@ -116,7 +117,7 @@ export default function ContactPage() {
                       type="submit"
                       className="w-full h-10 rounded-full font-semibold flex items-center justify-center gap-1.5"
                     >
-                      Send Message <Send className="h-3.5 w-3.5" />
+                      Send Message <HugeiconsIcon icon={Send} strokeWidth={2.25} className="h-3.5 w-3.5" />
                     </Button>
                   </form>
                 ) : (

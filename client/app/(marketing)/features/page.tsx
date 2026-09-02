@@ -3,10 +3,8 @@
 import React from "react";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
-import { 
-  Sparkles, Globe, Brain, Search, Video, Image, Code, 
-  StickyNote, Bookmark, Shield, Network, ArrowRight 
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, GlobeIcon as Globe, Brain01Icon as Brain, Search01Icon as Search, Video01Icon as Video, Image01Icon as Image, CodeIcon as Code, StickyNote01Icon as StickyNote, Bookmark01Icon as Bookmark, Shield01Icon as Shield, NetworkIcon as Network, ArrowRight01Icon as ArrowRight } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -82,7 +80,7 @@ export default function FeaturesPage() {
                 <div className="p-6 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full group">
                   <div>
                     <div className={cn("p-2 rounded-xl border border-border/40 w-fit mb-6", item.color)}>
-                      <Icon className="h-5 w-5" />
+                      <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-5 w-5" />
                     </div>
                     <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors">
                       {item.title}

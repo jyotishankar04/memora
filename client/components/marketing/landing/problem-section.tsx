@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Bookmark, Video, Image, StickyNote, Sparkles } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Bookmark01Icon as Bookmark, Video01Icon as Video, Image01Icon as Image, StickyNote01Icon as StickyNote, SparklesIcon as Sparkles } from "@hugeicons/core-free-icons";
 
 export default function ProblemSection() {
   return (
@@ -84,7 +85,7 @@ export default function ProblemSection() {
               <div className="animate-float-1 rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65">
                 <div className="p-4 rounded-lg border border-border/75 bg-card hover:border-primary/20 transition-colors h-full">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-orange-500/10 text-orange-600 mb-2">
-                    <Bookmark className="h-4.5 w-4.5" />
+                    <HugeiconsIcon icon={Bookmark} strokeWidth={2.25} className="h-4.5 w-4.5" />
                   </div>
                   <h4 className="text-xs font-medium text-foreground">Bookmarks</h4>
                   <p className="text-[10px] text-muted-foreground mt-0.5">247 saved links</p>
@@ -95,7 +96,7 @@ export default function ProblemSection() {
               <div className="animate-float-2 rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65">
                 <div className="p-4 rounded-lg border border-border/75 bg-card hover:border-primary/20 transition-colors h-full">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-red-500/10 text-red-600 mb-2">
-                    <Video className="h-4.5 w-4.5" />
+                    <HugeiconsIcon icon={Video} strokeWidth={2.25} className="h-4.5 w-4.5" />
                   </div>
                   <h4 className="text-xs font-medium text-foreground">YouTube</h4>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Saved videos</p>
@@ -106,7 +107,7 @@ export default function ProblemSection() {
               <div className="animate-float-3 rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65">
                 <div className="p-4 rounded-lg border border-border/75 bg-card hover:border-primary/20 transition-colors h-full">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 mb-2">
-                    <Image className="h-4.5 w-4.5" />
+                    <HugeiconsIcon icon={Image} strokeWidth={2.25} className="h-4.5 w-4.5" />
                   </div>
                   <h4 className="text-xs font-medium text-foreground">Screenshots</h4>
                   <p className="text-[10px] text-muted-foreground mt-0.5">1,284 images</p>
@@ -117,7 +118,7 @@ export default function ProblemSection() {
               <div className="animate-float-4 rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65">
                 <div className="p-4 rounded-lg border border-border/75 bg-card hover:border-primary/20 transition-colors h-full">
                   <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-600 mb-2">
-                    <StickyNote className="h-4.5 w-4.5" />
+                    <HugeiconsIcon icon={StickyNote} strokeWidth={2.25} className="h-4.5 w-4.5" />
                   </div>
                   <h4 className="text-xs font-medium text-foreground">Notes</h4>
                   <p className="text-[10px] text-muted-foreground mt-0.5">Random ideas</p>
@@ -167,7 +168,7 @@ export default function ProblemSection() {
                   <div className="absolute inset-0 rounded-lg border border-primary/20 scale-105 pointer-events-none pulse-glow-ring" />
                   
                   <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-xl bg-primary text-primary-foreground mb-4 shadow-[0_0_20px_rgba(20,71,230,0.4)] group-hover:rotate-12 transition-transform duration-300">
-                    <Sparkles className="h-5.5 w-5.5 fill-current" />
+                    <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-5.5 w-5.5 fill-current" />
                   </div>
                   
                   <span className="text-[10px] font-semibold tracking-[0.2em] text-primary uppercase">

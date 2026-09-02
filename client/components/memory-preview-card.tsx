@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { Memory } from "@/types/memory";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
@@ -19,7 +20,7 @@ export function MemoryPreviewCard({ memory }: { memory: Memory }) {
     >
       <div className="rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full p-2.5 min-h-32 space-y-2 transition-colors">
         <span className="w-fit flex items-center gap-1 rounded border border-primary/15 bg-primary/5 px-1.5 py-0.5 font-mono text-[7px] font-bold uppercase text-primary">
-          <TypeIcon className="h-2 w-2" /> {memory.type}
+          <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className="h-2 w-2" /> {memory.type}
         </span>
 
         {memory.type !== "note" && <MemoryThumbnail item={memory} />}

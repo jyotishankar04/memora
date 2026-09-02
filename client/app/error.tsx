@@ -1,7 +1,8 @@
 "use client";
 
 import Link from "next/link";
-import { TriangleAlert } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { TriangleAlertIcon as TriangleAlert } from "@hugeicons/core-free-icons";
 
 export default function GlobalError({ reset }: { error: Error & { digest?: string }; reset: () => void }) {
   return (
@@ -9,7 +10,7 @@ export default function GlobalError({ reset }: { error: Error & { digest?: strin
       <div className="relative w-14 h-14 flex items-center justify-center mb-6">
         <div className="absolute inset-0 bg-destructive/15 rounded-full blur-xl" />
         <div className="w-12 h-12 rounded-2xl border border-destructive/30 flex items-center justify-center bg-card shadow-md">
-          <TriangleAlert className="h-6 w-6 text-destructive" />
+          <HugeiconsIcon icon={TriangleAlert} strokeWidth={2.25} className="h-6 w-6 text-destructive" />
         </div>
       </div>
 

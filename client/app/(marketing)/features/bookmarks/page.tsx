@@ -4,7 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
-import { Sparkles, ArrowRight, Check, Search, Globe, Bookmark, Database, Layout } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, ArrowRight01Icon as ArrowRight, CheckIcon as Check, Search01Icon as Search, GlobeIcon as Globe, Bookmark01Icon as Bookmark, Database01Icon as Database, Layout01Icon as Layout } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { FeaturesNavigator } from "../quick-capture/page";
@@ -46,7 +47,7 @@ export default function BookmarksPage() {
               nativeButton={false}
               className="h-10 px-6 rounded-full font-semibold text-xs bg-primary text-white hover:bg-primary/95"
             >
-              Save Your First Bookmark <ArrowRight className="h-3.5 w-3.5" />
+              Save Your First Bookmark <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-3.5 w-3.5" />
             </Button>
           </div>
 
@@ -57,7 +58,7 @@ export default function BookmarksPage() {
               {/* Search bar mockup */}
               <div className="max-w-md mx-auto rounded-xl border border-border bg-card px-4 py-2.5 text-xs text-muted-foreground flex items-center justify-between shadow-xs">
                 <span>Search your memory...</span>
-                <Search className="h-4 w-4 text-primary" />
+                <HugeiconsIcon icon={Search} strokeWidth={2.25} className="h-4 w-4 text-primary" />
               </div>
 
               {/* Grid of bookmarks */}
@@ -193,7 +194,7 @@ export default function BookmarksPage() {
           <div className="max-w-md mx-auto space-y-6">
             {/* Search Input */}
             <div className="relative flex items-center">
-              <Search className="absolute left-4 h-5 w-5 text-primary stroke-[2.5]" />
+              <HugeiconsIcon icon={Search} strokeWidth={2.25} className="absolute left-4 h-5 w-5 text-primary stroke-[2.5]" />
               <input
                 type="text"
                 disabled
@@ -203,7 +204,7 @@ export default function BookmarksPage() {
             </div>
 
             <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-              <Sparkles className="h-4 w-4 fill-current" />
+              <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-4 w-4 fill-current" />
               <span>8 matching memories found</span>
             </div>
 
@@ -291,7 +292,7 @@ export default function BookmarksPage() {
             nativeButton={false}
             className="h-11 px-8 rounded-full bg-primary text-white hover:bg-primary/95 text-xs font-semibold flex items-center gap-1 shadow-sm"
           >
-            Start Saving <ArrowRight className="h-4 w-4" />
+            Start Saving <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-4 w-4" />
           </Button>
         </div>
       </section>

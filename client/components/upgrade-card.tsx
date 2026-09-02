@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { Sparkles, X } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, XIcon as X } from "@hugeicons/core-free-icons";
 
 export function UpgradeCard({ onDismiss }: { onDismiss: () => void }) {
   return (
@@ -16,11 +17,11 @@ export function UpgradeCard({ onDismiss }: { onDismiss: () => void }) {
           aria-label="Dismiss"
           className="absolute top-2.5 right-2.5 h-5 w-5 rounded-full flex items-center justify-center text-white/70 hover:text-white hover:bg-white/10 transition-colors"
         >
-          <X className="h-3 w-3" />
+          <HugeiconsIcon icon={X} strokeWidth={2.25} className="h-3 w-3" />
         </button>
 
         <div className="flex items-center gap-1.5">
-          <Sparkles className="h-3 w-3 text-white fill-current" />
+          <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-3 w-3 text-white fill-current" />
           <span className="text-[10px] font-bold uppercase tracking-wider text-white">SaveForLatter Pro</span>
         </div>
 

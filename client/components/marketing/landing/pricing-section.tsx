@@ -2,7 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { Check, ArrowRight } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { CheckIcon as Check, ArrowRight01Icon as ArrowRight } from "@hugeicons/core-free-icons";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -105,7 +106,7 @@ export default function PricingSection() {
                         "h-4 w-4 rounded-full flex items-center justify-center shrink-0 mt-0.5",
                         plan.popular ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
                       )}>
-                        <Check className="h-3 w-3 stroke-[2.5]" />
+                        <HugeiconsIcon icon={Check} strokeWidth={2.25} className="h-3 w-3 stroke-[2.5]" />
                       </div>
                       {feature}
                     </li>
@@ -125,7 +126,7 @@ export default function PricingSection() {
                   )}
                 >
                   {plan.cta}
-                  <ArrowRight className="h-4 w-4" />
+                  <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-4 w-4" />
                 </Link>
               </div>
             </div>

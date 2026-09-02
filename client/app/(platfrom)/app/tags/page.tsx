@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Search, Tag as TagIcon } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon as Search, Tag01Icon as TagIcon } from "@hugeicons/core-free-icons";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useTagsQuery } from "@/context/MemoryContext";
@@ -43,7 +44,7 @@ export default function TagsPage() {
 
         {tags.length > 0 && (
           <div className="relative flex items-center max-w-xs w-full shrink-0">
-            <Search className="absolute left-3.5 h-4 w-4 text-primary stroke-[2.5] z-10" />
+            <HugeiconsIcon icon={Search} strokeWidth={2.25} className="absolute left-3.5 h-4 w-4 text-primary stroke-[2.5] z-10" />
             <Input
               type="text"
               placeholder="Search tags..."
@@ -83,7 +84,7 @@ export default function TagsPage() {
               href={`/app/tags/${encodeURIComponent(tag.name)}`}
               className={`group flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-bold transition-colors ${colorFor(tag.id)}`}
             >
-              <TagIcon className="h-3.5 w-3.5" />
+              <HugeiconsIcon icon={TagIcon} strokeWidth={2.25} className="h-3.5 w-3.5" />
               {tag.name}
               <span className="text-[10px] font-mono opacity-70">{tag.memoryCount}</span>
             </Link>

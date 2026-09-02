@@ -3,7 +3,8 @@
 import React from "react";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
-import { Search, Globe, Key, Shield, HelpCircle, ArrowRight } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Search01Icon as Search, GlobeIcon as Globe, Key01Icon as Key, Shield01Icon as Shield, HelpCircleIcon as HelpCircle, ArrowRight01Icon as ArrowRight } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -35,7 +36,7 @@ export default function HelpPage() {
           
           {/* Search bar input mock */}
           <div className="max-w-md mx-auto relative flex items-center pt-2">
-            <Search className="absolute left-4 h-5 w-5 text-muted-foreground stroke-[2.5]" />
+            <HugeiconsIcon icon={Search} strokeWidth={2.25} className="absolute left-4 h-5 w-5 text-muted-foreground stroke-[2.5]" />
             <input 
               type="text" 
               placeholder="Search tutorials, keys, features..."
@@ -56,7 +57,7 @@ export default function HelpPage() {
                 <div className="p-6 rounded-xl border border-border/75 bg-card flex flex-col justify-between h-full group">
                   <div className="flex gap-4 items-start">
                     <div className="p-2 rounded-xl bg-primary/10 text-primary mt-1">
-                      <Icon className="h-5 w-5" />
+                      <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-5 w-5" />
                     </div>
                     
                     <div className="space-y-2">
@@ -67,7 +68,7 @@ export default function HelpPage() {
                         {item.desc}
                       </p>
                       <span className="text-xs font-semibold text-primary inline-flex items-center gap-1 group-hover:translate-x-0.5 transition-transform pt-1">
-                        View articles <ArrowRight className="h-3.5 w-3.5" />
+                        View articles <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-3.5 w-3.5" />
                       </span>
                     </div>
                   </div>

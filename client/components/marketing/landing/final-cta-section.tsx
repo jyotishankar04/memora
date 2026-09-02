@@ -2,7 +2,8 @@
 
 import React from "react";
 import Link from "next/link";
-import { ArrowRight } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { ArrowRight01Icon as ArrowRight } from "@hugeicons/core-free-icons";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -43,7 +44,7 @@ export default function FinalCtaSection() {
             )}
           >
             Start Saving Free
-            <ArrowRight className="h-4 w-4" />
+            <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-4 w-4" />
           </Link>
           
           <Link

@@ -3,7 +3,8 @@
 import React from "react";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
-import { Brain, Sparkles, Shield, Heart } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { Brain01Icon as Brain, SparklesIcon as Sparkles, Shield01Icon as Shield, HeartIcon as Heart } from "@hugeicons/core-free-icons";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
@@ -63,7 +64,7 @@ export default function AboutPage() {
                 <div className="p-6 rounded-xl border border-border/75 bg-card flex flex-col justify-between h-full">
                   <div>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary w-fit mb-4">
-                      <Icon className="h-4.5 w-4.5" />
+                      <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-4.5 w-4.5" />
                     </div>
                     <h3 className="text-sm font-semibold text-foreground">{item.title}</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">{item.desc}</p>

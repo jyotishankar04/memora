@@ -1,7 +1,8 @@
 "use client";
 
 import React from "react";
-import { Plus, Search, Sparkles, Globe, FileText, CheckCircle2, Wand2 } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { PlusIcon as Plus, Search01Icon as Search, SparklesIcon as Sparkles, GlobeIcon as Globe, FileTextIcon as FileText, CheckmarkCircle02Icon as CheckCircle2, MagicWand02Icon as Wand2 } from "@hugeicons/core-free-icons";
 
 export default function FeaturesSection() {
   return (
@@ -48,7 +49,7 @@ export default function FeaturesSection() {
             </p>
             <div className="pt-2 flex flex-wrap gap-2">
               <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground/80 bg-muted px-2.5 py-1 rounded-full border border-border/40">
-                <Globe className="h-3 w-3 text-primary" /> Chrome Extension
+                <HugeiconsIcon icon={Globe} strokeWidth={2.25} className="h-3 w-3 text-primary" /> Chrome Extension
               </span>
               <span className="inline-flex items-center gap-1 text-xs font-medium text-foreground/80 bg-muted px-2.5 py-1 rounded-full border border-border/40">
                 📱 iOS & Android Apps
@@ -93,7 +94,7 @@ export default function FeaturesSection() {
                   <p className="text-[11px] font-medium text-foreground mt-2 truncate">Building a second brain</p>
                   <p className="text-[9px] text-muted-foreground mt-0.5">Article saved successfully.</p>
                   <button className="mt-3 w-full bg-primary hover:bg-primary/95 text-primary-foreground text-[10px] font-semibold py-1.5 rounded-lg transition-colors flex items-center justify-center gap-1">
-                    <Plus className="h-3 w-3" /> Add Notes
+                    <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-3 w-3" /> Add Notes
                   </button>
                 </div>
               </div>
@@ -109,7 +110,7 @@ export default function FeaturesSection() {
               <div className="flex items-center justify-between border-b border-border/50 pb-3">
                 <div className="flex items-center gap-2">
                   <div className="p-1.5 rounded-lg bg-primary/10 text-primary">
-                    <Wand2 className="h-4 w-4" />
+                    <HugeiconsIcon icon={Wand2} strokeWidth={2.25} className="h-4 w-4" />
                   </div>
                   <div>
                     <h4 className="text-xs font-semibold text-foreground">AI Auto-Extraction</h4>
@@ -125,7 +126,7 @@ export default function FeaturesSection() {
                 {/* Task item 1 */}
                 <div className="flex items-start justify-between p-2.5 rounded-xl bg-background/50 border border-border/30">
                   <div className="flex gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <HugeiconsIcon icon={CheckCircle2} strokeWidth={2.25} className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-medium text-foreground">Extracting Article Summary</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">Generated key takeaways & readability optimizations.</p>
@@ -137,7 +138,7 @@ export default function FeaturesSection() {
                 {/* Task item 2 */}
                 <div className="flex items-start justify-between p-2.5 rounded-xl bg-background/50 border border-border/30">
                   <div className="flex gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <HugeiconsIcon icon={CheckCircle2} strokeWidth={2.25} className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-medium text-foreground">Generating Auto-Tags</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">Applied: #productivity #reading-notes #ai-tools</p>
@@ -149,7 +150,7 @@ export default function FeaturesSection() {
                 {/* Task item 3 */}
                 <div className="flex items-start justify-between p-2.5 rounded-xl bg-background/50 border border-border/30">
                   <div className="flex gap-2">
-                    <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                    <HugeiconsIcon icon={CheckCircle2} strokeWidth={2.25} className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
                     <div>
                       <p className="text-xs font-medium text-foreground">Screenshot OCR Text Recognition</p>
                       <p className="text-[10px] text-muted-foreground mt-0.5">Indexed 154 words of image text.</p>
@@ -209,7 +210,7 @@ export default function FeaturesSection() {
             <div className="p-5 rounded-2xl border border-border/40 bg-card/40 backdrop-blur-md shadow-lg space-y-4">
               {/* Search Bar */}
               <div className="relative flex items-center">
-                <Search className="absolute left-3.5 h-4 w-4 text-muted-foreground" />
+                <HugeiconsIcon icon={Search} strokeWidth={2.25} className="absolute left-3.5 h-4 w-4 text-muted-foreground" />
                 <div className="w-full text-xs bg-background/90 text-foreground border border-border/70 pl-10 pr-4 py-2.5 rounded-full shadow-xs">
                   "productivity book recommendations with blue cover"
                 </div>

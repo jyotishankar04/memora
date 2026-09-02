@@ -2,6 +2,7 @@
 
 import React from "react";
 import Link from "next/link";
+import { HugeiconsIcon } from "@hugeicons/react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemoriesQuery } from "@/context/MemoryContext";
 import { timeAgo, timelineGroup } from "@/lib/time";
@@ -89,7 +90,7 @@ export default function RecentPage() {
                               // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain favicon
                               <img src={item.faviconUrl} alt="" className="h-6 w-6 rounded-sm object-contain" />
                             ) : (
-                              <TypeIcon className="h-5 w-5" />
+                              <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className="h-5 w-5" />
                             )}
                           </div>
 

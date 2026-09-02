@@ -4,10 +4,8 @@ import React from "react";
 import Link from "next/link";
 import { Navbar } from "@/components/marketing/navbar";
 import MainFooter from "@/components/marketing/landing/main-footer";
-import { 
-  Sparkles, ArrowRight, Check, X, Search, Globe, Smartphone, 
-  Laptop, StickyNote, Network, Shield, Download, Lock, Plus, ArrowUpRight 
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, ArrowRight01Icon as ArrowRight, CheckIcon as Check, XIcon as X, Search01Icon as Search, GlobeIcon as Globe, SmartPhone01Icon as Smartphone, LaptopIcon as Laptop, StickyNote01Icon as StickyNote, NetworkIcon as Network, Shield01Icon as Shield, Download01Icon as Download, LockIcon as Lock, PlusIcon as Plus, ArrowUpRight01Icon as ArrowUpRight } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +19,7 @@ const timelineEvents = [
 
 export default function HowItWorksPage() {
   return (
-    <div className="flex flex-col min-h-screen bg-gradient-to-b from-primary/[0.03] via-background to-background text-foreground font-sans selection:bg-primary/20">
+    <div className="flex flex-col min-h-screen bg-linear-to-b from-primary/3 via-background to-background text-foreground font-sans selection:bg-primary/20">
       
       {/* Styles for custom keyframe flows and dot pulse indicators */}
       <style>{`
@@ -43,7 +41,7 @@ export default function HowItWorksPage() {
       <main className="flex-1 pt-24 pb-0 overflow-hidden">
 
         {/* 1. HERO SECTION */}
-        <section className="relative w-full py-20 md:py-32 bg-background flex flex-col items-center justify-center border-b border-border/20">
+        <section className="relative w-full py-20 md:py-32 flex flex-col items-center justify-center border-b border-border/20">
           <div 
             className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full pointer-events-none opacity-20 blur-[130px]"
             style={{
@@ -70,7 +68,7 @@ export default function HowItWorksPage() {
                 nativeButton={false}
                 className="h-11 px-6 rounded-full font-semibold text-xs flex items-center gap-1 bg-primary text-white hover:bg-primary/95"
               >
-                Start saving <ArrowRight className="h-3.5 w-3.5" />
+                Start saving <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-3.5 w-3.5" />
               </Button>
               
               <Button
@@ -99,7 +97,7 @@ export default function HowItWorksPage() {
                     
                     {/* Add Save bar mockup */}
                     <div className="mx-auto max-w-[120px] rounded-lg border border-border/80 bg-background/50 py-2 text-xs font-semibold text-muted-foreground flex items-center justify-center gap-1">
-                      <Plus className="h-3.5 w-3.5" /> Save
+                      <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-3.5 w-3.5" /> Save
                     </div>
 
                     {/* Search bar mockup */}
@@ -123,7 +121,7 @@ export default function HowItWorksPage() {
         </section>
 
         {/* 2. THE CORE LOOP */}
-        <section id="core-loop" className="relative w-full py-20 md:py-28 bg-background border-b border-border/20">
+        <section id="core-loop" className="relative w-full py-20 md:py-28  border-b border-border/20">
           <div className="mx-auto max-w-6xl px-6">
             
             <div className="text-center max-w-3xl mx-auto mb-16 md:mb-24">
@@ -151,7 +149,7 @@ export default function HowItWorksPage() {
                   
                   {/* Visual loop mock */}
                   <div className="p-3 bg-muted/40 border border-border/40 rounded-lg space-y-1.5">
-                    <div className="text-[9px] font-bold text-primary flex items-center gap-1"><Plus className="h-3 w-3" /> SAVE</div>
+                    <div className="text-[9px] font-bold text-primary flex items-center gap-1"><HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-3 w-3" /> SAVE</div>
                     <div className="text-[10px] text-foreground/80 flex items-center gap-1.5 font-semibold">🔗 Website</div>
                     <div className="text-[10px] text-foreground/80 flex items-center gap-1.5 font-semibold">🎥 Video</div>
                     <div className="text-[10px] text-foreground/80 flex items-center gap-1.5 font-semibold">🖼 Screenshot</div>
@@ -224,7 +222,7 @@ export default function HowItWorksPage() {
 
                   <div className="p-3.5 bg-muted/40 border border-border/40 rounded-lg space-y-2">
                     <div className="flex items-center gap-1 bg-background border border-border rounded-md px-1.5 py-1 text-[8px] text-muted-foreground font-medium">
-                      <Search className="h-2.5 w-2.5 text-primary" />
+                      <HugeiconsIcon icon={Search} strokeWidth={2.25} className="h-2.5 w-2.5 text-primary" />
                       <span>websites saved for dashboard</span>
                     </div>
                     <div className="bg-background border border-border/80 rounded p-1.5 space-y-1">
@@ -245,7 +243,7 @@ export default function HowItWorksPage() {
         </section>
 
         {/* 3. FROM CHAOS TO MEMORY */}
-        <section className="relative w-full py-20 md:py-28 bg-background border-b border-border/20">
+        <section className="relative w-full py-20 md:py-28 border-b border-border/20">
           <div className="mx-auto max-w-4xl px-6">
             
             <div className="text-center max-w-2xl mx-auto mb-16">
@@ -314,7 +312,7 @@ export default function HowItWorksPage() {
         </section>
 
         {/* 4. SAVE FROM ANYWHERE */}
-        <section className="relative w-full py-20 md:py-28 bg-background border-b border-border/20">
+        <section className="relative w-full py-20 md:py-28  border-b border-border/20">
           <div className="mx-auto max-w-6xl px-6">
             
             <div className="text-center max-w-3xl mx-auto mb-16 md:mb-20">
@@ -333,7 +331,7 @@ export default function HowItWorksPage() {
                 <div className="p-6 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full space-y-6">
                   <div>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary w-fit mb-4">
-                      <Globe className="h-5 w-5" />
+                      <HugeiconsIcon icon={Globe} strokeWidth={2.25} className="h-5 w-5" />
                     </div>
                     <h3 className="text-base font-bold text-foreground">Browser</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
@@ -349,7 +347,7 @@ export default function HowItWorksPage() {
                 <div className="p-6 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full space-y-6">
                   <div>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary w-fit mb-4">
-                      <Smartphone className="h-5 w-5" />
+                      <HugeiconsIcon icon={Smartphone} strokeWidth={2.25} className="h-5 w-5" />
                     </div>
                     <h3 className="text-base font-bold text-foreground">Phone</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
@@ -365,7 +363,7 @@ export default function HowItWorksPage() {
                 <div className="p-6 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full space-y-6">
                   <div>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary w-fit mb-4">
-                      <Laptop className="h-5 w-5" />
+                      <HugeiconsIcon icon={Laptop} strokeWidth={2.25} className="h-5 w-5" />
                     </div>
                     <h3 className="text-base font-bold text-foreground">Desktop</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
@@ -381,7 +379,7 @@ export default function HowItWorksPage() {
                 <div className="p-6 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full space-y-6">
                   <div>
                     <div className="p-2 rounded-xl bg-primary/10 text-primary w-fit mb-4">
-                      <StickyNote className="h-5 w-5" />
+                      <HugeiconsIcon icon={StickyNote} strokeWidth={2.25} className="h-5 w-5" />
                     </div>
                     <h3 className="text-base font-bold text-foreground">SaveForLatter</h3>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
@@ -398,7 +396,7 @@ export default function HowItWorksPage() {
         </section>
 
         {/* 5. ONE-TAP SAVING */}
-        <section className="relative w-full py-20 md:py-28 bg-background border-b border-border/20">
+        <section className="relative w-full py-20 md:py-28  border-b border-border/20">
           <div className="mx-auto max-w-4xl px-6">
             
             <div className="text-center max-w-2xl mx-auto mb-16">
@@ -425,7 +423,7 @@ export default function HowItWorksPage() {
 
                 <div className="p-8 bg-muted/20 border border-dashed border-border/60 rounded-xl text-center space-y-4 relative overflow-hidden">
                   <div className="mx-auto flex h-9 w-9 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                    <Sparkles className="h-4.5 w-4.5" />
+                    <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-4.5 w-4.5" />
                   </div>
                   
                   <div className="space-y-1">
@@ -439,13 +437,13 @@ export default function HowItWorksPage() {
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 text-center text-sm font-semibold text-muted-foreground max-w-lg mx-auto">
               <div className="flex items-center gap-2">
-                <X className="h-4 w-4 text-red-500" /> No copy-pasting.
+                <HugeiconsIcon icon={X} strokeWidth={2.25} className="h-4 w-4 text-red-500" /> No copy-pasting.
               </div>
               <div className="flex items-center gap-2">
-                <X className="h-4 w-4 text-red-500" /> No switching apps.
+                <HugeiconsIcon icon={X} strokeWidth={2.25} className="h-4 w-4 text-red-500" /> No switching apps.
               </div>
               <div className="flex items-center gap-2">
-                <X className="h-4 w-4 text-red-500" /> No “I'll save this later.”
+                <HugeiconsIcon icon={X} strokeWidth={2.25} className="h-4 w-4 text-red-500" /> No “I'll save this later.”
               </div>
             </div>
 
@@ -684,7 +682,7 @@ export default function HowItWorksPage() {
                 <div className="p-5 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full">
                   <div>
                     <div className="p-1.5 rounded-lg bg-primary/10 text-primary w-fit mb-3">
-                      <Lock className="h-4 w-4" />
+                      <HugeiconsIcon icon={Lock} strokeWidth={2.25} className="h-4 w-4" />
                     </div>
                     <h4 className="text-xs font-bold text-foreground">Private by default</h4>
                     <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
@@ -699,7 +697,7 @@ export default function HowItWorksPage() {
                 <div className="p-5 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full">
                   <div>
                     <div className="p-1.5 rounded-lg bg-primary/10 text-primary w-fit mb-3">
-                      <Shield className="h-4 w-4" />
+                      <HugeiconsIcon icon={Shield} strokeWidth={2.25} className="h-4 w-4" />
                     </div>
                     <h4 className="text-xs font-bold text-foreground">Your data, your account</h4>
                     <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
@@ -714,7 +712,7 @@ export default function HowItWorksPage() {
                 <div className="p-5 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full">
                   <div>
                     <div className="p-1.5 rounded-lg bg-primary/10 text-primary w-fit mb-3">
-                      <Download className="h-4 w-4" />
+                      <HugeiconsIcon icon={Download} strokeWidth={2.25} className="h-4 w-4" />
                     </div>
                     <h4 className="text-xs font-bold text-foreground">Export anytime</h4>
                     <p className="text-[10px] text-muted-foreground mt-2 leading-relaxed">
@@ -760,7 +758,7 @@ export default function HowItWorksPage() {
                 nativeButton={false}
                 className="h-11 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/95 text-xs font-semibold flex items-center gap-1 shadow-sm"
               >
-                Create your SaveForLatter <ArrowRight className="h-4 w-4" />
+                Create your SaveForLatter <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-4 w-4" />
               </Button>
               
               <Button
