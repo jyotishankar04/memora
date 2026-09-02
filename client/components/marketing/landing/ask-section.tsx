@@ -1,20 +1,21 @@
 "use client";
 
 import React from "react";
-import { MessageSquare, Sparkles, User, FileText, ExternalLink } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { MessageSquareIcon as MessageSquare, SparklesIcon as Sparkles, UserIcon as User, FileTextIcon as FileText, ExternalLinkIcon as ExternalLink } from "@hugeicons/core-free-icons";
 
 const sources = [
-  { id: "01", title: "AI Agents Guide", type: "Article", url: "https://example.com/agents-guide" },
-  { id: "02", title: "Building Reliable Agents", type: "Video", url: "https://example.com/reliable-agents" },
-  { id: "03", title: "Agent Memory Architecture", type: "GitHub", url: "https://example.com/memory-architecture" },
+  { id: "01", title: "Paint color guide", type: "Article", url: "https://example.com/paint-colors" },
+  { id: "02", title: "Small kitchen remodel", type: "Video", url: "https://example.com/kitchen-remodel" },
+  { id: "03", title: "IKEA shelving ideas", type: "Website", url: "https://example.com/shelving-ideas" },
 ];
 
 const topics = [
-  { name: "Memory", count: 8, pct: "w-[80%]" },
-  { name: "Tool calling", count: 6, pct: "w-[60%]" },
-  { name: "RAG", count: 5, pct: "w-[50%]" },
-  { name: "Evaluation", count: 3, pct: "w-[30%]" },
-  { name: "Multi-agent", count: 2, pct: "w-[20%]" },
+  { name: "Paint colors", count: 6, pct: "w-[80%]" },
+  { name: "Furniture", count: 5, pct: "w-[65%]" },
+  { name: "Lighting", count: 4, pct: "w-[50%]" },
+  { name: "Storage", count: 3, pct: "w-[35%]" },
+  { name: "Budget tips", count: 2, pct: "w-[20%]" },
 ];
 
 export default function AskSection() {
@@ -53,7 +54,7 @@ export default function AskSection() {
               <div className="flex items-center gap-2">
                 <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
                 <span className="text-xs font-semibold text-foreground tracking-wide flex items-center gap-1">
-                  <Sparkles className="h-3 w-3 text-primary fill-current" /> Ask SaveForLatter Assistant
+                  <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-3 w-3 text-primary fill-current" /> Ask SaveForLatter Assistant
                 </span>
               </div>
               <span className="text-[10px] text-muted-foreground bg-muted border border-border px-2 py-0.5 rounded">
@@ -67,11 +68,11 @@ export default function AskSection() {
               {/* User Message */}
               <div className="flex items-start gap-3">
                 <div className="h-8 w-8 rounded-lg bg-muted text-muted-foreground flex items-center justify-center shrink-0">
-                  <User className="h-4.5 w-4.5" />
+                  <HugeiconsIcon icon={User} strokeWidth={2.25} className="h-4.5 w-4.5" />
                 </div>
                 <div className="flex-1 bg-muted/30 border border-border/40 rounded-2xl rounded-tl-none p-3.5">
                   <p className="text-xs text-foreground/90 font-medium">
-                    What have I saved about AI agents?
+                    What have I saved about home renovation?
                   </p>
                 </div>
               </div>
@@ -79,7 +80,7 @@ export default function AskSection() {
               {/* Assistant Message */}
               <div className="flex items-start gap-3">
                 <div className="h-8 w-8 rounded-lg bg-primary text-primary-foreground flex items-center justify-center shrink-0 shadow-[0_2px_8px_rgba(20,71,230,0.3)]">
-                  <Sparkles className="h-4.5 w-4.5 fill-current" />
+                  <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-4.5 w-4.5 fill-current" />
                 </div>
                 
                 <div className="flex-1 space-y-4">
@@ -87,8 +88,8 @@ export default function AskSection() {
                   {/* Intro summary */}
                   <div className="space-y-1">
                     <div className="flex items-center gap-1.5 text-xs font-semibold text-primary">
-                      <Sparkles className="h-3.5 w-3.5 fill-current" />
-                      <span>You have 24 memories about AI agents.</span>
+                      <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-3.5 w-3.5 fill-current" />
+                      <span>You have 20 memories about home renovation.</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-2 leading-relaxed">
                       Based on your bookmarks, videos, and articles, the topics you've explored most are:
@@ -127,7 +128,7 @@ export default function AskSection() {
                                 {src.title}
                               </span>
                             </div>
-                            <ExternalLink className="h-3 w-3 text-muted-foreground/60 group-hover:text-primary shrink-0 ml-1.5" />
+                            <HugeiconsIcon icon={ExternalLink} strokeWidth={2.25} className="h-3 w-3 text-muted-foreground/60 group-hover:text-primary shrink-0 ml-1.5" />
                           </div>
                         </div>
                       ))}
