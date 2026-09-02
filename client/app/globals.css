@@ -196,3 +196,48 @@
     animation: none;
   }
 }
+
+/* MessageScrollerViewport already references scrollbar-thin/
+   scrollbar-gutter-stable, but nothing backed them — no scrollbar plugin is
+   installed, so they were silently no-op classes and the chat fell back to
+   the plain OS scrollbar. Defined here to match the same thin, rounded,
+   border-colored thumb shadcn's ScrollArea (components/ui/scroll-area.tsx)
+   already renders for the Sources panel, so both scrollable surfaces read
+   as one system. Native scrollbar styling, not a Base UI ScrollArea swap —
+   MessageScroller's autoscroll/scroll-anchor logic reads scrollTop directly
+   off this element's real native scrollbar, which a custom-thumb
+   implementation like ScrollArea's doesn't expose the same way. */
+@utility scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-border) transparent;
+
+  &::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  &::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    background-color: var(--color-border);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    background-color: var(--color-muted-foreground);
+  }
+  /* hidden mid-autoscroll (matches data-autoscrolling:scrollbar-thumb-transparent
+     already on the element) so the thumb doesn't jitter while following a stream */
+  &[data-autoscrolling] {
+    scrollbar-color: transparent transparent;
+
+    &::-webkit-scrollbar-thumb {
+      background-color: transparent;
+    }
+  }
+}
+
+@utility scrollbar-gutter-stable {
+  scrollbar-gutter: stable;
+}

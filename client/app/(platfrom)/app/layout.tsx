@@ -11,13 +11,14 @@ import {
   Compass, Check, ChevronRight, ChevronDown,
   FolderPlus, Heart, Clock, Compass as CompassIcon, BarChart2, FileText,
   Paperclip, UploadCloud, Layers, PanelLeftClose, PanelLeftOpen, Menu, Tag,
-  Keyboard, Archive, Trash2, TrendingUp, Plug
+  Keyboard, Archive, Trash2, TrendingUp, Plug, MessageSquarePlus, History
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
 import { UserAvatar, UserProvider, useUser, formatPlan, useCurrentUserQuery, useSetCurrentUser } from "@/context/UserContext";
 import { useMemories } from "@/context/MemoryContext";
+import { SidebarStateProvider } from "@/context/SidebarContext";
 import { UpgradeCard } from "@/components/upgrade-card";
 import { uploadFile, type UploadedFile } from "@/lib/uploads";
 import { detectMemoryType, deriveTitle, splitLinkAndCaption } from "@/lib/detect-memory-type";
@@ -58,6 +59,7 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Logo } from "@/components/logo";
 
 /** Exact-matches Home ("/app"); prefix-matches everything else, so a nav
@@ -68,14 +70,17 @@ function isNavItemActive(pathname: string, href: string): boolean {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
-const KEYBOARD_SHORTCUTS: { keys: string; label: string }[] = [
-  { keys: "⌘K / Ctrl+K", label: "Open search" },
-  { keys: "⌘Q / Ctrl+Q", label: "Quick capture" },
-  { keys: "⌘B / Ctrl+B", label: "Toggle sidebar" },
-  { keys: "⌘M / Ctrl+M", label: "Open collapsed sidebar menu" },
-  { keys: "⌘N / Ctrl+N", label: "Go to notifications" },
-  { keys: "⌘P / Ctrl+P", label: "Go to settings" },
-  { keys: "Esc", label: "Close open menu" },
+const KEYBOARD_SHORTCUTS: { mac: string[]; other: string[]; label: string }[] = [
+  { mac: ["⌘", "K"], other: ["Ctrl", "K"], label: "Open search" },
+  { mac: ["⌘", "Q"], other: ["Ctrl", "Q"], label: "Quick capture" },
+  { mac: ["⌘", "B"], other: ["Ctrl", "B"], label: "Toggle sidebar" },
+  { mac: ["⌘", "M"], other: ["Ctrl", "M"], label: "Open collapsed sidebar menu" },
+  { mac: ["⌘", "N"], other: ["Ctrl", "N"], label: "Go to notifications" },
+  { mac: ["⌘", "P"], other: ["Ctrl", "P"], label: "Go to settings" },
+  { mac: ["⌘", "J"], other: ["Ctrl", "J"], label: "New chat (on Ask SaveForLatter)" },
+  { mac: ["⌘", "H"], other: ["Ctrl", "H"], label: "Open chat history (on Ask SaveForLatter)" },
+  { mac: ["⌘", "/"], other: ["Ctrl", "/"], label: "Show keyboard shortcuts" },
+  { mac: ["Esc"], other: ["Esc"], label: "Close open menu" },
 ];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -402,11 +407,30 @@ function AppShell({ children }: { children: React.ReactNode }) {
           e.preventDefault();
           router.push("/app/settings");
           break;
+        // Ask-only — same two actions as the floating dock's "New
+        // chat"/"Chat history" buttons (AskPage listens for these same
+        // events), just reachable without needing the dock visible.
+        case "j":
+          if (pathname === "/app/ask") {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent("ask:new-chat"));
+          }
+          break;
+        case "h":
+          if (pathname === "/app/ask") {
+            e.preventDefault();
+            window.dispatchEvent(new CustomEvent("ask:open-history"));
+          }
+          break;
+        case "/":
+          e.preventDefault();
+          setShortcutsOpen(true);
+          break;
       }
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [saveModalOpen, saveStep, router, openCaptureModal, toggleSidebar]);
+  }, [saveModalOpen, saveStep, router, openCaptureModal, toggleSidebar, pathname]);
 
   // Collapsed-sidebar quick-nav menu keyboard control: Ctrl+M opens/closes
   // it, Tab / Shift+Tab cycle its items, Escape closes it (Enter navigates
@@ -766,7 +790,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <Search className="h-3.5 w-3.5 text-primary" />
                 <span>Search your memory...</span>
               </div>
-              <kbd className="px-1.5 py-0.5 border border-border bg-muted rounded text-[9px] font-mono">⌘K</kbd>
+              <KbdGroup>
+                <Kbd>⌘</Kbd>
+                <Kbd>K</Kbd>
+              </KbdGroup>
             </button>
           </div>
 
@@ -794,7 +821,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
         {/* Main nested content render */}
         <main className="flex-1 min-h-0">
           <ScrollArea className="h-full" viewportClassName="pb-16 md:pb-0">
-            {children}
+            <SidebarStateProvider value={{ collapsed: sidebarCollapsed, fullyCollapsed: sidebarFullyCollapsed }}>
+              {children}
+            </SidebarStateProvider>
           </ScrollArea>
         </main>
 
@@ -1052,6 +1081,33 @@ function AppShell({ children }: { children: React.ReactNode }) {
               <Plus className="h-4 w-4" />
             </motion.button>
           )}
+
+          {/* Ask's own thread history normally lives in its on-page sidebar,
+              but that sidebar has nowhere to dock once the main nav is fully
+              collapsed — it was rendering flush against this floating dock
+              instead. These two just dispatch events; AskPage (mounted as
+              `children`) owns the actual new-chat/history logic and can't be
+              called directly from here across the layout boundary. */}
+          {sidebarFullyCollapsed && pathname === "/app/ask" && (
+            <>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("ask:new-chat"))}
+                className="h-10 w-10 rounded-full border border-border/60 bg-card text-muted-foreground shadow-sm flex items-center justify-center hover:bg-muted hover:text-foreground transition-colors shrink-0"
+                aria-label="New chat (Ctrl+J)"
+              >
+                <MessageSquarePlus className="h-4 w-4" />
+              </button>
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent("ask:open-history"))}
+                className="h-10 w-10 rounded-full border border-border/60 bg-card text-muted-foreground shadow-sm flex items-center justify-center hover:bg-muted hover:text-foreground transition-colors shrink-0"
+                aria-label="Chat history (Ctrl+H)"
+              >
+                <History className="h-4 w-4" />
+              </button>
+            </>
+          )}
         </div>
       )}
 
@@ -1192,7 +1248,23 @@ function AppShell({ children }: { children: React.ReactNode }) {
             {KEYBOARD_SHORTCUTS.map((s) => (
               <li key={s.label} className="flex items-center justify-between gap-4 text-xs">
                 <span className="text-muted-foreground">{s.label}</span>
-                <kbd className="px-1.5 py-0.5 border border-border bg-muted rounded text-[10px] font-mono text-foreground shrink-0">{s.keys}</kbd>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  <KbdGroup>
+                    {s.mac.map((k, i) => (
+                      <Kbd key={i}>{k}</Kbd>
+                    ))}
+                  </KbdGroup>
+                  {s.mac.join("") !== s.other.join("") && (
+                    <>
+                      <span className="text-muted-foreground/50">/</span>
+                      <KbdGroup>
+                        {s.other.map((k, i) => (
+                          <Kbd key={i}>{k}</Kbd>
+                        ))}
+                      </KbdGroup>
+                    </>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

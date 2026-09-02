@@ -529,7 +529,29 @@ export const memoryChunks = pgTable(
 );
 
 // -----------------------------------------------------------------------------
-// 19. Relations
+// 19. Threads Table (Ask SaveForLatter chat threads — listing/naming only;
+//     message content lives in LangGraph's own Postgres checkpointer tables,
+//     keyed by this table's id as thread_id)
+// -----------------------------------------------------------------------------
+export const threads = pgTable(
+  "threads",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    title: varchar("title", { length: 200 }).notNull().default("New chat"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index("idx_threads_user_id").on(table.userId)]
+);
+
+// -----------------------------------------------------------------------------
+// 20. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {

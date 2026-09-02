@@ -65,5 +65,31 @@ export function createUpstashVectorStore(): VectorStore {
         .filter((r) => r.metadata?.memoryId)
         .map((r) => ({ memoryId: r.metadata!.memoryId, score: r.score }));
     },
+
+    async searchChunksByEmbedding(userId, embedding, limit) {
+      // content lives in metadata already (see upsertMemoryVectors above) —
+      // no Postgres round-trip needed to get the chunk text itself.
+      const results = await index.query<{
+        memoryId: string;
+        userId: string;
+        kind: string;
+        chunkIndex: number;
+        content: string;
+      }>({
+        vector: embedding,
+        topK: limit,
+        filter: `kind = 'chunk' and userId = '${userId}'`,
+        includeMetadata: true,
+      });
+
+      return results
+        .filter((r) => r.metadata?.memoryId && r.metadata?.content !== undefined)
+        .map((r) => ({
+          chunkId: chunkVectorId(r.metadata!.memoryId, r.metadata!.chunkIndex),
+          memoryId: r.metadata!.memoryId,
+          content: r.metadata!.content,
+          score: r.score,
+        }));
+    },
   };
 }

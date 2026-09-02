@@ -48,4 +48,22 @@ export const pgVectorStore: VectorStore = {
 
     return rows.map((row) => ({ memoryId: row.id, score: row.score }));
   },
+
+  async searchChunksByEmbedding(userId, embedding, limit) {
+    const vectorLiteral = `[${embedding.join(",")}]`;
+    const rows = await db
+      .select({
+        chunkId: memoryChunks.id,
+        memoryId: memoryChunks.memoryId,
+        content: memoryChunks.chunkContent,
+        score: sql<number>`1 - (${memoryChunks.embedding} <=> ${vectorLiteral}::vector)`.as("score"),
+      })
+      .from(memoryChunks)
+      .innerJoin(memories, eq(memoryChunks.memoryId, memories.id))
+      .where(and(eq(memoryChunks.userId, userId), eq(memories.inTrash, false)))
+      .orderBy(sql`${memoryChunks.embedding} <=> ${vectorLiteral}::vector`)
+      .limit(limit);
+
+    return rows;
+  },
 };
