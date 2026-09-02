@@ -2,28 +2,56 @@
 
 import React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowDown01Icon as ArrowDown, ArrowRight01Icon as ArrowRight, SparklesIcon as Sparkles, GlobeIcon as Globe, Video01Icon as Video, Image01Icon as Image, ShoppingBag01Icon as ShoppingBag } from "@hugeicons/core-free-icons";
-
-const examples = [
-  { type: "Website", icon: Globe, color: "text-blue-500 bg-blue-500/10 border-blue-500/20", tags: ["Design", "Ideas", "Inspiration"] },
-  { type: "Video", icon: Video, color: "text-red-500 bg-red-500/10 border-red-500/20", tags: ["Recipe", "Tutorial", "How-to"] },
-  { type: "Screenshot", icon: Image, color: "text-purple-500 bg-purple-500/10 border-purple-500/20", tags: ["Mood board", "Before & after", "Inspiration"] },
-  { type: "Product", icon: ShoppingBag, color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/20", tags: ["Wishlist", "Shopping", "Gift idea"] },
-];
+import { ArrowDown01Icon as ArrowDown, ArrowRight01Icon as ArrowRight, SparklesIcon as Sparkles, GlobeIcon as Globe, Target02Icon as Target, ListViewIcon as ListView, Tag01Icon as Tag, GitCompareIcon as GitCompare, Search01Icon as Search } from "@hugeicons/core-free-icons";
+import { StackedCards, type StackedCard } from "@/components/ui/stacked-cards";
+import { ParallaxGlow } from "@/components/ui/parallax-glow";
 
 const structuredTags = ["Home Decor", "Kitchen", "Renovation", "Budget Tips", "Before & After"];
+
+const pipelineStages: StackedCard[] = [
+  {
+    title: "Classify",
+    description: "Figures out what it's looking at — a recipe, a design reference, a receipt, a task.",
+    className: "bg-blue-600 text-white",
+    config: { y: -20, rotate: -15 },
+    visual: <HugeiconsIcon icon={Target} strokeWidth={1.75} className="h-9 w-9 opacity-80" />,
+  },
+  {
+    title: "Extract",
+    description: "Pulls out the useful details — ingredients, code, a due date — into structured fields.",
+    className: "bg-slate-800 text-white",
+    config: { y: 20, rotate: 8 },
+    visual: <HugeiconsIcon icon={ListView} strokeWidth={1.75} className="h-9 w-9 opacity-80" />,
+  },
+  {
+    title: "Tag & summarize",
+    description: "Writes a short summary and adds tags automatically, so you never have to.",
+    className: "bg-indigo-600 text-white",
+    config: { y: -80, rotate: -5 },
+    visual: <HugeiconsIcon icon={Tag} strokeWidth={1.75} className="h-9 w-9 opacity-80" />,
+  },
+  {
+    title: "Connect",
+    description: "Groups it with similar things you've saved before, no folders required.",
+    className: "bg-emerald-600 text-white",
+    config: { y: 20, rotate: 12 },
+    visual: <HugeiconsIcon icon={GitCompare} strokeWidth={1.75} className="h-9 w-9 opacity-80" />,
+  },
+  {
+    title: "Index",
+    description: "Makes it instantly searchable by meaning, not just by the words you typed.",
+    className: "bg-neutral-900 text-white",
+    config: { y: 20, rotate: -5 },
+    visual: <HugeiconsIcon icon={Search} strokeWidth={1.75} className="h-9 w-9 opacity-80" />,
+  },
+];
 
 export default function UnderstandingSection() {
   return (
     <section className="relative w-full py-20 md:py-28 bg-background overflow-hidden border-t border-border/20">
       
       {/* Subtle blue accent background glow */}
-      <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[500px] rounded-full pointer-events-none opacity-20 blur-[130px] dark:opacity-5"
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(20,71,230,0.06) 0%, rgba(20,71,230,0) 70%)"
-        }}
-      />
+      <ParallaxGlow className="w-[600px] h-[500px] opacity-20 blur-[130px] dark:opacity-5" />
 
       <div className="mx-auto max-w-6xl px-6 relative">
         
@@ -115,37 +143,12 @@ export default function UnderstandingSection() {
           </div>
         </div>
 
-        {/* Small examples grid (Double Bordered Cards) */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-4xl mx-auto">
-          {examples.map((item, idx) => {
-            const Icon = item.icon;
-            return (
-              <div 
-                key={idx}
-                className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65"
-              >
-                <div className="p-4 rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`p-1.5 rounded-lg border ${item.color}`}>
-                      <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-3.5 w-3.5" />
-                    </div>
-                    <span className="text-xs font-semibold text-foreground">{item.type}</span>
-                  </div>
-                  
-                  <div className="flex flex-wrap gap-1 mt-auto">
-                    {item.tags.map((tag) => (
-                      <span 
-                        key={tag}
-                        className="bg-muted text-muted-foreground border border-border/40 px-1.5 py-0.5 rounded text-[9px] font-medium"
-                      >
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
+        {/* Five stages of understanding, fanned out — click one to expand */}
+        <div>
+          <p className="text-center text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-2">
+            Every memory goes through the same five steps
+          </p>
+          <StackedCards cards={pipelineStages} />
         </div>
 
       </div>

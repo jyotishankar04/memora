@@ -6,6 +6,7 @@ import { GlobeIcon as Globe, SmartPhone01Icon as Smartphone, LaptopIcon as Lapto
 import type { IconSvgElement } from "@hugeicons/react";
 import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { ParallaxGlow } from "@/components/ui/parallax-glow";
 
 type Availability = "available" | "soon";
 
@@ -70,12 +71,7 @@ export default function PlatformAvailabilitySection() {
     <section className="relative w-full py-20 md:py-28 bg-background overflow-hidden border-t border-border/20">
 
       {/* Background glow */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full pointer-events-none opacity-20 blur-[130px] dark:opacity-5"
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(20,71,230,0.06) 0%, rgba(20,71,230,0) 70%)"
-        }}
-      />
+      <ParallaxGlow className="w-[700px] h-[500px] opacity-20 blur-[130px] dark:opacity-5" />
 
       <div className="mx-auto max-w-6xl px-6 relative">
 

@@ -21,7 +21,6 @@ const page = () => {
         <ProblemSection />
         <FeaturesGridSection />
         <SearchDemoSection />
-        <UnderstandingSection />
         <ContentTypesSection />
         <RediscoverSection />
         <PlatformAvailabilitySection />
