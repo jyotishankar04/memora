@@ -5,14 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { AnimatePresence, motion } from "motion/react";
-import {
-  Sparkles, Plus, Search,
-  Settings, HelpCircle, Bell, X, Moon, Sun, FolderOpen,
-  Compass, Check, ChevronRight, ChevronDown,
-  FolderPlus, Heart, Clock, Compass as CompassIcon, BarChart2, FileText,
-  Paperclip, UploadCloud, Layers, PanelLeftClose, PanelLeftOpen, Menu, Tag,
-  Keyboard, Archive, Trash2, TrendingUp, Plug, MessageSquarePlus, History
-} from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { SparklesIcon as Sparkles, PlusIcon as Plus, Search01Icon as Search, Settings01Icon as Settings, HelpCircleIcon as HelpCircle, BellIcon as Bell, XIcon as X, MoonIcon as Moon, Sun01Icon as Sun, FolderOpenIcon as FolderOpen, CompassIcon as Compass, CheckIcon as Check, ChevronRightIcon as ChevronRight, ChevronDownIcon as ChevronDown, FolderPlusIcon as FolderPlus, HeartIcon as Heart, Clock01Icon as Clock, CompassIcon, BarChartIcon as BarChart2, FileTextIcon as FileText, PaperclipIcon as Paperclip, CloudUploadIcon as UploadCloud, Layers01Icon as Layers, PanelLeftCloseIcon as PanelLeftClose, PanelLeftOpenIcon as PanelLeftOpen, Menu01Icon as Menu, Tag01Icon as Tag, KeyboardIcon as Keyboard, Archive01Icon as Archive, Delete02Icon as Trash2, TrendingUpIcon as TrendingUp, Plug01Icon as Plug, MessageSquarePlusIcon as MessageSquarePlus, HistoryIcon as History } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -61,6 +55,9 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Kbd, KbdGroup } from "@/components/ui/kbd";
 import { Logo } from "@/components/logo";
+import { NextStepProvider, NextStep } from "nextstepjs";
+import { useNextAdapter } from "nextstepjs/adapters/next";
+import { productTourSteps, TourCard, TourAutoStart } from "@/components/product-tour";
 
 /** Exact-matches Home ("/app"); prefix-matches everything else, so a nav
  * item for a list route (Tags, Collections, Memories) stays highlighted on
@@ -74,7 +71,7 @@ const KEYBOARD_SHORTCUTS: { mac: string[]; other: string[]; label: string }[] = 
   { mac: ["⌘", "K"], other: ["Ctrl", "K"], label: "Open search" },
   { mac: ["⌘", "Q"], other: ["Ctrl", "Q"], label: "Quick capture" },
   { mac: ["⌘", "B"], other: ["Ctrl", "B"], label: "Toggle sidebar" },
-  { mac: ["⌘", "M"], other: ["Ctrl", "M"], label: "Open collapsed sidebar menu" },
+  { mac: ["⌘", "M"], other: ["Ctrl", "M"], label: "Open sidebar menu (collapses sidebar first)" },
   { mac: ["⌘", "N"], other: ["Ctrl", "N"], label: "Go to notifications" },
   { mac: ["⌘", "P"], other: ["Ctrl", "P"], label: "Go to settings" },
   { mac: ["⌘", "J"], other: ["Ctrl", "J"], label: "New chat (on Ask SaveForLatter)" },
@@ -107,7 +104,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (isLoading || isError || !currentUser || needsOnboarding) {
     return (
       <div className="flex h-screen w-screen items-center justify-center bg-background">
-        <Sparkles className="h-5 w-5 text-primary animate-pulse" />
+        <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-5 w-5 text-primary animate-pulse" />
       </div>
     );
   }
@@ -174,6 +171,9 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const menuButtonRef = useRef<HTMLButtonElement>(null);
   const [menuAnchor, setMenuAnchor] = useState({ x: 0, y: 0 });
   const flyoutItemRefs = useRef<(HTMLAnchorElement | null)[]>([]);
+  // Set by the Ctrl+M handler when it has to collapse the sidebar first —
+  // the phase-watching effect below opens the flyout once collapse finishes.
+  const openFlyoutAfterCollapseRef = useRef(false);
 
   const toggleFlyout = useCallback(() => {
     setSidebarFlyoutOpen((open) => {
@@ -434,19 +434,24 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
   // Collapsed-sidebar quick-nav menu keyboard control: Ctrl+M opens/closes
   // it, Tab / Shift+Tab cycle its items, Escape closes it (Enter navigates
-  // via the focused link's own native behavior). Inert whenever the full
-  // sidebar is open — the floating menu doesn't exist in that state.
+  // via the focused link's own native behavior). If the full sidebar is
+  // still open, Ctrl+M collapses it first — the flyout doesn't exist until
+  // the sidebar is fully collapsed, so it opens once that finishes (see the
+  // phase-watching effect below) rather than being a no-op.
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (!sidebarFullyCollapsed) return;
-
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "m") {
         e.preventDefault();
-        toggleFlyout();
+        if (sidebarFullyCollapsed) {
+          toggleFlyout();
+        } else if (sidebarPhase === "expanded") {
+          openFlyoutAfterCollapseRef.current = true;
+          toggleSidebar();
+        }
         return;
       }
 
-      if (!sidebarFlyoutOpen) return;
+      if (!sidebarFullyCollapsed || !sidebarFlyoutOpen) return;
 
       if (e.key === "Escape") {
         e.preventDefault();
@@ -467,7 +472,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
     };
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [sidebarFullyCollapsed, sidebarFlyoutOpen, toggleFlyout]);
+  }, [sidebarFullyCollapsed, sidebarFlyoutOpen, sidebarPhase, toggleFlyout, toggleSidebar]);
+
+  // Once a Ctrl+M-triggered collapse finishes, open the flyout it was
+  // waiting on.
+  useEffect(() => {
+    if (sidebarFullyCollapsed && openFlyoutAfterCollapseRef.current) {
+      openFlyoutAfterCollapseRef.current = false;
+      toggleFlyout();
+    }
+  }, [sidebarFullyCollapsed, toggleFlyout]);
 
   // Focus the first item as soon as the menu opens, so Tab/Shift+Tab have
   // somewhere to start cycling from.
@@ -500,7 +514,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
   ];
 
   return (
-    <div className="flex h-screen w-screen bg-background text-foreground font-sans overflow-hidden transition-colors duration-300">
+    <NextStepProvider>
+      <NextStep steps={productTourSteps} navigationAdapter={useNextAdapter} cardComponent={TourCard}>
+        <TourAutoStart userId={currentUser.id} />
+        <div className="flex h-screen w-screen bg-background text-foreground font-sans overflow-hidden transition-colors duration-300">
 
       {/* Ambient primary-color glow — decorative, sits behind everything else */}
       <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
@@ -538,9 +555,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 layoutId="quick-capture-fab"
                 transition={{ duration: 0.25, ease: "easeInOut" }}
                 onClick={openCaptureModal}
+                data-tour="quick-capture-btn"
                 className="w-full h-10 rounded-full font-bold text-xs bg-primary text-white flex items-center justify-center gap-1.5 shadow-sm"
               >
-                <Plus className="h-4 w-4" /> Quick Capture
+                <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" /> Quick Capture
               </motion.button>
             )}
 
@@ -563,7 +581,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center shadow-sm shrink-0"
                 aria-label="Quick Capture (Ctrl+Q)"
               >
-                <Plus className="h-4 w-4" />
+                <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" />
               </motion.button>
             )}
           </div>
@@ -580,12 +598,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <Link
                   key={item.href}
                   href={item.href}
+                  data-tour={item.href === "/app/memories" ? "nav-memories" : undefined}
                   className={cn(
                     "px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-2.5 transition-colors",
                     active ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-4 w-4" />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -600,7 +619,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               className="w-full flex items-center justify-between px-3 mb-1 text-[9px] font-bold text-muted-foreground uppercase tracking-widest hover:text-foreground transition-colors"
             >
               <span>Collections</span>
-              <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", collectionsOpen ? "" : "-rotate-90")} />
+              <HugeiconsIcon icon={ChevronDown} strokeWidth={2.25} className={cn("h-3 w-3 transition-transform duration-200", collectionsOpen ? "" : "-rotate-90")} />
             </button>
 
             <AnimatePresence initial={false}>
@@ -627,7 +646,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                           <span>{col.icon}</span>
                           {col.name}
                         </span>
-                        <ChevronRight className="h-3 w-3 opacity-30" />
+                        <HugeiconsIcon icon={ChevronRight} strokeWidth={2.25} className="h-3 w-3 opacity-30" />
                       </Link>
                     );
                   })}
@@ -638,7 +657,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                       onClick={() => setCollectionsShowAll((show) => !show)}
                       className="w-full px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-1.5 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                     >
-                      <ChevronDown className={cn("h-3 w-3 transition-transform duration-200", collectionsShowAll ? "rotate-180" : "")} />
+                      <HugeiconsIcon icon={ChevronDown} strokeWidth={2.25} className={cn("h-3 w-3 transition-transform duration-200", collectionsShowAll ? "rotate-180" : "")} />
                       {collectionsShowAll ? "Show less" : `Show ${collections.length - COLLECTIONS_PREVIEW_COUNT} more`}
                     </button>
                   )}
@@ -647,7 +666,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     href="/app/collections"
                     className="px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center gap-2 text-primary hover:underline"
                   >
-                    <Plus className="h-3 w-3" /> New collection
+                    <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-3 w-3" /> New collection
                   </Link>
                 </motion.div>
               )}
@@ -668,7 +687,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     active ? "bg-primary/10 text-primary" : "hover:bg-muted text-muted-foreground hover:text-foreground"
                   )}
                 >
-                  <Icon className="h-4 w-4" />
+                  <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-4 w-4" />
                   <span>{item.label}</span>
                 </Link>
               );
@@ -712,7 +731,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   <p className="text-[9px] text-muted-foreground font-mono leading-none">{formatPlan(currentUser.roles)}</p>
                 </div>
               </div>
-              <ChevronDown className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
+              <HugeiconsIcon icon={ChevronDown} strokeWidth={2.25} className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
             </button>
 
             {upgradeCardDismissed && isFreeUser && (
@@ -736,7 +755,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               </div>
 
               <Link href="/app/settings" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
-                <Settings className="h-3.5 w-3.5 opacity-60" />
+                <HugeiconsIcon icon={Settings} strokeWidth={2.25} className="h-3.5 w-3.5 opacity-60" />
                 <span>Settings</span>
               </Link>
 
@@ -745,12 +764,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 onClick={() => { setUserDropdownOpen(false); setShortcutsOpen(true); }}
                 className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2"
               >
-                <Keyboard className="h-3.5 w-3.5 opacity-60" />
+                <HugeiconsIcon icon={Keyboard} strokeWidth={2.25} className="h-3.5 w-3.5 opacity-60" />
                 <span>Keyboard shortcuts</span>
               </button>
 
               <Link href="/help" target="_blank" rel="noreferrer" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
-                <HelpCircle className="h-3.5 w-3.5 opacity-60" />
+                <HugeiconsIcon icon={HelpCircle} strokeWidth={2.25} className="h-3.5 w-3.5 opacity-60" />
                 <span>Help & Docs</span>
               </Link>
 
@@ -775,10 +794,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
             {/* Sidebar collapse toggle */}
             <button
               onClick={toggleSidebar}
+              data-tour="sidebar-collapse-btn"
               className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors shrink-0"
               aria-label={sidebarCollapsed ? "Expand sidebar (Ctrl+B)" : "Collapse sidebar (Ctrl+B)"}
             >
-              {sidebarCollapsed ? <PanelLeftOpen className="h-4 w-4" /> : <PanelLeftClose className="h-4 w-4" />}
+              {sidebarCollapsed ? <HugeiconsIcon icon={PanelLeftOpen} strokeWidth={2.25} className="h-4 w-4" /> : <HugeiconsIcon icon={PanelLeftClose} strokeWidth={2.25} className="h-4 w-4" />}
             </button>
 
             {/* Global search trigger */}
@@ -787,7 +807,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               className="w-80 h-9 px-3 rounded-full border border-border/60 bg-muted/20 text-xs text-muted-foreground flex items-center justify-between hover:bg-muted transition-all select-none"
             >
               <div className="flex items-center gap-2">
-                <Search className="h-3.5 w-3.5 text-primary" />
+                <HugeiconsIcon icon={Search} strokeWidth={2.25} className="h-3.5 w-3.5 text-primary" />
                 <span>Search your memory...</span>
               </div>
               <KbdGroup>
@@ -800,7 +820,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
           {/* Actions */}
           <div className="flex items-center gap-4">
             <Link href="/app/notifications" aria-label="Notifications (Ctrl+N)" className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
-              <Bell className="h-4 w-4" />
+              <HugeiconsIcon icon={Bell} strokeWidth={2.25} className="h-4 w-4" />
               <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-primary rounded-full" />
             </Link>
 
@@ -808,7 +828,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
               className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground"
             >
-              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+              {theme === "dark" ? <HugeiconsIcon icon={Sun} strokeWidth={2.25} className="h-4 w-4" /> : <HugeiconsIcon icon={Moon} strokeWidth={2.25} className="h-4 w-4" />}
             </button>
 
             <Link href="/app/settings" aria-label="Profile (Ctrl+P)">
@@ -830,12 +850,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
         {/* 3. MOBILE BOTTOM NAVIGATION BAR */}
         <nav className="fixed bottom-0 left-0 right-0 h-14 bg-card border-t border-border flex items-center justify-around z-40 md:hidden px-4">
           <Link href="/app" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", isNavItemActive(pathname, "/app") ? "text-primary" : "text-muted-foreground")}>
-            <Compass className="h-5 w-5" />
+            <HugeiconsIcon icon={Compass} strokeWidth={2.25} className="h-5 w-5" />
             <span>Home</span>
           </Link>
 
           <Link href="/app/search" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", isNavItemActive(pathname, "/app/search") ? "text-primary" : "text-muted-foreground")}>
-            <Search className="h-5 w-5" />
+            <HugeiconsIcon icon={Search} strokeWidth={2.25} className="h-5 w-5" />
             <span>Search</span>
           </Link>
 
@@ -844,16 +864,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
             onClick={openCaptureModal}
             className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg -translate-y-2 select-none"
           >
-            <Plus className="h-6 w-6 stroke-[2.5]" />
+            <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-6 w-6 stroke-[2.5]" />
           </button>
 
           <Link href="/app/ask" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", isNavItemActive(pathname, "/app/ask") ? "text-primary" : "text-muted-foreground")}>
-            <Sparkles className="h-5 w-5" />
+            <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="h-5 w-5" />
             <span>Ask</span>
           </Link>
 
           <Link href="/app/settings" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", isNavItemActive(pathname, "/app/settings") ? "text-primary" : "text-muted-foreground")}>
-            <Settings className="h-5 w-5" />
+            <HugeiconsIcon icon={Settings} strokeWidth={2.25} className="h-5 w-5" />
             <span>You</span>
           </Link>
         </nav>
@@ -868,7 +888,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <div className="flex items-center justify-between border-b border-border/20 pb-2">
               <span className="text-xs font-bold text-foreground">Add to SaveForLatter</span>
               <button onClick={() => setSaveModalOpen(false)} className="text-muted-foreground hover:text-foreground">
-                <X className="h-4 w-4" />
+                <HugeiconsIcon icon={X} strokeWidth={2.25} className="h-4 w-4" />
               </button>
             </div>
 
@@ -879,7 +899,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <div className="relative">
                   {isDraggingOver && (
                     <div className="pointer-events-none absolute inset-0 z-10 flex flex-col items-center justify-center gap-1.5 rounded-2xl bg-background/90 backdrop-blur-sm">
-                      <UploadCloud className="h-5 w-5 text-primary" />
+                      <HugeiconsIcon icon={UploadCloud} strokeWidth={2.25} className="h-5 w-5 text-primary" />
                       <p className="text-[10px] font-bold text-primary uppercase tracking-wide">Drop to attach</p>
                     </div>
                   )}
@@ -916,7 +936,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                               // eslint-disable-next-line @next/next/no-img-element -- external, unpredictable-domain preview image
                               <img src={captureAttachment.fileUrl} alt="" />
                             ) : (
-                              <FileText />
+                              <HugeiconsIcon icon={FileText} strokeWidth={2.25} />
                             )}
                           </AttachmentMedia>
                           <AttachmentContent>
@@ -932,7 +952,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                           </AttachmentContent>
                           <AttachmentActions>
                             <AttachmentAction type="button" aria-label={`Remove ${captureAttachmentName ?? "attachment"}`} onClick={clearAttachment}>
-                              <X />
+                              <HugeiconsIcon icon={X} strokeWidth={2.25} />
                             </AttachmentAction>
                           </AttachmentActions>
                         </Attachment>
@@ -941,12 +961,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
                     <InputGroupAddon align="block-end" className="w-full justify-between border-t border-border/40 bg-muted/20 px-3 py-2">
                       <InputGroupButton type="button" onClick={() => fileInputRef.current?.click()}>
-                        <Paperclip className="h-3.5 w-3.5" />
+                        <HugeiconsIcon icon={Paperclip} strokeWidth={2.25} className="h-3.5 w-3.5" />
                         Attach
                       </InputGroupButton>
 
                       <InputGroupText className="rounded-full bg-primary/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-primary">
-                        <DetectedTypeIcon className="h-3 w-3" />
+                        <HugeiconsIcon icon={DetectedTypeIcon} strokeWidth={2.25} className="h-3 w-3" />
                         {detectedTypeLabel}
                       </InputGroupText>
                     </InputGroupAddon>
@@ -989,7 +1009,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                           >
                             <span>{col.icon}</span>
                             {col.name}
-                            {isSelected && <Check className="h-2.5 w-2.5 stroke-[3]" />}
+                            {isSelected && <HugeiconsIcon icon={Check} strokeWidth={2.25} className="h-2.5 w-2.5 stroke-[3]" />}
                           </button>
                         );
                       })}
@@ -1014,7 +1034,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             {saveStep === "done" && (
               <div className="text-center py-6 space-y-4">
                 <div className="h-10 w-10 bg-emerald-500/10 text-emerald-600 border border-emerald-500/20 rounded-full flex items-center justify-center mx-auto shadow-xs">
-                  <Check className="h-5 w-5 stroke-[3]" />
+                  <HugeiconsIcon icon={Check} strokeWidth={2.25} className="h-5 w-5 stroke-[3]" />
                 </div>
 
                 <div className="space-y-1">
@@ -1061,7 +1081,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               className="h-10 w-10 rounded-full border border-primary/30 bg-primary/10 text-primary shadow-sm flex items-center justify-center hover:bg-primary/15 transition-colors shrink-0"
               aria-label="Open sidebar menu (Ctrl+M)"
             >
-              <Menu className="h-4 w-4" />
+              <HugeiconsIcon icon={Menu} strokeWidth={2.25} className="h-4 w-4" />
             </button>
           )}
 
@@ -1078,7 +1098,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
               className="h-10 w-10 rounded-full bg-primary text-white shadow-sm flex items-center justify-center hover:opacity-90 transition-opacity shrink-0"
               aria-label="Quick Capture (Ctrl+Q)"
             >
-              <Plus className="h-4 w-4" />
+              <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" />
             </motion.button>
           )}
 
@@ -1096,7 +1116,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 className="h-10 w-10 rounded-full border border-border/60 bg-card text-muted-foreground shadow-sm flex items-center justify-center hover:bg-muted hover:text-foreground transition-colors shrink-0"
                 aria-label="New chat (Ctrl+J)"
               >
-                <MessageSquarePlus className="h-4 w-4" />
+                <HugeiconsIcon icon={MessageSquarePlus} strokeWidth={2.25} className="h-4 w-4" />
               </button>
               <button
                 type="button"
@@ -1104,7 +1124,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 className="h-10 w-10 rounded-full border border-border/60 bg-card text-muted-foreground shadow-sm flex items-center justify-center hover:bg-muted hover:text-foreground transition-colors shrink-0"
                 aria-label="Chat history (Ctrl+H)"
               >
-                <History className="h-4 w-4" />
+                <HugeiconsIcon icon={History} strokeWidth={2.25} className="h-4 w-4" />
               </button>
             </>
           )}
@@ -1174,7 +1194,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                                 : "bg-card border-border/60 text-muted-foreground hover:text-foreground hover:bg-muted"
                             )}
                           >
-                            <Icon className="h-5 w-5" />
+                            <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-5 w-5" />
                           </Link>
                         }
                       />
@@ -1201,15 +1221,15 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
           <CommandGroup heading="Quick Actions">
             <CommandItem onSelect={() => { setSearchModalOpen(false); openCaptureModal(); }}>
-              <Plus className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+              <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Save a memory</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/ask"); }}>
-              <Sparkles className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+              <HugeiconsIcon icon={Sparkles} strokeWidth={2.25} className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Ask SaveForLatter</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/collections"); }}>
-              <FolderPlus className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+              <HugeiconsIcon icon={FolderPlus} strokeWidth={2.25} className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Create collection</span>
             </CommandItem>
           </CommandGroup>
@@ -1218,19 +1238,19 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
           <CommandGroup heading="Go to">
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app"); }}>
-              <Compass className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+              <HugeiconsIcon icon={Compass} strokeWidth={2.25} className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Go to Home</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/memories"); }}>
-              <FolderOpen className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+              <HugeiconsIcon icon={FolderOpen} strokeWidth={2.25} className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Go to Memories</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/favorites"); }}>
-              <Heart className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+              <HugeiconsIcon icon={Heart} strokeWidth={2.25} className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Go to Favorites</span>
             </CommandItem>
             <CommandItem onSelect={() => { setSearchModalOpen(false); router.push("/app/settings"); }}>
-              <Settings className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
+              <HugeiconsIcon icon={Settings} strokeWidth={2.25} className="mr-2 h-3.5 w-3.5 text-muted-foreground" />
               <span>Go to Settings</span>
             </CommandItem>
           </CommandGroup>
@@ -1294,6 +1314,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
         }
       `}</style>
 
-    </div>
+        </div>
+      </NextStep>
+    </NextStepProvider>
   );
 }

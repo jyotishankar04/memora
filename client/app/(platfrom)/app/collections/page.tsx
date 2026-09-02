@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Plus } from "lucide-react";
+import { HugeiconsIcon } from "@hugeicons/react";
+import { PlusIcon as Plus } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FolderCard } from "@/components/ui/folder-card";
@@ -66,7 +67,7 @@ export default function CollectionsPage() {
     <div className="max-w-4xl mx-auto px-6 py-10 space-y-8 animate-fade-in">
 
       {/* Header Title */}
-      <div className="flex items-center justify-between border-b border-border/20 pb-4">
+      <div className="flex items-center justify-between border-b border-border/20 pb-4" data-tour="collections-header">
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Collections</h1>
           <p className="text-xs text-muted-foreground mt-1">
@@ -78,7 +79,7 @@ export default function CollectionsPage() {
           onClick={() => setShowAddModal(true)}
           className="rounded-full px-4 text-xs font-bold bg-primary text-white flex items-center gap-1.5 shadow-sm"
         >
-          <Plus className="h-4 w-4" /> New Collection
+          <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" /> New Collection
         </Button>
       </div>
 
