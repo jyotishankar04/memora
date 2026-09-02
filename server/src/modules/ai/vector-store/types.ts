@@ -17,12 +17,19 @@ export interface VectorSearchResult {
   score: number;
 }
 
+export interface VectorChunkSearchResult {
+  /** memory_chunks.id — the merge key for RAG's chunk-level RRF (multiple
+   *  chunks can share a memoryId, so memoryId alone can't be the key). */
+  chunkId: string;
+  memoryId: string;
+  content: string;
+  score: number;
+}
+
 /**
  * Where a memory's embeddings actually live — pgvector columns on the
  * primary DB for local/dev, Upstash Vector for production (see
- * VECTOR_STORE_PROVIDER in src/config/env.ts). RAG passage retrieval over
- * memory_chunks is still out of scope until the "Ask Memora" pass —
- * searchByEmbedding below is document-level only, for the Search feature.
+ * VECTOR_STORE_PROVIDER in src/config/env.ts).
  */
 export interface VectorStore {
   upsertMemoryVectors(input: VectorUpsertInput): Promise<void>;
@@ -35,4 +42,11 @@ export interface VectorStore {
    * callers needing those must post-filter (see ../search/).
    */
   searchByEmbedding(userId: string, embedding: number[], limit: number): Promise<VectorSearchResult[]>;
+  /**
+   * Nearest-neighbor search against per-chunk embeddings — passage-level
+   * retrieval for the "Ask SaveForLatter" RAG agent (see ../rag/), unlike
+   * searchByEmbedding above which is document-level for the Search feature.
+   * Same userId/in_trash=false scoping, same best-first cosine ordering.
+   */
+  searchChunksByEmbedding(userId: string, embedding: number[], limit: number): Promise<VectorChunkSearchResult[]>;
 }
