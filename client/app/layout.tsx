@@ -3,9 +3,11 @@ import { Geist, Geist_Mono, Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/common/theme-provider";
+import { ThemeShortcut } from "@/components/common/theme-shortcut";
 import { Toaster } from "@/components/ui/toast";
 import { QueryProvider } from "./providers";
 import { AnnouncementGate } from "@/components/announcements/announcement-gate";
+import { ComingSoonGate } from "@/components/showcase/coming-soon-gate";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -33,9 +35,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     >
     <body className="min-h-full flex flex-col" suppressHydrationWarning>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+          <ThemeShortcut />
           <QueryProvider>
             <Toaster>
-              <AnnouncementGate>{children}</AnnouncementGate>
+              <ComingSoonGate>
+                <AnnouncementGate>{children}</AnnouncementGate>
+              </ComingSoonGate>
             </Toaster>
           </QueryProvider>
         </ThemeProvider>
