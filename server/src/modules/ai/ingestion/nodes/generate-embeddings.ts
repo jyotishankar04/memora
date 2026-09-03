@@ -1,4 +1,5 @@
 import { getEmbeddings } from "../../ai.providers";
+import { logAiUsage } from "../../../ai-usage/usage-logger";
 import { logNode } from "../log";
 import type { IngestionStateType, IngestionUpdate } from "../state";
 
@@ -23,6 +24,17 @@ export async function generateEmbeddings(state: IngestionStateType): Promise<Ing
   logNode(state.memoryId, "generateEmbeddings", {
     documentEmbeddingDims: documentEmbedding.length,
     chunkEmbeddingCount: chunkEmbeddings.length,
+  });
+
+  // OpenAIEmbeddings doesn't surface token usage through LangChain.js —
+  // log a call-count row (no token fields) rather than a real count.
+  void logAiUsage({
+    userId: state.userId,
+    requestType: "embedding:document",
+    provider: "openai",
+    model: "text-embedding-3-small",
+    memoryId: state.memoryId,
+    metadata: { calls: 1 + (chunkTexts.length > 0 ? 1 : 0), chunkCount: chunkTexts.length },
   });
 
   return { documentEmbedding, chunkEmbeddings };

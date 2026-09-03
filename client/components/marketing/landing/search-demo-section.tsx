@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 import { TypewriterEffect, type TypewriterWord } from "@/components/ui/typewriter-effect";
 import { TextGenerateEffect } from "@/components/ui/text-generate-effect";
 import { HoverEffect } from "@/components/ui/card-hover-effect";
+import { ParallaxGlow } from "@/components/ui/parallax-glow";
 
 type ResultKind = "WEBSITE" | "ARTICLE" | "SCREENSHOT";
 
@@ -308,12 +309,7 @@ export default function SearchDemoSection() {
     <section className="relative w-full py-20 md:py-28 bg-background overflow-hidden border-t border-border/20">
 
       {/* Subtle blue accent background glow */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full pointer-events-none opacity-20 blur-[130px] dark:opacity-5"
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(20,71,230,0.08) 0%, rgba(20,71,230,0) 70%)"
-        }}
-      />
+      <ParallaxGlow className="w-[700px] h-[500px] opacity-20 blur-[130px] dark:opacity-5" alpha={0.08} />
 
       <div className="mx-auto max-w-6xl px-6 relative">
 

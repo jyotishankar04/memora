@@ -25,6 +25,11 @@ export default function CaptureSection() {
         .float-central {
           animation: float-circle 6s ease-in-out infinite;
         }
+        @media (prefers-reduced-motion: reduce) {
+          .float-central {
+            animation: none;
+          }
+        }
       `}</style>
 
       <div className="mx-auto max-w-6xl px-6 relative">

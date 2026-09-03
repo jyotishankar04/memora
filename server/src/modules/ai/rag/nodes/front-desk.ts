@@ -2,6 +2,7 @@ import { AIMessage, HumanMessage, SystemMessage } from "@langchain/core/messages
 import type { GraphNode } from "@langchain/langgraph";
 import { z } from "zod";
 import { getChatModel } from "../../ai.providers";
+import { createUsageCallback } from "../../../ai-usage/usage-logger";
 import { FRONT_DESK_CLASSIFY_PROMPT, FRONT_DESK_DECLINE_PROMPT } from "../prompts";
 import { RAGState, type RAGStateType } from "../state";
 import { INTERNAL_EVENT_TAG } from "../internal-tag";
@@ -27,18 +28,26 @@ const declineModel = getChatModel("fast");
  * checkGrounding's leak bug (see nodes/check-grounding.ts) showed is easy to
  * get wrong around streamEvents().
  */
-export const frontDeskNode: GraphNode<typeof RAGState> = async (state) => {
+export const frontDeskNode: GraphNode<typeof RAGState> = async (state, config) => {
   const lastMessage = state.messages.at(-1);
   const query = lastMessage && HumanMessage.isInstance(lastMessage) && typeof lastMessage.content === "string" ? lastMessage.content : "";
   if (!query) return { inScope: true };
 
+  const userId = (config.context as { userId?: string } | undefined)?.userId ?? null;
+  const threadId = (config.configurable as { thread_id?: string } | undefined)?.thread_id ?? null;
+
   const prompt = FRONT_DESK_CLASSIFY_PROMPT.replace("{query}", query);
   // Tagged internal — this classifier call must never leak into the client
   // stream (same reasoning as checkGrounding's tagged call).
-  const { inScope } = await classifyModel.invoke(prompt, { tags: [INTERNAL_EVENT_TAG] });
+  const { inScope } = await classifyModel.invoke(prompt, {
+    tags: [INTERNAL_EVENT_TAG],
+    callbacks: [createUsageCallback({ userId, requestType: "rag:front_desk_classify", threadId })],
+  });
   if (inScope) return { inScope: true };
 
-  const decline = await declineModel.invoke([new SystemMessage(FRONT_DESK_DECLINE_PROMPT), ...state.messages]);
+  const decline = await declineModel.invoke([new SystemMessage(FRONT_DESK_DECLINE_PROMPT), ...state.messages], {
+    callbacks: [createUsageCallback({ userId, requestType: "rag:front_desk_decline", threadId })],
+  });
   return { inScope: false, messages: [decline as AIMessage] };
 };
 

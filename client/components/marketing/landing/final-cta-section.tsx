@@ -5,6 +5,8 @@ import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowRight01Icon as ArrowRight } from "@hugeicons/core-free-icons";
 import { buttonVariants } from "@/components/ui/button";
+import { MagneticButton } from "@/components/ui/magnetic-button";
+import { ParallaxGlow } from "@/components/ui/parallax-glow";
 import { cn } from "@/lib/utils";
 
 export default function FinalCtaSection() {
@@ -12,12 +14,7 @@ export default function FinalCtaSection() {
     <section className="relative w-full py-32 md:py-44 bg-background overflow-hidden border-t border-border/20">
       
       {/* Background soft blue glow */}
-      <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full pointer-events-none opacity-20 blur-[130px] dark:opacity-5"
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(20,71,230,0.06) 0%, rgba(20,71,230,0) 70%)"
-        }}
-      />
+      <ParallaxGlow className="w-[700px] h-[500px] opacity-20 blur-[130px] dark:opacity-5" />
 
       <div className="mx-auto max-w-4xl px-6 relative text-center space-y-8">
         
@@ -36,17 +33,19 @@ export default function FinalCtaSection() {
 
         {/* Buttons */}
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-          <Link
-            href="/auth/signup"
-            className={cn(
-              buttonVariants({ variant: "default", size: "lg" }),
-              "h-12 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/95 text-sm font-semibold flex items-center gap-1 shadow-sm transition-all duration-200"
-            )}
-          >
-            Start Saving Free
-            <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-4 w-4" />
-          </Link>
-          
+          <MagneticButton strength={0.4}>
+            <Link
+              href="/auth/signup"
+              className={cn(
+                buttonVariants({ variant: "default", size: "lg" }),
+                "h-12 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/95 text-sm font-semibold flex items-center gap-1 shadow-sm transition-all duration-200"
+              )}
+            >
+              Start Saving Free
+              <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-4 w-4" />
+            </Link>
+          </MagneticButton>
+
           <Link
             href="/how-it-works"
             className={cn(

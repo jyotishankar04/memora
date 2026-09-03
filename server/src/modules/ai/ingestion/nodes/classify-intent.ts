@@ -1,6 +1,7 @@
 import { ChatPromptTemplate } from "@langchain/core/prompts";
 import { JsonOutputParser } from "@langchain/core/output_parsers";
 import { getChatModel } from "../../ai.providers";
+import { createUsageCallback } from "../../../ai-usage/usage-logger";
 import { logNode } from "../log";
 import type { IngestionStateType, IngestionUpdate } from "../state";
 
@@ -45,11 +46,14 @@ export async function classifyIntent(state: IngestionStateType): Promise<Ingesti
       .join(" | ") || "(none available)";
 
   const chain = prompt.pipe(getChatModel("fast")).pipe(new JsonOutputParser<IntentClassification>());
-  const result = await chain.invoke({
-    categories: (TAXONOMY_BY_TYPE[state.mediaType] ?? ["other"]).join(", "),
-    content: (state.rawContent || "(none captured)").slice(0, 4000),
-    context,
-  });
+  const result = await chain.invoke(
+    {
+      categories: (TAXONOMY_BY_TYPE[state.mediaType] ?? ["other"]).join(", "),
+      content: (state.rawContent || "(none captured)").slice(0, 4000),
+      context,
+    },
+    { callbacks: [createUsageCallback({ userId: state.userId, requestType: "ingestion:classify_intent", memoryId: state.memoryId })] },
+  );
 
   logNode(state.memoryId, "classifyIntent", {
     resourceCategory: result.resourceCategory,

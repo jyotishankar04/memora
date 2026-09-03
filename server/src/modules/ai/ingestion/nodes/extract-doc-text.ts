@@ -18,7 +18,11 @@ export async function extractDocText(state: IngestionStateType): Promise<Ingesti
   try {
     const response = await fetch(state.attachmentUrl, { signal: AbortSignal.timeout(15000) });
     const data = await response.arrayBuffer();
-    const rawContent = await extractPdfContent(data, state.caption || undefined);
+    const rawContent = await extractPdfContent(
+      data,
+      { userId: state.userId, requestType: "ingestion:pdf_summary", memoryId: state.memoryId },
+      state.caption || undefined,
+    );
     logNode(state.memoryId, "extractDocText", { attachmentUrl: state.attachmentUrl, contentLength: rawContent.length });
     return { rawContent };
   } catch (err) {

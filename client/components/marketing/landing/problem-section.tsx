@@ -3,6 +3,7 @@
 import React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Bookmark01Icon as Bookmark, Video01Icon as Video, Image01Icon as Image, StickyNote01Icon as StickyNote, SparklesIcon as Sparkles } from "@hugeicons/core-free-icons";
+import { ParallaxGlow } from "@/components/ui/parallax-glow";
 
 export default function ProblemSection() {
   return (
@@ -48,12 +49,7 @@ export default function ProblemSection() {
       `}</style>
 
       {/* Subtle background glow effect */}
-      <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] rounded-full pointer-events-none opacity-40 blur-[120px]"
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(20,71,230,0.12) 0%, rgba(20,71,230,0) 70%)"
-        }}
-      />
+      <ParallaxGlow className="w-[500px] h-[500px] opacity-40 blur-[120px]" alpha={0.12} />
 
       <div className="mx-auto max-w-6xl px-6">
         {/* Header content */}

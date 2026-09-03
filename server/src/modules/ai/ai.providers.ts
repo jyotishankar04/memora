@@ -4,6 +4,14 @@ import type { BaseChatModel } from "@langchain/core/language_models/chat_models"
 import type { BaseMessage } from "@langchain/core/messages";
 import { env } from "../../config/env";
 import { logger } from "../../shared/utils/logger";
+import { createUsageCallback } from "../ai-usage/usage-logger";
+
+export interface UsageContext {
+  userId: string | null;
+  requestType: string;
+  memoryId?: string | null;
+  threadId?: string | null;
+}
 
 // gpt-5-nano rejects any non-default temperature ("Unsupported value:
 // 'temperature' does not support 0.2 with this model. Only the default (1)
@@ -63,10 +71,15 @@ export function getTextFallbackModels(): BaseChatModel[] {
   return [getChatModel("fast"), getOpenAiFallbackModel()];
 }
 
-export async function invokeWithFallback(models: BaseChatModel[], messages: BaseMessage[], timeoutMs = 20000): Promise<string> {
+export async function invokeWithFallback(
+  models: BaseChatModel[],
+  messages: BaseMessage[],
+  usage: UsageContext,
+  timeoutMs = 20000,
+): Promise<string> {
   for (const model of models) {
     try {
-      const response = await model.invoke(messages, { timeout: timeoutMs });
+      const response = await model.invoke(messages, { timeout: timeoutMs, callbacks: [createUsageCallback(usage)] });
       const content = typeof response.content === "string" ? response.content : JSON.stringify(response.content);
       return content;
     } catch (err) {

@@ -4,7 +4,9 @@ import React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { GlobeIcon as Globe, SmartPhone01Icon as Smartphone, LaptopIcon as Laptop, PuzzleIcon as Puzzle, MonitorIcon as Monitor, AppleIcon as Apple } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
+import { motion, useReducedMotion } from "motion/react";
 import { cn } from "@/lib/utils";
+import { ParallaxGlow } from "@/components/ui/parallax-glow";
 
 type Availability = "available" | "soon";
 
@@ -63,16 +65,13 @@ const platformRows: Platform[][] = [
 ];
 
 export default function PlatformAvailabilitySection() {
+  const reduceMotion = useReducedMotion();
+
   return (
     <section className="relative w-full py-20 md:py-28 bg-background overflow-hidden border-t border-border/20">
 
       {/* Background glow */}
-      <div
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[700px] h-[500px] rounded-full pointer-events-none opacity-20 blur-[130px] dark:opacity-5"
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(20,71,230,0.06) 0%, rgba(20,71,230,0) 70%)"
-        }}
-      />
+      <ParallaxGlow className="w-[700px] h-[500px] opacity-20 blur-[130px] dark:opacity-5" />
 
       <div className="mx-auto max-w-6xl px-6 relative">
 
@@ -96,10 +95,12 @@ export default function PlatformAvailabilitySection() {
               {row.map((platform) => {
                 const Icon = platform.icon;
                 return (
-                  <div
+                  <motion.div
                     key={platform.name}
+                    whileHover={reduceMotion ? undefined : { y: -3 }}
+                    transition={{ type: "spring", stiffness: 400, damping: 28 }}
                     className={cn(
-                      "relative rounded-2xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65 transition-all duration-300",
+                      "group relative rounded-2xl border border-border/45 bg-muted/75 p-1 shadow-xs dark:border-border/65 hover:shadow-md",
                       platform.span === "wide" ? "sm:flex-[3]" : "sm:flex-[2]"
                     )}
                   >
@@ -122,7 +123,7 @@ export default function PlatformAvailabilitySection() {
                         {platform.status === "available" ? "Available" : "Coming soon"}
                       </span>
 
-                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-border/50 bg-background/60 text-muted-foreground/80 mb-5 mt-2">
+                      <div className="flex h-16 w-16 items-center justify-center rounded-2xl border border-border/50 bg-background/60 text-muted-foreground/80 mb-5 mt-2 transition-colors duration-200 group-hover:border-primary/30 group-hover:text-primary">
                         <HugeiconsIcon icon={Icon} strokeWidth={2.25} className="h-7 w-7 stroke-[1.5]" />
                       </div>
 
@@ -131,7 +132,7 @@ export default function PlatformAvailabilitySection() {
                         {platform.desc}
                       </p>
                     </div>
-                  </div>
+                  </motion.div>
                 );
               })}
             </div>

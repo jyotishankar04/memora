@@ -4,9 +4,12 @@ import React, { useState, useEffect, useRef, useMemo, useCallback } from "react"
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
+import { useQuery } from "@tanstack/react-query";
+import { MaintenanceFullPage } from "@/components/maintenance/maintenance-full-page";
+import { getMaintenanceStatus } from "@/lib/maintenance";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SparklesIcon as Sparkles, PlusIcon as Plus, Search01Icon as Search, Settings01Icon as Settings, HelpCircleIcon as HelpCircle, BellIcon as Bell, XIcon as X, MoonIcon as Moon, Sun01Icon as Sun, FolderOpenIcon as FolderOpen, CompassIcon as Compass, CheckIcon as Check, ChevronRightIcon as ChevronRight, ChevronDownIcon as ChevronDown, FolderPlusIcon as FolderPlus, HeartIcon as Heart, Clock01Icon as Clock, CompassIcon, BarChartIcon as BarChart2, FileTextIcon as FileText, PaperclipIcon as Paperclip, CloudUploadIcon as UploadCloud, Layers01Icon as Layers, PanelLeftCloseIcon as PanelLeftClose, PanelLeftOpenIcon as PanelLeftOpen, Menu01Icon as Menu, Tag01Icon as Tag, KeyboardIcon as Keyboard, Archive01Icon as Archive, Delete02Icon as Trash2, TrendingUpIcon as TrendingUp, Plug01Icon as Plug, MessageSquarePlusIcon as MessageSquarePlus, HistoryIcon as History } from "@hugeicons/core-free-icons";
+import { SparklesIcon as Sparkles, PlusIcon as Plus, Search01Icon as Search, Settings01Icon as Settings, HelpCircleIcon as HelpCircle, BellIcon as Bell, XIcon as X, MoonIcon as Moon, Sun01Icon as Sun, FolderOpenIcon as FolderOpen, CompassIcon as Compass, CheckIcon as Check, ChevronRightIcon as ChevronRight, ChevronDownIcon as ChevronDown, FolderPlusIcon as FolderPlus, HeartIcon as Heart, Clock01Icon as Clock, CompassIcon, BarChartIcon as BarChart2, FileTextIcon as FileText, PaperclipIcon as Paperclip, CloudUploadIcon as UploadCloud, Layers01Icon as Layers, PanelLeftCloseIcon as PanelLeftClose, PanelLeftOpenIcon as PanelLeftOpen, Menu01Icon as Menu, Tag01Icon as Tag, KeyboardIcon as Keyboard, Archive01Icon as Archive, Delete02Icon as Trash2, TrendingUpIcon as TrendingUp, Plug01Icon as Plug, MessageSquarePlusIcon as MessageSquarePlus, HistoryIcon as History, ShieldUserIcon as ShieldUser } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -83,6 +86,18 @@ const KEYBOARD_SHORTCUTS: { mac: string[]; other: string[]; label: string }[] = 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
 
+  // Maintenance gate takes priority over the auth gate below — /app is
+  // fully hidden while maintenance is on (admins manage it from /admin
+  // instead, which this layout doesn't cover). Polls so it recovers on its
+  // own once an admin turns maintenance back off, no reload needed.
+  const { data: maintenance } = useQuery({
+    queryKey: ["maintenance", "status"],
+    queryFn: getMaintenanceStatus,
+    staleTime: 60 * 1000,
+    refetchInterval: 15 * 1000,
+    retry: 1,
+  });
+
   // Auth gate: the access token lives in an httpOnly cookie the backend set,
   // so this client can't check for it locally — it asks /auth/me instead.
   // Redirects to login if that fails, or to /onboard if the signed-in user
@@ -100,6 +115,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.replace("/onboard");
     }
   }, [isLoading, isError, needsOnboarding, router]);
+
+  if (maintenance?.enabled) {
+    return <MaintenanceFullPage message={maintenance.message} />;
+  }
 
   if (isLoading || isError || !currentUser || needsOnboarding) {
     return (
@@ -830,6 +849,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
             >
               {theme === "dark" ? <HugeiconsIcon icon={Sun} strokeWidth={2.25} className="h-4 w-4" /> : <HugeiconsIcon icon={Moon} strokeWidth={2.25} className="h-4 w-4" />}
             </button>
+
+            {currentUser.roles.includes("admin") && (
+              <Link
+                href="/admin"
+                aria-label="Admin panel"
+                className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <HugeiconsIcon icon={ShieldUser} strokeWidth={2.25} className="h-4 w-4" />
+              </Link>
+            )}
 
             <Link href="/app/settings" aria-label="Profile (Ctrl+P)">
               <UserAvatar user={currentUser} className="h-8 w-8 text-xs border border-primary/20" />

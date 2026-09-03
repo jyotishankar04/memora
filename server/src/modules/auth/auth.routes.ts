@@ -5,6 +5,7 @@ import { AuthController } from "./auth.controller";
 
 const router = Router();
 
+router.get("/providers", AuthController.providers);
 router.get("/google", oauthRateLimiter, AuthController.initiateGoogle);
 router.get("/google/callback", oauthRateLimiter, AuthController.googleCallback);
 router.get("/github", oauthRateLimiter, AuthController.initiateGithub);

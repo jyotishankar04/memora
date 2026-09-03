@@ -2,7 +2,9 @@ import crypto from "node:crypto";
 import type { Request, Response } from "express";
 import { env } from "../../config/env";
 import { ApiResponse } from "../../shared/response/api-response";
+import { AppError } from "../../shared/errors/app-error";
 import { getClientIp } from "../../shared/utils/device-fingerprint";
+import { isProviderEnabled, isSignupsEnabled } from "../feature-flags/feature-flags.service";
 import {
   OAUTH_STATE_COOKIE,
   REFRESH_TOKEN_COOKIE,
@@ -66,16 +68,31 @@ async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (c
 }
 
 export class AuthController {
-  static initiateGoogle(_req: Request, res: Response) {
+  static async initiateGoogle(_req: Request, res: Response) {
+    if (!(await isProviderEnabled("google"))) {
+      throw new AppError("Google sign-in is currently disabled", 403, "PROVIDER_DISABLED");
+    }
     const state = crypto.randomUUID();
     setOAuthStateCookie(res, state);
     res.redirect(buildGoogleAuthUrl(state));
   }
 
-  static initiateGithub(_req: Request, res: Response) {
+  static async initiateGithub(_req: Request, res: Response) {
+    if (!(await isProviderEnabled("github"))) {
+      throw new AppError("GitHub sign-in is currently disabled", 403, "PROVIDER_DISABLED");
+    }
     const state = crypto.randomUUID();
     setOAuthStateCookie(res, state);
     res.redirect(buildGithubAuthUrl(state));
+  }
+
+  static async providers(_req: Request, res: Response) {
+    const [google, github, signupsEnabled] = await Promise.all([
+      isProviderEnabled("google"),
+      isProviderEnabled("github"),
+      isSignupsEnabled(),
+    ]);
+    res.status(200).json(ApiResponse.success({ google, github, signupsEnabled }));
   }
 
   static async googleCallback(req: Request, res: Response) {

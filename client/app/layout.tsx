@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import { ThemeProvider } from "@/components/common/theme-provider";
 import { Toaster } from "@/components/ui/toast";
 import { QueryProvider } from "./providers";
+import { AnnouncementGate } from "@/components/announcements/announcement-gate";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
 
@@ -34,7 +35,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <QueryProvider>
             <Toaster>
-              {children}
+              <AnnouncementGate>{children}</AnnouncementGate>
             </Toaster>
           </QueryProvider>
         </ThemeProvider>

@@ -7,6 +7,7 @@ import { AppError } from "../../shared/errors/app-error";
 import { buildDeviceFingerprint, parseUserAgent } from "../../shared/utils/device-fingerprint";
 import { parseDurationMs } from "../../shared/utils/duration";
 import { generateRefreshToken, hashToken, signAccessToken } from "../../shared/utils/jwt";
+import { isSignupsEnabled } from "../feature-flags/feature-flags.service";
 
 export interface OAuthProfile {
   provider: Provider;
@@ -216,6 +217,10 @@ export async function findOrCreateUser(profile: OAuthProfile): Promise<{ user: U
     await syncAvatar(userByEmail.id, userByEmail.avatarUrl, profile.avatarUrl);
 
     return { user: userByEmail, isNewUser: false };
+  }
+
+  if (!(await isSignupsEnabled())) {
+    throw new AppError("New signups are currently disabled", 403, "SIGNUPS_DISABLED");
   }
 
   const [newUser] = await db

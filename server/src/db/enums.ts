@@ -46,3 +46,14 @@ export enum MemoryStatus {
   PARTIAL = "partial",
   FAILED = "failed",
 }
+
+export enum AnnouncementType {
+  COUNTDOWN = "countdown",
+  ANNOUNCEMENT = "announcement",
+  UPDATE = "update",
+}
+
+export enum AnnouncementDisplayMode {
+  BANNER = "banner",
+  FULL_PAGE = "full_page",
+}

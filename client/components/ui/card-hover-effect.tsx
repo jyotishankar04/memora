@@ -1,7 +1,7 @@
 "use client";
 
 import { cn } from "@/lib/utils";
-import { AnimatePresence, motion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 import { useState, type ReactNode } from "react";
 
 export function HoverEffect({
@@ -12,6 +12,7 @@ export function HoverEffect({
   className?: string;
 }) {
   const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+  const reduceMotion = useReducedMotion();
 
   return (
     <div className={cn("grid grid-cols-1 md:grid-cols-3 gap-4", className)}>
@@ -32,7 +33,13 @@ export function HoverEffect({
               />
             )}
           </AnimatePresence>
-          <div className="relative">{item.content}</div>
+          <motion.div
+            className="relative"
+            whileHover={reduceMotion ? undefined : { y: -3 }}
+            transition={{ type: "spring", stiffness: 420, damping: 30 }}
+          >
+            {item.content}
+          </motion.div>
         </div>
       ))}
     </div>

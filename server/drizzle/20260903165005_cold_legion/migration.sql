@@ -1,0 +1,2 @@
+CREATE TYPE "announcement_display_mode" AS ENUM('banner', 'full_page');--> statement-breakpoint
+ALTER TABLE "announcements" ADD COLUMN "display_mode" "announcement_display_mode" DEFAULT 'banner'::"announcement_display_mode" NOT NULL;

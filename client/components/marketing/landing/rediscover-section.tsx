@@ -3,6 +3,7 @@
 import React from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SparklesIcon as Sparkles, GlobeIcon as Globe, FileTextIcon as FileText, Video01Icon as Video, Clock01Icon as Clock } from "@hugeicons/core-free-icons";
+import { ParallaxGlow } from "@/components/ui/parallax-glow";
 
 const oldMemories = [
   { type: "Website", title: "houzz.com/kitchen-remodel", icon: Globe, color: "text-blue-500 bg-blue-500/10", excerpt: "Budget-friendly kitchen upgrades that still feel high-end." },
@@ -16,12 +17,7 @@ export default function RediscoverSection() {
     <section className="relative w-full py-20 md:py-28 bg-background overflow-hidden border-t border-border/20">
       
       {/* Background soft glow */}
-      <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[500px] rounded-full pointer-events-none opacity-20 blur-[130px] dark:opacity-5"
-        style={{
-          backgroundImage: "radial-gradient(circle, rgba(20,71,230,0.06) 0%, rgba(20,71,230,0) 70%)"
-        }}
-      />
+      <ParallaxGlow className="w-[600px] h-[500px] opacity-20 blur-[130px] dark:opacity-5" />
 
       <div className="mx-auto max-w-6xl px-6 relative">
         

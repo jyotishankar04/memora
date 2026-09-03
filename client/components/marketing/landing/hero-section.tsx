@@ -1,12 +1,28 @@
+"use client";
+
+import { useRef } from "react";
+import { motion, useReducedMotion, useScroll, useTransform } from "motion/react";
 import LandingSlideButton from "@/components/custom/button/landing-slide-button"
-import { Button } from "@/components/ui/button"
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ArrowUpRight01Icon as ArrowUpRight, StarIcon as Star } from "@hugeicons/core-free-icons";
 
 const HeroSection = () => {
+  const ref = useRef<HTMLDivElement>(null);
+  const reduceMotion = useReducedMotion();
+  // Tracks scroll only while the hero itself is passing through view, so the
+  // background drifts down as the user scrolls away — a classic hero parallax.
+  const { scrollYProgress } = useScroll({ target: ref, offset: ["start start", "end start"] });
+  const y = useTransform(scrollYProgress, [0, 1], [0, 180]);
+
   return (
-    <div className="bg-[url('/marketing/hero-landing.png')] bg-cover bg-center h-screen  object-cover object-center flex items-center justify-center">
-      <div className="mx-auto flex max-w-5xl flex-col items-center px-6 py-12 text-center">
+    <div ref={ref} className="relative h-screen overflow-hidden flex items-center justify-center">
+      {/* Scaled up so the parallax translate never reveals an edge. */}
+      <motion.div
+        aria-hidden
+        style={reduceMotion ? undefined : { y }}
+        className="absolute inset-0 scale-110 bg-[url('/marketing/hero-landing.png')] bg-cover bg-center"
+      />
+      <div className="relative mx-auto flex max-w-5xl flex-col items-center px-6 py-12 text-center">
         {/* Social proof pill */}
         <div className="mb-6 inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 backdrop-blur-md px-4 py-1.5 text-xs font-medium text-white/90">
           <div className="flex items-center gap-0.5">

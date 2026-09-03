@@ -2,6 +2,7 @@ import { AIMessage, ToolMessage } from "@langchain/core/messages";
 import type { GraphNode } from "@langchain/langgraph";
 import { z } from "zod";
 import { getChatModel } from "../../ai.providers";
+import { createUsageCallback } from "../../../ai-usage/usage-logger";
 import { GROUNDING_CHECK_PROMPT } from "../prompts";
 import { RAGState, type RAGStateType } from "../state";
 import { INTERNAL_EVENT_TAG } from "../internal-tag";
@@ -27,7 +28,7 @@ function collectToolResultsText(messages: RAGStateType["messages"]): string {
   return results.reverse().join("\n\n") || "(no tool results this turn)";
 }
 
-export const checkGroundingNode: GraphNode<typeof RAGState> = async (state) => {
+export const checkGroundingNode: GraphNode<typeof RAGState> = async (state, config) => {
   const lastMessage = state.messages.at(-1);
   const answer =
     lastMessage && AIMessage.isInstance(lastMessage) && typeof lastMessage.content === "string" ? lastMessage.content : "";
@@ -36,6 +37,9 @@ export const checkGroundingNode: GraphNode<typeof RAGState> = async (state) => {
   // text yet) — treat as grounded so routing doesn't stall on an empty check.
   if (!answer) return { grounded: true };
 
+  const userId = (config.context as { userId?: string } | undefined)?.userId ?? null;
+  const threadId = (config.configurable as { thread_id?: string } | undefined)?.thread_id ?? null;
+
   const toolResults = collectToolResultsText(state.messages);
   const prompt = GROUNDING_CHECK_PROMPT.replace("{toolResults}", toolResults).replace("{answer}", answer);
   // Tagged so the streaming layer (ai.service.ts) can filter this internal
@@ -43,7 +47,10 @@ export const checkGroundingNode: GraphNode<typeof RAGState> = async (state) => {
   // streamEvents() surfaces every chat-model call in the graph, including
   // this one, and its raw `{"grounded":...}` JSON leaks into the UI as a
   // second fake assistant message (confirmed live before this fix).
-  const { grounded } = await groundingModel.invoke(prompt, { tags: [INTERNAL_EVENT_TAG] });
+  const { grounded } = await groundingModel.invoke(prompt, {
+    tags: [INTERNAL_EVENT_TAG],
+    callbacks: [createUsageCallback({ userId, requestType: "rag:check_grounding", threadId })],
+  });
 
   return { grounded, retryCount: grounded ? state.retryCount : state.retryCount + 1 };
 };
