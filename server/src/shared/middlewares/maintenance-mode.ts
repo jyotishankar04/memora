@@ -4,7 +4,9 @@ import { ApiResponse } from "../response/api-response";
 import { ACCESS_TOKEN_COOKIE } from "../utils/cookies";
 import { verifyAccessToken } from "../utils/jwt";
 
-const BYPASS_PATH_PREFIXES = ["/health", "/admin", "/auth"];
+// /announcements and /maintenance are public, read-only, and consumed by the
+// marketing site itself — which stays fully usable during maintenance.
+const BYPASS_PATH_PREFIXES = ["/health", "/admin", "/auth", "/announcements", "/maintenance"];
 
 function extractToken(req: Request): string | null {
   const header = req.headers.authorization;

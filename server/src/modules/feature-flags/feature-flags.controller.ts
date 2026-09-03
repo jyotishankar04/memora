@@ -1,12 +1,18 @@
 import type { Request, Response } from "express";
 import { ApiResponse } from "../../shared/response/api-response";
 import { logAdminAction } from "../../shared/utils/audit-log";
-import { listFlags, updateFlag } from "./feature-flags.service";
+import { getMaintenanceMessage, isMaintenanceMode, listFlags, updateFlag } from "./feature-flags.service";
 
 export class FeatureFlagsController {
   static async list(_req: Request, res: Response) {
     const flags = await listFlags();
     res.status(200).json(ApiResponse.success(flags));
+  }
+
+  /** Public — lets every client (marketing, platform, auth) know whether to gate itself, with no auth round trip. */
+  static async maintenanceStatus(_req: Request, res: Response) {
+    const [enabled, message] = await Promise.all([isMaintenanceMode(), getMaintenanceMessage()]);
+    res.status(200).json(ApiResponse.success({ enabled, message }));
   }
 
   static async update(req: Request, res: Response) {
