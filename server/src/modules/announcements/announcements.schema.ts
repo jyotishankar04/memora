@@ -1,8 +1,9 @@
 import { z } from "zod";
-import { AnnouncementType } from "../../db/enums";
+import { AnnouncementDisplayMode, AnnouncementType } from "../../db/enums";
 
 export const createAnnouncementSchema = z.object({
   type: z.enum([AnnouncementType.COUNTDOWN, AnnouncementType.ANNOUNCEMENT, AnnouncementType.UPDATE]),
+  displayMode: z.enum([AnnouncementDisplayMode.BANNER, AnnouncementDisplayMode.FULL_PAGE]).optional(),
   title: z.string().min(1).max(200),
   message: z.string().min(1),
   targetDate: z.string().datetime().nullable().optional(),

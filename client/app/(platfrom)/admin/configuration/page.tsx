@@ -15,6 +15,7 @@ import {
   updateAnnouncement,
   type Announcement,
   type AnnouncementType,
+  type AnnouncementDisplayMode,
 } from "@/lib/announcements";
 import { toast } from "@/components/ui/toast";
 
@@ -176,6 +177,7 @@ function AnnouncementsSection() {
   const [pendingId, setPendingId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [type, setType] = useState<AnnouncementType>("announcement");
+  const [displayMode, setDisplayMode] = useState<AnnouncementDisplayMode>("banner");
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [targetDate, setTargetDate] = useState("");
@@ -189,6 +191,7 @@ function AnnouncementsSection() {
 
   const resetForm = () => {
     setType("announcement");
+    setDisplayMode("banner");
     setTitle("");
     setMessage("");
     setTargetDate("");
@@ -200,6 +203,7 @@ function AnnouncementsSection() {
     try {
       await createAnnouncement({
         type,
+        displayMode,
         title: title.trim(),
         message: message.trim(),
         targetDate: type === "countdown" && targetDate ? new Date(targetDate).toISOString() : undefined,
@@ -220,6 +224,23 @@ function AnnouncementsSection() {
       await updateAnnouncement(announcement.id, { isActive: !announcement.isActive });
       invalidate();
       toast.add({ title: announcement.isActive ? "Deactivated." : "Activated — now the one live announcement.", type: "success" });
+    } catch {
+      toast.add({ title: "Failed to update announcement.", type: "error" });
+    } finally {
+      setPendingId(null);
+    }
+  };
+
+  const toggleDisplayMode = async (announcement: Announcement) => {
+    const next = announcement.displayMode === "full_page" ? "banner" : "full_page";
+    setPendingId(announcement.id);
+    try {
+      await updateAnnouncement(announcement.id, { displayMode: next });
+      invalidate();
+      toast.add({
+        title: next === "full_page" ? "Now a full page takeover." : "Now a sticky banner.",
+        type: "success",
+      });
     } catch {
       toast.add({ title: "Failed to update announcement.", type: "error" });
     } finally {
@@ -260,6 +281,7 @@ function AnnouncementsSection() {
               <div className="min-w-0 space-y-1">
                 <div className="flex items-center gap-2">
                   <Badge variant="secondary">{ANNOUNCEMENT_TYPE_LABEL[a.type]}</Badge>
+                  {a.displayMode === "full_page" && <Badge variant="destructive">Full page</Badge>}
                   {a.isActive && <Badge>Live</Badge>}
                   <span className="text-xs font-semibold text-foreground truncate">{a.title}</span>
                 </div>
@@ -269,6 +291,15 @@ function AnnouncementsSection() {
                 )}
               </div>
               <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  disabled={pendingId === a.id}
+                  onClick={() => toggleDisplayMode(a)}
+                  title="Blocks every page except /admin while active, instead of showing as a sticky banner."
+                  className="h-7 rounded-full border border-border text-[10px] font-bold px-3 hover:bg-muted transition-colors disabled:opacity-40"
+                >
+                  {a.displayMode === "full_page" ? "Make banner" : "Make full page"}
+                </button>
                 <button
                   type="button"
                   disabled={pendingId === a.id}
@@ -309,6 +340,19 @@ function AnnouncementsSection() {
             <Input type="datetime-local" value={targetDate} onChange={(e) => setTargetDate(e.target.value)} className="flex-1" />
           )}
         </div>
+
+        <label className="flex items-center gap-2.5 py-1">
+          <Switch
+            checked={displayMode === "full_page"}
+            onCheckedChange={(checked) => setDisplayMode(checked ? "full_page" : "banner")}
+          />
+          <span className="text-xs text-foreground">
+            Full page takeover
+            <span className="block text-[10px] text-muted-foreground font-normal">
+              Blocks every page (marketing, app, auth) except /admin — like maintenance mode. Otherwise shows as a sticky banner.
+            </span>
+          </span>
+        </label>
 
         <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
         <Textarea placeholder="Message shown to visitors" value={message} onChange={(e) => setMessage(e.target.value)} rows={2} className="text-xs" />

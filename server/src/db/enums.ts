@@ -52,3 +52,8 @@ export enum AnnouncementType {
   ANNOUNCEMENT = "announcement",
   UPDATE = "update",
 }
+
+export enum AnnouncementDisplayMode {
+  BANNER = "banner",
+  FULL_PAGE = "full_page",
+}

@@ -17,6 +17,7 @@ import { defineRelations } from "drizzle-orm";
 import { vector, tsvector, EMBEDDING_DIMENSIONS } from "./pgvector-type";
 import {
   AccentColor,
+  AnnouncementDisplayMode,
   AnnouncementType,
   MemoryStatus,
   MemoryType,
@@ -77,6 +78,11 @@ export const announcementTypeEnum = pgEnum("announcement_type", [
   AnnouncementType.COUNTDOWN,
   AnnouncementType.ANNOUNCEMENT,
   AnnouncementType.UPDATE,
+]);
+
+export const announcementDisplayModeEnum = pgEnum("announcement_display_mode", [
+  AnnouncementDisplayMode.BANNER,
+  AnnouncementDisplayMode.FULL_PAGE,
 ]);
 
 // -----------------------------------------------------------------------------
@@ -589,6 +595,10 @@ export const announcements = pgTable(
   {
     id: uuid("id").primaryKey().defaultRandom(),
     type: announcementTypeEnum("type").notNull().default(AnnouncementType.ANNOUNCEMENT),
+    // "full_page" blocks every page (marketing, platform, auth) except /admin,
+    // the same way maintenance mode does — for hard launch splashes, not the
+    // default sticky-banner treatment.
+    displayMode: announcementDisplayModeEnum("display_mode").notNull().default(AnnouncementDisplayMode.BANNER),
     title: varchar("title", { length: 200 }).notNull(),
     message: text("message").notNull(),
     targetDate: timestamp("target_date", { withTimezone: true }),

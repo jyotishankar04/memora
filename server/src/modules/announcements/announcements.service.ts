@@ -19,6 +19,7 @@ export async function createAnnouncement(input: CreateAnnouncementInput, adminUs
       .insert(announcements)
       .values({
         type: input.type,
+        displayMode: input.displayMode,
         title: input.title,
         message: input.message,
         targetDate: input.targetDate ? new Date(input.targetDate) : null,
@@ -50,6 +51,7 @@ export async function updateAnnouncement(id: string, input: UpdateAnnouncementIn
       .update(announcements)
       .set({
         ...(input.type !== undefined ? { type: input.type } : {}),
+        ...(input.displayMode !== undefined ? { displayMode: input.displayMode } : {}),
         ...(input.title !== undefined ? { title: input.title } : {}),
         ...(input.message !== undefined ? { message: input.message } : {}),
         ...(input.targetDate !== undefined ? { targetDate: input.targetDate ? new Date(input.targetDate) : null } : {}),
