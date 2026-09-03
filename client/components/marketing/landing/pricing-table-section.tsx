@@ -7,6 +7,7 @@ import { BoxIcon as Box, CheckmarkCircle01Icon as CheckCircle, GemIcon as Gem, U
 import type { IconSvgElement } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { ctaHref } from "@/lib/showcase";
 
 interface PricingPlan {
   name: string;
@@ -123,7 +124,7 @@ const PlanCard = ({ plan }: { plan: PricingPlan }) => {
           {plan.period ? "billed monthly" : "free forever"}
         </p>
         <Button
-          render={<Link href={plan.href} />}
+          render={<Link href={ctaHref(plan.href)} />}
           nativeButton={false}
           className="my-6 w-full h-10 rounded-full font-medium"
           size="lg"
