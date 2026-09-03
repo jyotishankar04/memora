@@ -24,6 +24,8 @@ import {
 import { HugeiconsIcon } from "@hugeicons/react";
 import { ChevronRightIcon as ChevronRight, Menu01Icon as Menu, MoonIcon as Moon, Sun01Icon as Sun, LayoutDashboardIcon as LayoutDashboard } from "@hugeicons/core-free-icons";
 import { useCurrentUserQuery } from "@/context/UserContext";
+import { AnnouncementBanner } from "@/components/marketing/announcement-banner";
+import { MaintenanceModal } from "@/components/marketing/maintenance-modal";
 
 const features = [
   {
@@ -90,7 +92,10 @@ export function Navbar() {
   }, []);
 
   return (
-    <header className="fixed left-0 top-4 z-50 w-full px-4 sm:px-8">
+    <div className="fixed inset-x-0 top-0 z-50">
+      <MaintenanceModal />
+      <AnnouncementBanner />
+      <header className="mt-4 w-full px-4 sm:px-8">
       <nav
         className={cn(
           "mx-auto flex h-14 max-w-6xl items-center px-3 rounded-full border transition-all duration-300",
@@ -485,6 +490,7 @@ export function Navbar() {
           </Sheet>
         </div>
       </nav>
-    </header>
+      </header>
+    </div>
   );
 }

@@ -1,10 +1,12 @@
 import { apiFetch } from "@/lib/auth";
 
 export type AnnouncementType = "countdown" | "announcement" | "update";
+export type AnnouncementDisplayMode = "banner" | "full_page";
 
 export interface Announcement {
   id: string;
   type: AnnouncementType;
+  displayMode: AnnouncementDisplayMode;
   title: string;
   message: string;
   targetDate: string | null;
@@ -20,6 +22,7 @@ export interface Announcement {
 
 export interface AnnouncementInput {
   type: AnnouncementType;
+  displayMode?: AnnouncementDisplayMode;
   title: string;
   message: string;
   targetDate?: string | null;
@@ -44,4 +47,9 @@ export async function updateAnnouncement(id: string, input: Partial<Announcement
 
 export async function deleteAnnouncement(id: string): Promise<{ id: string }> {
   return apiFetch<{ id: string }>(`/admin/announcements/${id}`, { method: "DELETE" });
+}
+
+/** Public, unauthenticated — the currently active announcement/countdown, or null. */
+export async function getActiveAnnouncement(): Promise<Announcement | null> {
+  return apiFetch<Announcement | null>("/announcements/active");
 }
