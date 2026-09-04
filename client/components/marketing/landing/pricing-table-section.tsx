@@ -8,6 +8,9 @@ import type { IconSvgElement } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ctaHref } from "@/lib/showcase";
+import { BETA_MODE } from "@/lib/beta";
+import { SquigglyText } from "@/components/ui/squiggly-text";
+import { Rocket01Icon as Rocket } from "@hugeicons/core-free-icons";
 
 interface PricingPlan {
   name: string;
@@ -85,12 +88,33 @@ export default function PricingTableSection() {
         Flexible pricing designed to grow with you ready
       </p>
 
-      <div className="mt-12 grid grid-cols-1 gap-1 rounded-xl border bg-muted/40 p-1 sm:mt-16 sm:grid-cols-2 md:mt-15 md:grid-cols-3 border-border/50">
-        {pricingPlans.map((plan) => (
-          <PlanCard key={plan.name} plan={plan} />
-        ))}
-      </div>
+      {BETA_MODE ? <PricingBetaPlaceholder /> : (
+        <div className="mt-12 grid grid-cols-1 gap-1 rounded-xl border bg-muted/40 p-1 sm:mt-16 sm:grid-cols-2 md:mt-15 md:grid-cols-3 border-border/50">
+          {pricingPlans.map((plan) => (
+            <PlanCard key={plan.name} plan={plan} />
+          ))}
+        </div>
+      )}
     </section>
+  );
+}
+
+function PricingBetaPlaceholder() {
+  return (
+    <div className="mt-12 sm:mt-16 md:mt-15 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/60 bg-muted/20 py-16 px-6 text-center">
+      <div className="relative w-12 h-12 flex items-center justify-center">
+        <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl" />
+        <div className="w-10 h-10 flex items-center justify-center">
+          <HugeiconsIcon icon={Rocket} strokeWidth={2.25} className="h-5 w-5 text-primary" />
+        </div>
+      </div>
+      <h3 className="text-lg font-semibold text-foreground">
+        Pricing is <SquigglyText scale={[3, 6]} stepDuration={90} className="text-primary">still being built</SquigglyText>
+      </h3>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        We&apos;re in beta and finalizing plans. Join the waitlist and we&apos;ll let you know the moment pricing goes live.
+      </p>
+    </div>
   );
 }
 
