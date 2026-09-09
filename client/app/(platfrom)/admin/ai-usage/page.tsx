@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as RechartsPrimitive from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
+import { StatTile } from "@/components/admin/stat-tile";
 import { getUsageByUser, getUsageSummary } from "@/lib/ai-usage";
 
 const RANGE_OPTIONS = [
@@ -17,15 +18,6 @@ const RANGE_OPTIONS = [
 const chartConfig = {
   totalTokens: { label: "Tokens", color: "var(--primary)" },
 } satisfies ChartConfig;
-
-function StatTile({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="rounded-xl border border-border p-4">
-      <p className="text-[10px] font-semibold text-muted-foreground uppercase tracking-wide">{label}</p>
-      <p className="text-xl font-bold text-foreground mt-1 tabular-nums">{value}</p>
-    </div>
-  );
-}
 
 function BreakdownTable<T extends { calls: number; totalTokens: number }>({
   title,

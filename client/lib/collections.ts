@@ -9,8 +9,13 @@ export interface CreateCollectionInput {
 
 export type UpdateCollectionInput = Partial<CreateCollectionInput>;
 
-export async function listCollections(): Promise<Collection[]> {
-  return apiFetch<Collection[]>("/collections");
+export async function listCollections(includeSystem = false): Promise<Collection[]> {
+  return apiFetch<Collection[]>(`/collections${includeSystem ? "?includeSystem=true" : ""}`);
+}
+
+/** One-way: turns a system collection into a user-owned one. Never the reverse. */
+export async function convertCollectionToUser(id: string): Promise<Collection> {
+  return apiFetch<Collection>(`/collections/${id}/convert-to-user`, { method: "PATCH" });
 }
 
 export async function createCollection(input: CreateCollectionInput): Promise<Collection> {

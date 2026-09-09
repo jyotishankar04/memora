@@ -52,6 +52,9 @@ export interface Collection {
   name: string;
   icon: string;
   description: string | null;
+  // "system" collections (onboarding defaults, AI-suggested groupings) are
+  // hidden by default — see useCollectionsQuery's includeSystem param.
+  source: "user" | "system";
   memoryCount: number;
   createdAt: string;
   updatedAt: string;

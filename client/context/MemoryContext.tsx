@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import type { Collection, Memory } from "@/types/memory";
-import { createCollection, deleteCollection, listCollections, type CreateCollectionInput } from "@/lib/collections";
+import { convertCollectionToUser, createCollection, deleteCollection, listCollections, type CreateCollectionInput } from "@/lib/collections";
 import { listTags } from "@/lib/tags";
 import {
   createMemory,
@@ -16,7 +16,13 @@ import {
 } from "@/lib/memories";
 
 export const memoriesQueryKey = (params: ListMemoriesParams = {}) => ["memories", params] as const;
-export const collectionsQueryKey = () => ["collections"] as const;
+// No-arg form is deliberately just ["collections"] (not, say,
+// ["collections", { includeSystem: false }]) — TanStack Query invalidates by
+// key-array prefix, so invalidating this base key matches both the
+// includeSystem:true and :false query variants at once.
+export function collectionsQueryKey(includeSystem?: boolean) {
+  return includeSystem === undefined ? (["collections"] as const) : (["collections", { includeSystem }] as const);
+}
 export const tagsQueryKey = () => ["tags"] as const;
 export const memoryQueryKey = (id: string) => ["memory", id] as const;
 
@@ -35,8 +41,8 @@ export function useMemoriesQuery(params: ListMemoriesParams = {}) {
   });
 }
 
-export function useCollectionsQuery() {
-  return useQuery({ queryKey: collectionsQueryKey(), queryFn: listCollections });
+export function useCollectionsQuery(includeSystem = false) {
+  return useQuery({ queryKey: collectionsQueryKey(includeSystem), queryFn: () => listCollections(includeSystem) });
 }
 
 export function useTagsQuery() {
@@ -60,6 +66,16 @@ export function useDeleteCollectionMutation() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
       queryClient.invalidateQueries({ queryKey: ["memories"] });
+    },
+  });
+}
+
+export function useConvertCollectionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => convertCollectionToUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
     },
   });
 }

@@ -17,7 +17,11 @@ import {
   Logout03Icon as LogoutIcon,
   MoonIcon as Moon,
   Sun01Icon as Sun,
+  Layers01Icon as Layers,
+  CreditCardIcon as CreditCard,
+  Megaphone01Icon as Megaphone,
 } from "@hugeicons/core-free-icons";
+import type { IconSvgElement } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
 import {
@@ -29,13 +33,74 @@ import {
   formatPlan,
 } from "@/context/UserContext";
 
-const NAV_LINKS = [
+interface NavLeaf {
+  label: string;
+  href: string;
+  icon?: IconSvgElement;
+}
+interface NavGroup {
+  label: string;
+  icon: IconSvgElement;
+  children: NavLeaf[];
+}
+type NavEntry = NavLeaf | NavGroup;
+
+function isGroup(entry: NavEntry): entry is NavGroup {
+  return "children" in entry;
+}
+
+// Content/Support/System groups from the original spec aren't here yet —
+// their backends don't exist (Phase 2/3), and a nav item with nothing real
+// behind it is worse than not showing it. Promotions/Rewards under Growth
+// are the same story — deferred until there's something to manage.
+const NAV_ENTRIES: NavEntry[] = [
   { label: "Overview", href: "/admin", icon: DashboardSquare },
   { label: "Users", href: "/admin/users", icon: UserGroup },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart },
   { label: "AI Usage", href: "/admin/ai-usage", icon: Cpu },
   { label: "Configuration", href: "/admin/configuration", icon: Settings },
+  { label: "Plans & Limits", href: "/admin/plans-limits", icon: Layers },
+  {
+    label: "Billing",
+    icon: CreditCard,
+    children: [
+      { label: "Plans", href: "/admin/plans-limits" },
+      { label: "Subscriptions", href: "/admin/billing/subscriptions" },
+      { label: "Revenue", href: "/admin/billing/revenue" },
+      { label: "Transactions", href: "/admin/billing/transactions" },
+    ],
+  },
+  {
+    label: "Growth & Promotions",
+    icon: Megaphone,
+    children: [
+      { label: "Referral Program", href: "/admin/growth/referrals" },
+      { label: "Coupons", href: "/admin/growth/coupons" },
+      { label: "Credits", href: "/admin/growth/credits" },
+    ],
+  },
 ];
+
+/**
+ * Every leaf link, groups flattened, deduped by href — for the mobile pill
+ * nav and topbar active-label lookup. "Plans & Limits" (top-level) and
+ * "Billing > Plans" intentionally point at the same route (both were in the
+ * requested nav spec), so without deduping this renders/keys that one route
+ * twice in the flattened views. First occurrence wins.
+ */
+const NAV_LEAVES: NavLeaf[] = (() => {
+  const seen = new Set<string>();
+  const leaves = NAV_ENTRIES.flatMap((entry) => (isGroup(entry) ? entry.children : [entry]));
+  return leaves.filter((leaf) => {
+    if (seen.has(leaf.href)) return false;
+    seen.add(leaf.href);
+    return true;
+  });
+})();
+
+function isActive(pathname: string, href: string): boolean {
+  return href === "/admin" ? pathname === href : pathname.startsWith(href);
+}
 
 /**
  * Deliberately its own shell — no shared chrome with the main app layout
@@ -95,25 +160,48 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           <span className="text-sm font-bold tracking-tight">Admin</span>
         </div>
 
-        <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-0.5">
-          {NAV_LINKS.map((link) => {
-            const active = link.href === "/admin" ? pathname === link.href : pathname.startsWith(link.href);
-            return (
+        <nav className="flex-1 min-h-0 overflow-y-auto p-3 space-y-3">
+          {NAV_ENTRIES.map((entry) =>
+            isGroup(entry) ? (
+              <div key={entry.label} className="space-y-0.5">
+                <div className="px-3 pt-2 pb-1 flex items-center gap-2 text-[10px] font-bold uppercase tracking-wide text-sidebar-foreground/45">
+                  <HugeiconsIcon icon={entry.icon} strokeWidth={2.25} className="h-3.5 w-3.5" />
+                  {entry.label}
+                </div>
+                {entry.children.map((link) => {
+                  const active = isActive(pathname, link.href);
+                  return (
+                    <Link
+                      key={link.href}
+                      href={link.href}
+                      className={cn(
+                        "ml-1 px-3 py-1.5 text-xs font-semibold rounded-lg flex items-center transition-colors",
+                        active
+                          ? "bg-sidebar-accent text-sidebar-primary"
+                          : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
+                      )}
+                    >
+                      {link.label}
+                    </Link>
+                  );
+                })}
+              </div>
+            ) : (
               <Link
-                key={link.href}
-                href={link.href}
+                key={entry.href}
+                href={entry.href}
                 className={cn(
                   "px-3 py-2 text-xs font-semibold rounded-lg flex items-center gap-2.5 transition-colors",
-                  active
+                  isActive(pathname, entry.href)
                     ? "bg-sidebar-accent text-sidebar-primary"
                     : "text-sidebar-foreground/70 hover:bg-sidebar-accent hover:text-sidebar-foreground"
                 )}
               >
-                <HugeiconsIcon icon={link.icon} strokeWidth={2.25} className="h-4 w-4" />
-                {link.label}
+                {entry.icon && <HugeiconsIcon icon={entry.icon} strokeWidth={2.25} className="h-4 w-4" />}
+                {entry.label}
               </Link>
-            );
-          })}
+            ),
+          )}
         </nav>
 
         <div className="p-3 border-t border-sidebar-border/60 shrink-0">
@@ -137,14 +225,13 @@ function AdminShell({ children }: { children: React.ReactNode }) {
           </div>
 
           <nav className="hidden md:flex items-center gap-1">
-            {NAV_LINKS.map((link) => {
-              const active = link.href === "/admin" ? pathname === link.href : pathname.startsWith(link.href);
-              return active ? (
+            {NAV_LEAVES.map((link) =>
+              isActive(pathname, link.href) ? (
                 <span key={link.href} className="text-xs font-bold text-foreground">
                   {link.label}
                 </span>
-              ) : null;
-            })}
+              ) : null,
+            )}
           </nav>
 
           <div className="flex items-center gap-3">
@@ -184,8 +271,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
             <HugeiconsIcon icon={ArrowLeft} strokeWidth={2.25} className="h-3.5 w-3.5" />
           </Link>
           <span className="h-4 w-px bg-border shrink-0" />
-          {NAV_LINKS.map((link) => {
-            const active = link.href === "/admin" ? pathname === link.href : pathname.startsWith(link.href);
+          {NAV_LEAVES.map((link) => {
+            const active = isActive(pathname, link.href);
             return (
               <Link
                 key={link.href}

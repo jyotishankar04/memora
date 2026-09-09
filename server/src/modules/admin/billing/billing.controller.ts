@@ -1,7 +1,7 @@
 import type { Request, Response } from "express";
 import { ApiResponse } from "../../../shared/response/api-response";
-import type { AssignPlanInput, ListTransactionsQuery, RevenueQuery } from "./billing.schema";
-import { assignPlanToUser, cancelAssignment, getRevenueRollup, listAssignmentsForUser, listTransactions } from "./billing.service";
+import type { AssignPlanInput, ListAssignmentsQuery, ListTransactionsQuery, RevenueQuery } from "./billing.schema";
+import { assignPlanToUser, cancelAssignment, getRevenueRollup, listAllAssignments, listAssignmentsForUser, listTransactions } from "./billing.service";
 
 export class AdminBillingController {
   static async assignPlan(req: Request, res: Response) {
@@ -17,6 +17,12 @@ export class AdminBillingController {
   static async listUserAssignments(req: Request, res: Response) {
     const items = await listAssignmentsForUser(req.params.userId as string);
     res.status(200).json(ApiResponse.success(items));
+  }
+
+  static async listAssignments(req: Request, res: Response) {
+    const query = req.query as unknown as ListAssignmentsQuery;
+    const result = await listAllAssignments(query);
+    res.status(200).json(ApiResponse.success(result.items, { page: result.page, limit: result.limit, total: result.total }));
   }
 
   static async listTransactions(req: Request, res: Response) {

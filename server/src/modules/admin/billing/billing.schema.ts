@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { TransactionStatus } from "../../../db/enums";
+import { PlanAssignmentStatus, TransactionStatus } from "../../../db/enums";
 
 export const assignPlanSchema = z.object({
   planId: z.string().uuid(),
@@ -33,6 +33,15 @@ export const revenueQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(365).default(30),
 });
 
+export const listAssignmentsQuerySchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  limit: z.coerce.number().int().min(1).max(100).default(20),
+  status: z
+    .enum([PlanAssignmentStatus.ACTIVE, PlanAssignmentStatus.EXPIRED, PlanAssignmentStatus.CANCELLED, PlanAssignmentStatus.SUPERSEDED])
+    .optional(),
+});
+
 export type AssignPlanInput = z.infer<typeof assignPlanSchema>;
 export type ListTransactionsQuery = z.infer<typeof listTransactionsQuerySchema>;
 export type RevenueQuery = z.infer<typeof revenueQuerySchema>;
+export type ListAssignmentsQuery = z.infer<typeof listAssignmentsQuerySchema>;

@@ -1,12 +1,12 @@
 import { and, count, desc, eq, gte, sql } from "drizzle-orm";
 import { db } from "../../../db";
-import { transactions, userPlanAssignments } from "../../../db/schema";
+import { plans, transactions, userPlanAssignments, users } from "../../../db/schema";
 import { PlanAssignmentSource, PlanAssignmentStatus, TransactionStatus, TransactionType } from "../../../db/enums";
 import { AppError } from "../../../shared/errors/app-error";
 import { logAdminAction } from "../../../shared/utils/audit-log";
 import { markRedemptionConverted } from "../../coupons/coupons.service";
 import { markConversionConverted } from "../../referrals/referrals.service";
-import type { AssignPlanInput, ListTransactionsQuery, RevenueQuery } from "./billing.schema";
+import type { AssignPlanInput, ListAssignmentsQuery, ListTransactionsQuery, RevenueQuery } from "./billing.schema";
 
 /**
  * The manual "give this user a plan" flow — creates the plan assignment and
@@ -108,6 +108,38 @@ export async function listAssignmentsForUser(userId: string) {
     .from(userPlanAssignments)
     .where(eq(userPlanAssignments.userId, userId))
     .orderBy(desc(userPlanAssignments.startsAt));
+}
+
+/** Global "Subscriptions" list — every plan assignment across every user, joined for display. */
+export async function listAllAssignments(query: ListAssignmentsQuery) {
+  const where = query.status ? eq(userPlanAssignments.status, query.status) : undefined;
+
+  const [{ value: total }] = await db.select({ value: count() }).from(userPlanAssignments).where(where);
+
+  const items = await db
+    .select({
+      id: userPlanAssignments.id,
+      userId: userPlanAssignments.userId,
+      userEmail: users.email,
+      userName: users.name,
+      planId: userPlanAssignments.planId,
+      planKey: plans.key,
+      planName: plans.name,
+      status: userPlanAssignments.status,
+      source: userPlanAssignments.source,
+      startsAt: userPlanAssignments.startsAt,
+      endsAt: userPlanAssignments.endsAt,
+      reason: userPlanAssignments.reason,
+    })
+    .from(userPlanAssignments)
+    .leftJoin(users, eq(users.id, userPlanAssignments.userId))
+    .leftJoin(plans, eq(plans.id, userPlanAssignments.planId))
+    .where(where)
+    .orderBy(desc(userPlanAssignments.startsAt))
+    .limit(query.limit)
+    .offset((query.page - 1) * query.limit);
+
+  return { items, page: query.page, limit: query.limit, total };
 }
 
 export async function listTransactions(query: ListTransactionsQuery) {
