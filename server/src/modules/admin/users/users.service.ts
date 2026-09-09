@@ -1,15 +1,9 @@
-import { and, count, desc, eq, gte, ilike, or, sql } from "drizzle-orm";
-import { db } from "../../db";
-import { adminAuditLogs, collections, memories, roles, sessions, users, userRoles } from "../../db/schema";
-import { AppError } from "../../shared/errors/app-error";
-import { logAdminAction } from "../../shared/utils/audit-log";
-import type {
-  AnalyticsRangeQuery,
-  AuditLogQuery,
-  ListUsersQuery,
-  UpdateUserRolesInput,
-  UpdateUserStatusInput,
-} from "./admin.schema";
+import { and, count, desc, eq, ilike, or, sql } from "drizzle-orm";
+import { db } from "../../../db";
+import { collections, memories, roles, users, userRoles } from "../../../db/schema";
+import { AppError } from "../../../shared/errors/app-error";
+import { logAdminAction } from "../../../shared/utils/audit-log";
+import type { ListUsersQuery, UpdateUserRolesInput, UpdateUserStatusInput } from "./users.schema";
 
 export interface AdminUserListItem {
   id: string;
@@ -198,66 +192,4 @@ export async function updateUserStatus(
   });
 
   return after;
-}
-
-// --- Analytics ---
-
-function daysAgo(days: number): Date {
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-}
-
-export async function getSignupsOverTime(query: AnalyticsRangeQuery) {
-  const since = daysAgo(query.days);
-  const rows = await db
-    .select({ date: sql<string>`date(${users.createdAt})`, count: count() })
-    .from(users)
-    .where(gte(users.createdAt, since))
-    .groupBy(sql`date(${users.createdAt})`)
-    .orderBy(sql`date(${users.createdAt})`);
-  return rows;
-}
-
-export async function getActiveUsers(query: AnalyticsRangeQuery) {
-  const since = daysAgo(query.days);
-  const rows = await db
-    .select({ date: sql<string>`date(${sessions.lastActivityAt})`, count: sql<number>`count(distinct ${sessions.userId})::int` })
-    .from(sessions)
-    .where(gte(sessions.lastActivityAt, since))
-    .groupBy(sql`date(${sessions.lastActivityAt})`)
-    .orderBy(sql`date(${sessions.lastActivityAt})`);
-  return rows;
-}
-
-export async function getContentGrowth(query: AnalyticsRangeQuery) {
-  const since = daysAgo(query.days);
-  const memoryRows = await db
-    .select({ date: sql<string>`date(${memories.createdAt})`, count: count() })
-    .from(memories)
-    .where(gte(memories.createdAt, since))
-    .groupBy(sql`date(${memories.createdAt})`)
-    .orderBy(sql`date(${memories.createdAt})`);
-
-  const collectionRows = await db
-    .select({ date: sql<string>`date(${collections.createdAt})`, count: count() })
-    .from(collections)
-    .where(gte(collections.createdAt, since))
-    .groupBy(sql`date(${collections.createdAt})`)
-    .orderBy(sql`date(${collections.createdAt})`);
-
-  return { memories: memoryRows, collections: collectionRows };
-}
-
-export async function getAuditLog(
-  query: AuditLogQuery,
-): Promise<{ items: (typeof adminAuditLogs.$inferSelect)[]; page: number; limit: number; total: number }> {
-  const [{ value: total }] = await db.select({ value: count() }).from(adminAuditLogs);
-
-  const items = await db
-    .select()
-    .from(adminAuditLogs)
-    .orderBy(desc(adminAuditLogs.createdAt))
-    .limit(query.limit)
-    .offset((query.page - 1) * query.limit);
-
-  return { items, page: query.page, limit: query.limit, total };
 }

@@ -7,12 +7,16 @@ import { getClientIp } from "../../shared/utils/device-fingerprint";
 import { isProviderEnabled, isSignupsEnabled } from "../feature-flags/feature-flags.service";
 import {
   OAUTH_STATE_COOKIE,
+  REFERRAL_CODE_COOKIE,
   REFRESH_TOKEN_COOKIE,
   clearAuthCookies,
   clearOAuthStateCookie,
+  clearReferralCodeCookie,
   setAuthCookies,
   setOAuthStateCookie,
+  setReferralCodeCookie,
 } from "../../shared/utils/cookies";
+import { recordReferralSignup } from "../referrals/referrals.service";
 import {
   assignDefaultRole,
   buildGithubAuthUrl,
@@ -33,7 +37,9 @@ function loginUrl(error: string): string {
 
 async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (code: string) => Promise<OAuthProfile>) {
   const cookieState = req.cookies?.[OAUTH_STATE_COOKIE];
+  const referralCode = req.cookies?.[REFERRAL_CODE_COOKIE] as string | undefined;
   clearOAuthStateCookie(res);
+  clearReferralCodeCookie(res);
 
   const { code, state, error: providerError } = req.query as { code?: string; state?: string; error?: string };
 
@@ -50,6 +56,12 @@ async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (c
 
     if (isNewUser) {
       await assignDefaultRole(user.id);
+      // Never blocks/fails the signup itself — an unknown, expired, or
+      // missing code just means no attribution, same "attach if present"
+      // shape as everything else in this callback.
+      if (referralCode) {
+        await recordReferralSignup(referralCode, user.id).catch(() => {});
+      }
     }
 
     const userWithRoles = await getUserWithRoles(user.id);
@@ -68,21 +80,25 @@ async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (c
 }
 
 export class AuthController {
-  static async initiateGoogle(_req: Request, res: Response) {
+  static async initiateGoogle(req: Request, res: Response) {
     if (!(await isProviderEnabled("google"))) {
       throw new AppError("Google sign-in is currently disabled", 403, "PROVIDER_DISABLED");
     }
     const state = crypto.randomUUID();
     setOAuthStateCookie(res, state);
+    const ref = req.query.ref as string | undefined;
+    if (ref) setReferralCodeCookie(res, ref);
     res.redirect(buildGoogleAuthUrl(state));
   }
 
-  static async initiateGithub(_req: Request, res: Response) {
+  static async initiateGithub(req: Request, res: Response) {
     if (!(await isProviderEnabled("github"))) {
       throw new AppError("GitHub sign-in is currently disabled", 403, "PROVIDER_DISABLED");
     }
     const state = crypto.randomUUID();
     setOAuthStateCookie(res, state);
+    const ref = req.query.ref as string | undefined;
+    if (ref) setReferralCodeCookie(res, ref);
     res.redirect(buildGithubAuthUrl(state));
   }
 
