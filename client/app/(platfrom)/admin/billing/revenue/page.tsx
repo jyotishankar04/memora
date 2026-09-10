@@ -59,7 +59,7 @@ export default function AdminRevenuePage() {
       {revenue && (
         <>
           <div className="grid grid-cols-2 gap-3">
-            <StatTile label="Total revenue" value={formatPriceMinor(totalMinor, "inr")} />
+            <StatTile label="Total revenue" value={formatPriceMinor(totalMinor, "usd")} />
             <StatTile label="Transactions" value={totalCount.toLocaleString()} />
           </div>
 
@@ -99,7 +99,7 @@ export default function AdminRevenuePage() {
                   <tr key={i} className="border-b border-border/50 last:border-0">
                     <td className="px-4 py-2 font-medium text-foreground">{planName(row.planId)}</td>
                     <td className="px-4 py-2 text-right text-muted-foreground tabular-nums">{row.count.toLocaleString()} tx</td>
-                    <td className="px-4 py-2 text-right font-mono text-muted-foreground tabular-nums">{formatPriceMinor(row.totalMinor, "inr")}</td>
+                    <td className="px-4 py-2 text-right font-mono text-muted-foreground tabular-nums">{formatPriceMinor(row.totalMinor, "usd")}</td>
                   </tr>
                 ))}
               </tbody>

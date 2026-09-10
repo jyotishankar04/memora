@@ -463,6 +463,13 @@ export const collections = pgTable(
     // boolean to drift out of sync.
     source: collectionSourceEnum("source").notNull().default(CollectionSource.USER),
     convertedFromSystemAt: timestamp("converted_from_system_at", { withTimezone: true }),
+    // Pro-only "shareable collection" perk (plans.features.publicCollections
+    // gates who can set this). publicSlug is generated once on first share
+    // and never regenerated — toggling isPublic off/on again reuses the
+    // same link rather than rotating it, so a link a user already shared
+    // doesn't silently break just because they paused sharing.
+    isPublic: boolean("is_public").notNull().default(false),
+    publicSlug: varchar("public_slug", { length: 32 }).unique(),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -787,8 +794,8 @@ export const plans = pgTable(
     key: varchar("key", { length: 50 }).notNull().unique(), // e.g. "free", "plus", "pro" — never renamed
     name: varchar("name", { length: 100 }).notNull(),
     description: text("description"),
-    priceMinor: integer("price_minor").notNull().default(0), // paise
-    currency: varchar("currency", { length: 3 }).notNull().default("inr"),
+    priceMinor: integer("price_minor").notNull().default(0), // cents
+    currency: varchar("currency", { length: 3 }).notNull().default("usd"),
     billingInterval: planBillingIntervalEnum("billing_interval")
       .notNull()
       .default(PlanBillingInterval.MONTHLY),
@@ -798,6 +805,12 @@ export const plans = pgTable(
     // transaction pattern as announcements.isActive.
     isDefault: boolean("is_default").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
+    // Admin-editable, boolean/on-off perks distinct from the numeric
+    // PlanLimitType quota system above (memory_count etc.) — for capabilities
+    // that are either on or off rather than a countable limit, e.g.
+    // publicCollections. Checked via plans/plans.service.ts's hasFeature(),
+    // the boolean-returning counterpart to assertWithinLimit().
+    features: jsonb("features").$type<Record<string, boolean>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -884,8 +897,8 @@ export const transactions = pgTable(
     }),
     type: transactionTypeEnum("type").notNull(),
     status: transactionStatusEnum("status").notNull().default(TransactionStatus.PENDING),
-    amountMinor: integer("amount_minor").notNull().default(0), // paise; 0 for admin_grant
-    currency: varchar("currency", { length: 3 }).notNull().default("inr"),
+    amountMinor: integer("amount_minor").notNull().default(0), // cents; 0 for admin_grant
+    currency: varchar("currency", { length: 3 }).notNull().default("usd"),
     provider: varchar("provider", { length: 50 }), // null today; "stripe" once integrated
     providerRef: varchar("provider_ref", { length: 255 }), // future Stripe payment_intent/charge id
     // No FK back to coupon_redemptions here — that link lives on

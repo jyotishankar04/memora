@@ -9,6 +9,7 @@ import type { IconSvgElement } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
 import { listPublicPlans, formatPriceMinor, planLimitBullets, type PublicPlan } from "@/lib/plans";
 
 // Keyed by the plan's stable `key` (never renamed, unlike `name`) — falls
@@ -18,10 +19,26 @@ const PLAN_ICON: Record<string, IconSvgElement> = {
   plus: Gem,
 };
 
+// Tailwind needs static class strings, so the column count an admin's
+// active-plan count maps to is a lookup, not a template literal — keeps the
+// grid from leaving an empty cell when a plan is disabled (fewer active
+// plans mid-session, thanks to the poll below) or reserving too few once a
+// 4th tier is added.
+const GRID_COLS: Record<number, string> = {
+  1: "sm:grid-cols-1 md:grid-cols-1",
+  2: "sm:grid-cols-2 md:grid-cols-2",
+  3: "sm:grid-cols-2 md:grid-cols-3",
+  4: "sm:grid-cols-2 md:grid-cols-4",
+};
+
 export default function PricingTableSection() {
+  // Polled like the maintenance-mode/announcement gates elsewhere in
+  // marketing — a visitor sitting on the landing page should see a plan an
+  // admin just disabled disappear without needing to refresh or refocus.
   const { data: plans, isLoading, isError } = useQuery({
     queryKey: ["plans", "public"],
     queryFn: listPublicPlans,
+    refetchInterval: 15 * 1000,
   });
 
   // The middle tier of 3+ gets the "Most Popular" badge — the classic
@@ -57,7 +74,12 @@ export default function PricingTableSection() {
       )}
 
       {plans && plans.length > 0 && (
-        <div className="mt-12 grid grid-cols-1 gap-1 rounded-xl border bg-muted/40 p-1 sm:mt-16 sm:grid-cols-2 md:mt-15 md:grid-cols-3 border-border/50">
+        <div
+          className={cn(
+            "mt-12 grid grid-cols-1 gap-1 rounded-xl border bg-muted/40 p-1 sm:mt-16 md:mt-15 border-border/50",
+            GRID_COLS[plans.length] ?? GRID_COLS[4],
+          )}
+        >
           {plans.map((plan, i) => (
             <PlanCard key={plan.id} plan={plan} isRecommended={i === recommendedIndex} />
           ))}

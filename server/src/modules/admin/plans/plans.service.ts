@@ -12,21 +12,24 @@ interface DefaultPlanSeed {
   name: string;
   description: string;
   priceMinor: number;
+  currency: string;
   isDefault: boolean;
   sortOrder: number;
   limits: { limitType: PlanLimitType; limitValue: number | null }[];
+  features: Record<string, boolean>;
 }
 
 // Placeholders, same "not load-bearing" reasoning as every seed value in
 // this codebase (see seedDefaultFlags) — the entire point of this table is
 // that an admin edits these via admin/plans without a deploy. Prices are in
-// paise (this product prices in INR — see the marketing pricing table).
+// cents (this product prices in USD — see the marketing pricing table).
 const DEFAULT_PLANS: DefaultPlanSeed[] = [
   {
     key: "free",
     name: "Free",
     description: "Perfect for building your personal memory vault.",
     priceMinor: 0,
+    currency: "usd",
     isDefault: true,
     sortOrder: 0,
     limits: [
@@ -35,26 +38,30 @@ const DEFAULT_PLANS: DefaultPlanSeed[] = [
       { limitType: PlanLimitType.STORAGE_MB, limitValue: 250 },
       { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 5 },
     ],
+    features: {},
   },
   {
     key: "plus",
     name: "Plus",
     description: "For people who save more than they can keep track of.",
-    priceMinor: 49900,
+    priceMinor: 600,
+    currency: "usd",
     isDefault: false,
     sortOrder: 1,
     limits: [
-      { limitType: PlanLimitType.MEMORY_COUNT, limitValue: 2000 },
+      { limitType: PlanLimitType.MEMORY_COUNT, limitValue: null },
       { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 300 },
       { limitType: PlanLimitType.STORAGE_MB, limitValue: 5000 },
-      { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 50 },
+      { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 100 },
     ],
+    features: {},
   },
   {
     key: "pro",
     name: "Pro",
     description: "Ideal for power users who want a true second brain.",
-    priceMinor: 199900,
+    priceMinor: 1200,
+    currency: "usd",
     isDefault: false,
     sortOrder: 2,
     limits: [
@@ -63,6 +70,7 @@ const DEFAULT_PLANS: DefaultPlanSeed[] = [
       { limitType: PlanLimitType.STORAGE_MB, limitValue: 50000 },
       { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: null },
     ],
+    features: { publicCollections: true },
   },
 ];
 
@@ -82,8 +90,10 @@ export async function seedDefaultPlans(): Promise<void> {
         name: seed.name,
         description: seed.description,
         priceMinor: seed.priceMinor,
+        currency: seed.currency,
         isDefault: seed.isDefault,
         sortOrder: seed.sortOrder,
+        features: seed.features,
       })
       .onConflictDoNothing({ target: plans.key });
 
@@ -136,6 +146,7 @@ export async function createPlan(input: CreatePlanInput, adminUserId: string, ip
         isActive: input.isActive,
         isDefault: input.isDefault,
         sortOrder: input.sortOrder,
+        features: input.features,
       })
       .returning();
 
@@ -170,6 +181,11 @@ export async function updatePlan(planId: string, input: UpdatePlanInput, adminUs
     const [after] = await tx
       .update(plans)
       .set({
+        // Always present so .set() never receives an empty object — a
+        // limits-only PATCH (the admin UI's per-limit edit, and any
+        // scripted plan-limit update) would otherwise pass nothing here at
+        // all, and Drizzle throws "No values to set" on an empty .set().
+        updatedAt: new Date(),
         ...(input.name !== undefined ? { name: input.name } : {}),
         ...(input.description !== undefined ? { description: input.description } : {}),
         ...(input.priceMinor !== undefined ? { priceMinor: input.priceMinor } : {}),
@@ -178,6 +194,7 @@ export async function updatePlan(planId: string, input: UpdatePlanInput, adminUs
         ...(input.isActive !== undefined ? { isActive: input.isActive } : {}),
         ...(input.isDefault !== undefined ? { isDefault: input.isDefault } : {}),
         ...(input.sortOrder !== undefined ? { sortOrder: input.sortOrder } : {}),
+        ...(input.features !== undefined ? { features: input.features } : {}),
       })
       .where(eq(plans.id, planId))
       .returning();

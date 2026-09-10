@@ -13,6 +13,7 @@ export interface Plan {
   isActive: boolean;
   isDefault: boolean;
   sortOrder: number;
+  features: Record<string, boolean>;
 }
 
 export interface PlanAssignment {
@@ -63,7 +64,7 @@ export function formatLimitValue(limitType: PlanLimitType, value: number): strin
 
 export function formatPriceMinor(priceMinor: number, currency: string): string {
   if (priceMinor === 0) return "Free";
-  const symbol = currency === "inr" ? "₹" : currency.toUpperCase() + " ";
+  const symbol = currency === "usd" ? "$" : currency === "inr" ? "₹" : currency.toUpperCase() + " ";
   return `${symbol}${(priceMinor / 100).toLocaleString()}`;
 }
 

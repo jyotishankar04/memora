@@ -146,6 +146,40 @@ export async function assertWithinLimit(
   }
 }
 
+/**
+ * Whether the AI ingestion pipeline may create another auto-organized
+ * (source='system') collection for this user. Mirrors assertWithinLimit's
+ * semantics (allowed up to and including the plan's collection_count
+ * limit) but checks the system-collection count, not the user's own, and
+ * returns a boolean instead of throwing — hitting this cap isn't a
+ * user-facing error, it's a signal for the ingestion pipeline to fall back
+ * to a general collection instead of failing the whole pipeline.
+ */
+export async function canCreateSystemCollection(userId: string, dbClient: DbOrTx = db): Promise<boolean> {
+  const { plan } = await resolveEffectivePlan(userId, dbClient);
+  const limits = await getPlanLimits(plan.id, dbClient);
+  const limitValue = limits[PlanLimitType.COLLECTION_COUNT];
+  if (limitValue == null) return true; // unlimited
+
+  const [row] = await dbClient
+    .select({ value: sql<number>`count(*)::int` })
+    .from(collections)
+    .where(and(eq(collections.userId, userId), eq(collections.source, CollectionSource.SYSTEM)));
+  const current = row?.value ?? 0;
+  return current < limitValue;
+}
+
+/**
+ * Boolean counterpart to assertWithinLimit — for admin-configured on/off
+ * perks (plans.features), not countable quotas. Doesn't throw; callers
+ * decide how to react (the collections module throws its own
+ * FEATURE_NOT_AVAILABLE AppError so the message can name the feature).
+ */
+export async function hasFeature(userId: string, key: string, dbClient: DbOrTx = db): Promise<boolean> {
+  const { plan } = await resolveEffectivePlan(userId, dbClient);
+  return Boolean(plan.features?.[key]);
+}
+
 export async function getMyPlanSummary(userId: string) {
   const { plan, assignment } = await resolveEffectivePlan(userId);
   const limits = await getPlanLimits(plan.id);

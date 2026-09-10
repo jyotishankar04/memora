@@ -17,6 +17,9 @@ import type { AssignPlanInput, ListAssignmentsQuery, ListTransactionsQuery, Reve
  */
 export async function assignPlanToUser(userId: string, input: AssignPlanInput, adminUserId: string, ipAddress?: string) {
   return db.transaction(async (tx) => {
+    const [plan] = await tx.select({ currency: plans.currency }).from(plans).where(eq(plans.id, input.planId)).limit(1);
+    if (!plan) throw new AppError("Plan not found", 404);
+
     // Only one ACTIVE assignment per user — same flip-others-first pattern
     // used throughout this schema (announcements.isActive, plans.isDefault).
     await tx
@@ -52,6 +55,7 @@ export async function assignPlanToUser(userId: string, input: AssignPlanInput, a
         type: input.amountMinor > 0 ? TransactionType.SUBSCRIPTION_PURCHASE : TransactionType.ADMIN_GRANT,
         status: TransactionStatus.SUCCEEDED,
         amountMinor: input.amountMinor,
+        currency: plan.currency,
         initiatedBy: adminUserId,
         occurredAt: new Date(),
       })
