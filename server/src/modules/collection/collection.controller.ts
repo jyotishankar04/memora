@@ -1,7 +1,16 @@
 import type { Request, Response } from "express";
 import { ApiResponse } from "../../shared/response/api-response";
 import type { ListCollectionsQuery } from "./collection.schema";
-import { convertToUser, createCollection, deleteCollection, listCollections, updateCollection } from "./collection.service";
+import {
+  convertToUser,
+  createCollection,
+  deleteCollection,
+  getPublicCollection,
+  listCollections,
+  shareCollection,
+  unshareCollection,
+  updateCollection,
+} from "./collection.service";
 
 export class CollectionController {
   static async list(req: Request, res: Response) {
@@ -28,5 +37,20 @@ export class CollectionController {
   static async remove(req: Request, res: Response) {
     await deleteCollection(req.user!.id, req.params.id as string);
     res.status(204).send();
+  }
+
+  static async share(req: Request, res: Response) {
+    const collection = await shareCollection(req.user!.id, req.params.id as string);
+    res.status(200).json(ApiResponse.success(collection));
+  }
+
+  static async unshare(req: Request, res: Response) {
+    const collection = await unshareCollection(req.user!.id, req.params.id as string);
+    res.status(200).json(ApiResponse.success(collection));
+  }
+
+  static async getPublic(req: Request, res: Response) {
+    const collection = await getPublicCollection(req.params.slug as string);
+    res.status(200).json(ApiResponse.success(collection));
   }
 }

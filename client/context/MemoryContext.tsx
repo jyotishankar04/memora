@@ -2,7 +2,15 @@
 
 import { useQuery, useMutation, useQueryClient, type UseQueryOptions } from "@tanstack/react-query";
 import type { Collection, Memory } from "@/types/memory";
-import { convertCollectionToUser, createCollection, deleteCollection, listCollections, type CreateCollectionInput } from "@/lib/collections";
+import {
+  convertCollectionToUser,
+  createCollection,
+  deleteCollection,
+  listCollections,
+  shareCollection,
+  unshareCollection,
+  type CreateCollectionInput,
+} from "@/lib/collections";
 import { listTags } from "@/lib/tags";
 import {
   createMemory,
@@ -74,6 +82,26 @@ export function useConvertCollectionMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (id: string) => convertCollectionToUser(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
+    },
+  });
+}
+
+export function useShareCollectionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => shareCollection(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
+    },
+  });
+}
+
+export function useUnshareCollectionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => unshareCollection(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
     },

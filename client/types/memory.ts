@@ -56,6 +56,8 @@ export interface Collection {
   // hidden by default — see useCollectionsQuery's includeSystem param.
   source: "user" | "system";
   memoryCount: number;
+  isPublic: boolean;
+  publicSlug: string | null;
   createdAt: string;
   updatedAt: string;
 }

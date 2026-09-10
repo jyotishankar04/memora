@@ -1,9 +1,10 @@
+import crypto from "node:crypto";
 import { and, count, eq } from "drizzle-orm";
 import { db } from "../../db";
-import { collectionMemories, collections } from "../../db/schema";
-import { CollectionSource, PlanLimitType } from "../../db/enums";
+import { collectionMemories, collections, memories } from "../../db/schema";
+import { CollectionSource, MemoryType, PlanLimitType } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
-import { assertWithinLimit } from "../plans/plans.service";
+import { assertWithinLimit, hasFeature } from "../plans/plans.service";
 import type { CreateCollectionInput, ListCollectionsQuery, UpdateCollectionInput } from "./collection.schema";
 
 export interface CollectionResponse {
@@ -13,8 +14,34 @@ export interface CollectionResponse {
   description: string | null;
   source: CollectionSource;
   memoryCount: number;
+  isPublic: boolean;
+  publicSlug: string | null;
   createdAt: Date;
   updatedAt: Date;
+}
+
+// Public collection pages are unauthenticated — every field here is
+// deliberately public-safe, reviewed against the full memories schema
+// rather than spreading a row and hoping nothing sensitive leaks. No
+// status/diagnostic fields (fetchStatus, captureMethod, browserCapture,
+// canonicalUrl), no owner-only fields (tags, isFavorite, isArchived).
+export interface PublicMemoryItem {
+  id: string;
+  type: MemoryType;
+  title: string;
+  url: string | null;
+  description: string | null;
+  content: string | null;
+  faviconUrl: string | null;
+  previewImageUrl: string | null;
+  createdAt: Date;
+}
+
+export interface PublicCollectionResponse {
+  name: string;
+  icon: string;
+  description: string | null;
+  memories: PublicMemoryItem[];
 }
 
 export async function listCollections(userId: string, query: ListCollectionsQuery): Promise<CollectionResponse[]> {
@@ -30,6 +57,8 @@ export async function listCollections(userId: string, query: ListCollectionsQuer
       icon: collections.icon,
       description: collections.description,
       source: collections.source,
+      isPublic: collections.isPublic,
+      publicSlug: collections.publicSlug,
       createdAt: collections.createdAt,
       updatedAt: collections.updatedAt,
       memoryCount: count(collectionMemories.memoryId),
@@ -131,4 +160,95 @@ export async function deleteCollection(userId: string, id: string): Promise<void
   if (!deleted) {
     throw new AppError("Collection not found", 404, "NOT_FOUND");
   }
+}
+
+function generatePublicSlug(): string {
+  return crypto.randomBytes(12).toString("base64url");
+}
+
+/**
+ * Pro-only perk (plans.features.publicCollections). The slug is generated
+ * once and kept forever once assigned — re-sharing after an unshare reuses
+ * the same slug rather than rotating it, so a link a user already handed
+ * out doesn't silently die just because they paused sharing.
+ */
+export async function shareCollection(userId: string, id: string): Promise<CollectionResponse> {
+  const [existing] = await db
+    .select()
+    .from(collections)
+    .where(and(eq(collections.id, id), eq(collections.userId, userId)))
+    .limit(1);
+
+  if (!existing) {
+    throw new AppError("Collection not found", 404, "NOT_FOUND");
+  }
+
+  if (!(await hasFeature(userId, "publicCollections"))) {
+    throw new AppError("Sharing collections publicly is a Pro feature", 403, "FEATURE_NOT_AVAILABLE");
+  }
+
+  const [row] = await db
+    .update(collections)
+    .set({ isPublic: true, publicSlug: existing.publicSlug ?? generatePublicSlug(), updatedAt: new Date() })
+    .where(eq(collections.id, id))
+    .returning();
+
+  const [{ value: memoryCount }] = await db
+    .select({ value: count() })
+    .from(collectionMemories)
+    .where(eq(collectionMemories.collectionId, id));
+
+  return { ...row, memoryCount };
+}
+
+export async function unshareCollection(userId: string, id: string): Promise<CollectionResponse> {
+  const [row] = await db
+    .update(collections)
+    .set({ isPublic: false, updatedAt: new Date() })
+    .where(and(eq(collections.id, id), eq(collections.userId, userId)))
+    .returning();
+
+  if (!row) {
+    throw new AppError("Collection not found", 404, "NOT_FOUND");
+  }
+
+  const [{ value: memoryCount }] = await db
+    .select({ value: count() })
+    .from(collectionMemories)
+    .where(eq(collectionMemories.collectionId, id));
+
+  return { ...row, memoryCount };
+}
+
+/** Unauthenticated — looked up by slug alone, and only ever returns a collection that's currently public. */
+export async function getPublicCollection(slug: string): Promise<PublicCollectionResponse> {
+  const [collection] = await db
+    .select({ name: collections.name, icon: collections.icon, description: collections.description })
+    .from(collections)
+    .where(and(eq(collections.publicSlug, slug), eq(collections.isPublic, true)))
+    .limit(1);
+
+  if (!collection) {
+    throw new AppError("Collection not found", 404, "NOT_FOUND");
+  }
+
+  const items = await db
+    .select({
+      id: memories.id,
+      type: memories.type,
+      title: memories.title,
+      url: memories.url,
+      description: memories.description,
+      content: memories.content,
+      faviconUrl: memories.faviconUrl,
+      previewImageUrl: memories.previewImageUrl,
+      createdAt: memories.createdAt,
+    })
+    .from(collectionMemories)
+    .innerJoin(memories, eq(memories.id, collectionMemories.memoryId))
+    .innerJoin(collections, eq(collections.id, collectionMemories.collectionId))
+    .where(and(eq(collections.publicSlug, slug), eq(collections.isPublic, true), eq(memories.inTrash, false)))
+    .orderBy(memories.createdAt);
+
+  return { ...collection, memories: items };
 }
