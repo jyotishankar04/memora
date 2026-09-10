@@ -1,12 +1,45 @@
 import { and, eq, ilike } from "drizzle-orm";
 import { db } from "../../../../db";
 import { collectionMemories, collections, memories, memoryTags } from "../../../../db/schema";
-import { MemoryStatus, MemoryType } from "../../../../db/enums";
+import { CollectionSource, MemoryStatus, MemoryType } from "../../../../db/enums";
 import { resolveTagIds, type Tx } from "../../../memory/memory.service";
+import { canCreateSystemCollection } from "../../../plans/plans.service";
 import { getVectorStore } from "../../vector-store";
 import { isVideoUrl } from "../extract-url";
 import { logNode } from "../log";
 import type { IngestionStateType, IngestionUpdate } from "../state";
+
+// Reused across every memory the agent files once a user's plan-tier cap
+// on auto-organized collections is reached, instead of endlessly proposing
+// new ones — see canCreateSystemCollection.
+const GENERAL_COLLECTION_NAME = "General";
+
+async function findOrCreateGeneralCollection(tx: Tx, userId: string): Promise<string> {
+  const [existing] = await tx
+    .select({ id: collections.id })
+    .from(collections)
+    .where(
+      and(
+        eq(collections.userId, userId),
+        eq(collections.name, GENERAL_COLLECTION_NAME),
+        eq(collections.source, CollectionSource.SYSTEM),
+      ),
+    )
+    .limit(1);
+  if (existing) return existing.id;
+
+  const [created] = await tx
+    .insert(collections)
+    .values({
+      userId,
+      name: GENERAL_COLLECTION_NAME,
+      icon: "📥",
+      description: "Everything the agent files once you've reached your collection limit.",
+      source: CollectionSource.SYSTEM,
+    })
+    .returning({ id: collections.id });
+  return created.id;
+}
 
 async function assignCollection(tx: Tx, state: IngestionStateType): Promise<string | null> {
   if (state.collectionAction === "existing" && state.collectionName) {
@@ -23,17 +56,28 @@ async function assignCollection(tx: Tx, state: IngestionStateType): Promise<stri
   }
 
   if (state.collectionAction === "new" && state.collectionName) {
-    const [created] = await tx
-      .insert(collections)
-      .values({
-        userId: state.userId,
-        name: state.collectionName,
-        icon: state.collectionIcon || "📁",
-        description: state.collectionDescription,
-      })
-      .returning({ id: collections.id });
-    await tx.insert(collectionMemories).values({ collectionId: created.id, memoryId: state.memoryId });
-    return created.id;
+    const canCreate = await canCreateSystemCollection(state.userId, tx);
+
+    const collectionId = canCreate
+      ? (
+          await tx
+            .insert(collections)
+            .values({
+              userId: state.userId,
+              name: state.collectionName,
+              icon: state.collectionIcon || "📁",
+              description: state.collectionDescription,
+              source: CollectionSource.SYSTEM,
+            })
+            .returning({ id: collections.id })
+        )[0].id
+      : await findOrCreateGeneralCollection(tx, state.userId);
+
+    await tx
+      .insert(collectionMemories)
+      .values({ collectionId, memoryId: state.memoryId })
+      .onConflictDoNothing();
+    return collectionId;
   }
 
   return null;

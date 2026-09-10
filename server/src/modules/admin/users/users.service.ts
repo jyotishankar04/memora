@@ -1,15 +1,10 @@
-import { and, count, desc, eq, gte, ilike, or, sql } from "drizzle-orm";
-import { db } from "../../db";
-import { adminAuditLogs, collections, memories, roles, sessions, users, userRoles } from "../../db/schema";
-import { AppError } from "../../shared/errors/app-error";
-import { logAdminAction } from "../../shared/utils/audit-log";
-import type {
-  AnalyticsRangeQuery,
-  AuditLogQuery,
-  ListUsersQuery,
-  UpdateUserRolesInput,
-  UpdateUserStatusInput,
-} from "./admin.schema";
+import { and, count, desc, eq, gte, ilike, isNull, or, sql } from "drizzle-orm";
+import { db } from "../../../db";
+import { collections, memories, plans, roles, users, userPlanAssignments, userRoles } from "../../../db/schema";
+import { PlanAssignmentStatus } from "../../../db/enums";
+import { AppError } from "../../../shared/errors/app-error";
+import { logAdminAction } from "../../../shared/utils/audit-log";
+import type { ListUsersQuery, UpdateUserRolesInput, UpdateUserStatusInput } from "./users.schema";
 
 export interface AdminUserListItem {
   id: string;
@@ -20,6 +15,8 @@ export interface AdminUserListItem {
   emailVerified: boolean;
   createdAt: Date;
   roles: string[];
+  planKey: string | null;
+  planName: string | null;
 }
 
 async function attachRoles<T extends { id: string }>(items: T[]): Promise<(T & { roles: string[] })[]> {
@@ -42,6 +39,38 @@ async function attachRoles<T extends { id: string }>(items: T[]): Promise<(T & {
   return items.map((item) => ({ ...item, roles: rolesByUser.get(item.id) ?? [] }));
 }
 
+/**
+ * A user's effective plan is their active, not-yet-expired assignment if
+ * one exists, else the plan marked isDefault — same resolution rule as
+ * plans/plans.service.ts's resolveEffectivePlan, duplicated here (rather
+ * than imported) because this needs it batched across many users at once
+ * for a list/filter, not one user at a time.
+ */
+async function activeAssignmentCondition() {
+  const now = new Date();
+  return and(eq(userPlanAssignments.status, PlanAssignmentStatus.ACTIVE), or(isNull(userPlanAssignments.endsAt), gte(userPlanAssignments.endsAt, now)));
+}
+
+async function attachPlans<T extends { id: string }>(items: T[]): Promise<(T & { planKey: string | null; planName: string | null })[]> {
+  if (items.length === 0) return [];
+  const ids = items.map((i) => i.id);
+
+  const [defaultPlan] = await db.select({ key: plans.key, name: plans.name }).from(plans).where(eq(plans.isDefault, true)).limit(1);
+
+  const assignmentRows = await db
+    .select({ userId: userPlanAssignments.userId, key: plans.key, name: plans.name })
+    .from(userPlanAssignments)
+    .innerJoin(plans, eq(plans.id, userPlanAssignments.planId))
+    .where(and(sql`${userPlanAssignments.userId} IN ${ids}`, await activeAssignmentCondition()));
+
+  const planByUser = new Map(assignmentRows.map((r) => [r.userId, { key: r.key, name: r.name }]));
+
+  return items.map((item) => {
+    const plan = planByUser.get(item.id) ?? defaultPlan ?? null;
+    return { ...item, planKey: plan?.key ?? null, planName: plan?.name ?? null };
+  });
+}
+
 export async function listUsers(
   query: ListUsersQuery,
 ): Promise<{ items: AdminUserListItem[]; page: number; limit: number; total: number }> {
@@ -53,18 +82,47 @@ export async function listUsers(
     conditions.push(eq(users.status, query.status));
   }
 
-  let userIdsWithRole: string[] | null = null;
   if (query.role) {
     const rows = await db
       .select({ userId: userRoles.userId })
       .from(userRoles)
       .innerJoin(roles, eq(userRoles.roleId, roles.id))
       .where(eq(roles.name, query.role));
-    userIdsWithRole = rows.map((r) => r.userId);
+    const userIdsWithRole = rows.map((r) => r.userId);
     if (userIdsWithRole.length === 0) {
       return { items: [], page: query.page, limit: query.limit, total: 0 };
     }
     conditions.push(sql`${users.id} IN ${userIdsWithRole}`);
+  }
+
+  if (query.plan) {
+    const [targetPlan] = await db.select({ id: plans.id, isDefault: plans.isDefault }).from(plans).where(eq(plans.key, query.plan)).limit(1);
+    if (!targetPlan) {
+      return { items: [], page: query.page, limit: query.limit, total: 0 };
+    }
+
+    const explicitRows = await db
+      .select({ userId: userPlanAssignments.userId })
+      .from(userPlanAssignments)
+      .where(and(eq(userPlanAssignments.planId, targetPlan.id), await activeAssignmentCondition()));
+    const explicitIds = explicitRows.map((r) => r.userId).filter((id): id is string => id != null);
+
+    if (targetPlan.isDefault) {
+      // Anyone without ANY active assignment is implicitly on the default
+      // plan — not just anyone without one to *this* plan.
+      const anyActiveRows = await db.select({ userId: userPlanAssignments.userId }).from(userPlanAssignments).where(await activeAssignmentCondition());
+      const excludeIds = anyActiveRows.map((r) => r.userId).filter((id): id is string => id != null);
+      conditions.push(
+        excludeIds.length > 0
+          ? or(sql`${users.id} IN ${explicitIds.length > 0 ? explicitIds : ["00000000-0000-0000-0000-000000000000"]}`, sql`${users.id} NOT IN ${excludeIds}`)
+          : sql`true`, // nobody has any active assignment at all — everyone is on the default plan
+      );
+    } else {
+      if (explicitIds.length === 0) {
+        return { items: [], page: query.page, limit: query.limit, total: 0 };
+      }
+      conditions.push(sql`${users.id} IN ${explicitIds}`);
+    }
   }
 
   const where = conditions.length > 0 ? and(...conditions) : undefined;
@@ -87,7 +145,8 @@ export async function listUsers(
     .limit(query.limit)
     .offset((query.page - 1) * query.limit);
 
-  const items = await attachRoles(rows);
+  const withRoles = await attachRoles(rows);
+  const items = await attachPlans(withRoles);
   return { items, page: query.page, limit: query.limit, total };
 }
 
@@ -198,66 +257,4 @@ export async function updateUserStatus(
   });
 
   return after;
-}
-
-// --- Analytics ---
-
-function daysAgo(days: number): Date {
-  return new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-}
-
-export async function getSignupsOverTime(query: AnalyticsRangeQuery) {
-  const since = daysAgo(query.days);
-  const rows = await db
-    .select({ date: sql<string>`date(${users.createdAt})`, count: count() })
-    .from(users)
-    .where(gte(users.createdAt, since))
-    .groupBy(sql`date(${users.createdAt})`)
-    .orderBy(sql`date(${users.createdAt})`);
-  return rows;
-}
-
-export async function getActiveUsers(query: AnalyticsRangeQuery) {
-  const since = daysAgo(query.days);
-  const rows = await db
-    .select({ date: sql<string>`date(${sessions.lastActivityAt})`, count: sql<number>`count(distinct ${sessions.userId})::int` })
-    .from(sessions)
-    .where(gte(sessions.lastActivityAt, since))
-    .groupBy(sql`date(${sessions.lastActivityAt})`)
-    .orderBy(sql`date(${sessions.lastActivityAt})`);
-  return rows;
-}
-
-export async function getContentGrowth(query: AnalyticsRangeQuery) {
-  const since = daysAgo(query.days);
-  const memoryRows = await db
-    .select({ date: sql<string>`date(${memories.createdAt})`, count: count() })
-    .from(memories)
-    .where(gte(memories.createdAt, since))
-    .groupBy(sql`date(${memories.createdAt})`)
-    .orderBy(sql`date(${memories.createdAt})`);
-
-  const collectionRows = await db
-    .select({ date: sql<string>`date(${collections.createdAt})`, count: count() })
-    .from(collections)
-    .where(gte(collections.createdAt, since))
-    .groupBy(sql`date(${collections.createdAt})`)
-    .orderBy(sql`date(${collections.createdAt})`);
-
-  return { memories: memoryRows, collections: collectionRows };
-}
-
-export async function getAuditLog(
-  query: AuditLogQuery,
-): Promise<{ items: (typeof adminAuditLogs.$inferSelect)[]; page: number; limit: number; total: number }> {
-  const [{ value: total }] = await db.select({ value: count() }).from(adminAuditLogs);
-
-  const items = await db
-    .select()
-    .from(adminAuditLogs)
-    .orderBy(desc(adminAuditLogs.createdAt))
-    .limit(query.limit)
-    .offset((query.page - 1) * query.limit);
-
-  return { items, page: query.page, limit: query.limit, total };
 }

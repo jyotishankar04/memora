@@ -4,11 +4,21 @@ import { toUIMessageStream } from "@ai-sdk/langchain";
 import { createUIMessageStreamResponse } from "ai";
 import { db } from "../../db";
 import { threads } from "../../db/schema";
+import { PlanLimitType } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
+import { assertWithinLimit } from "../plans/plans.service";
+import { logAiUsage } from "../ai-usage/usage-logger";
 import { compiledRagGraph } from "./rag/graph";
 import { ensureCheckpointerSetup } from "./rag/checkpointer";
 import { INTERNAL_EVENT_TAG } from "./rag/internal-tag";
 import type { CreateThreadInput } from "./ai.schema";
+
+// The synthetic "one user question" marker — distinct from the rag:* rows
+// createUsageCallback logs per LLM call inside the pipeline (front_desk,
+// agent, check_grounding can each fire more than once per question), so the
+// AI_MONTHLY_QUERIES plan limit counts this exact requestType, never a rag:*
+// prefix, or it would overcount.
+const ASK_QUERY_REQUEST_TYPE = "ask:query";
 
 export interface ThreadResponse {
   id: string;
@@ -139,6 +149,14 @@ async function* filterInternalEvents<T extends { tags?: string[] }>(stream: Asyn
  *  wire compatibility for a future client using @ai-sdk/react's useChat. */
 export async function streamAsk(userId: string, threadId: string, query: string): Promise<Response> {
   await requireOwnedThread(userId, threadId);
+  // Reject before spending any tokens if this question would exceed the
+  // plan's monthly quota, rather than letting the pipeline run and only
+  // finding out afterward.
+  await assertWithinLimit(userId, PlanLimitType.AI_MONTHLY_QUERIES, 1);
+  // Logged now (not after the stream completes) — matches how the
+  // embedding:query call sites elsewhere in this module fire-and-forget
+  // logAiUsage at the point of use, not on completion of an async stream.
+  void logAiUsage({ userId, requestType: ASK_QUERY_REQUEST_TYPE, provider: "internal", model: "n/a", threadId });
   await ensureCheckpointerSetup();
 
   const eventStream = compiledRagGraph.streamEvents(

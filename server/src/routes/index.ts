@@ -12,6 +12,10 @@ import { adminRouter as featureFlagsAdminRoutes, publicRouter as featureFlagsPub
 import aiUsageRoutes from "../modules/ai-usage";
 import { adminRouter as announcementsAdminRoutes, publicRouter as announcementsPublicRoutes } from "../modules/announcements";
 import adminRoutes from "../modules/admin";
+import plansRoutes from "../modules/plans";
+import creditsRoutes from "../modules/credits";
+import couponsRoutes from "../modules/coupons";
+import referralsRoutes from "../modules/referrals";
 import { maintenanceMode } from "../shared/middlewares/maintenance-mode";
 
 const router = Router();
@@ -30,6 +34,10 @@ router.use("/collections", collectionRoutes);
 router.use("/tags", tagRoutes);
 router.use("/uploads", uploadRoutes);
 router.use("/ai", aiRoutes);
+router.use("/plans", plansRoutes);
+router.use("/credits", creditsRoutes);
+router.use("/coupons", couponsRoutes);
+router.use("/referrals", referralsRoutes);
 router.use("/admin/flags", featureFlagsAdminRoutes);
 router.use("/admin/ai-usage", aiUsageRoutes);
 router.use("/admin/announcements", announcementsAdminRoutes);

@@ -9,6 +9,8 @@ export interface AdminUser {
   emailVerified: boolean;
   createdAt: string;
   roles: string[];
+  planKey: string | null;
+  planName: string | null;
 }
 
 export interface AdminUserDetail extends AdminUser {
@@ -21,6 +23,7 @@ export interface ListUsersParams {
   q?: string;
   status?: AdminUser["status"];
   role?: string;
+  plan?: string;
   page?: number;
   limit?: number;
 }

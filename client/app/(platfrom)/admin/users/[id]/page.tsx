@@ -9,7 +9,10 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { getUser, updateUserRoles, updateUserStatus, type AdminUser } from "@/lib/admin-users";
 import { getUsageForUser } from "@/lib/ai-usage";
+import { assignPlanToUser, listUserAssignments } from "@/lib/admin-billing";
+import { listAdminPlans } from "@/lib/admin-plans";
 import { toast } from "@/components/ui/toast";
+import { Input } from "@/components/ui/input";
 
 const ASSIGNABLE_ROLES = ["free_user", "pro_user", "admin"];
 const STATUS_OPTIONS: AdminUser["status"][] = ["active", "inactive", "suspended", "banned"];
@@ -29,9 +32,40 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
     queryFn: () => getUsageForUser(id, 30),
   });
 
+  const { data: assignments } = useQuery({
+    queryKey: ["admin", "billing", "users", id, "assignments"],
+    queryFn: () => listUserAssignments(id),
+  });
+  const { data: plans } = useQuery({ queryKey: ["admin", "plans"], queryFn: listAdminPlans });
+
+  const activeAssignment = assignments?.find((a) => a.status === "active");
+  const activePlan = plans?.find((p) => p.id === activeAssignment?.planId);
+  const defaultPlan = plans?.find((p) => p.isDefault);
+
+  const [selectedPlanId, setSelectedPlanId] = useState<string>("");
+  const [assignReason, setAssignReason] = useState("");
+  const [assigning, setAssigning] = useState(false);
+
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ["admin", "users", id] });
     queryClient.invalidateQueries({ queryKey: ["admin", "users"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "billing", "users", id, "assignments"] });
+    queryClient.invalidateQueries({ queryKey: ["admin", "billing", "assignments"] });
+  };
+
+  const handleAssignPlan = async () => {
+    if (!selectedPlanId) return;
+    setAssigning(true);
+    try {
+      await assignPlanToUser(id, { planId: selectedPlanId, reason: assignReason.trim() || undefined });
+      invalidate();
+      setAssignReason("");
+      toast.add({ title: "Plan updated.", type: "success" });
+    } catch (err) {
+      toast.add({ title: err instanceof Error ? err.message : "Failed to update plan.", type: "error" });
+    } finally {
+      setAssigning(false);
+    }
   };
 
   const toggleRole = async (role: string) => {
@@ -92,6 +126,47 @@ export default function AdminUserDetailPage({ params }: { params: Promise<{ id: 
         <div className="rounded-lg border border-border px-3 py-2">
           <span className="block text-[10px] text-muted-foreground uppercase tracking-wide">Collections</span>
           <span className="font-bold text-foreground">{user.stats.collectionCount}</span>
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <h3 className="text-xs font-bold text-foreground uppercase tracking-wide">Plan</h3>
+        <div className="flex items-center gap-2 text-xs">
+          <span className="text-muted-foreground">Current:</span>
+          <Badge variant="secondary">
+            {activePlan?.name ?? (defaultPlan ? `${defaultPlan.name} (default)` : "—")}
+          </Badge>
+        </div>
+        <div className="flex items-end gap-2">
+          <div className="space-y-1">
+            <label className="text-[9px] uppercase tracking-wider text-muted-foreground block">New plan</label>
+            <Select value={selectedPlanId} onValueChange={(v) => v && setSelectedPlanId(v)}>
+              <SelectTrigger className="w-40">
+                <SelectValue placeholder="Select plan">
+                  {() => plans?.find((p) => p.id === selectedPlanId)?.name}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                {plans?.filter((p) => p.isActive).map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex-1 space-y-1">
+            <label className="text-[9px] uppercase tracking-wider text-muted-foreground block">Reason (optional)</label>
+            <Input value={assignReason} onChange={(e) => setAssignReason(e.target.value)} placeholder="e.g. support goodwill" />
+          </div>
+          <button
+            type="button"
+            disabled={!selectedPlanId || assigning}
+            onClick={handleAssignPlan}
+            className="h-9 rounded-full bg-primary text-primary-foreground text-[10px] font-bold px-4 hover:bg-primary/90 transition-colors disabled:opacity-40 shrink-0"
+          >
+            {assigning ? "Assigning..." : "Assign"}
+          </button>
         </div>
       </div>
 

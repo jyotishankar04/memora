@@ -1,13 +1,20 @@
 import { Router } from "express";
 import { authenticate } from "../../shared/middlewares/authenticate";
 import { CollectionController } from "./collection.controller";
-import { validateCreateCollection, validateUpdateCollection } from "./collection.validator";
+import { validateCreateCollection, validateListCollections, validateUpdateCollection } from "./collection.validator";
 
 const router = Router();
 
-router.get("/", authenticate, CollectionController.list);
+// Public + unauthenticated — must be registered before the /:id routes so
+// "public" is never swallowed as an :id param.
+router.get("/public/:slug", CollectionController.getPublic);
+
+router.get("/", authenticate, validateListCollections, CollectionController.list);
 router.post("/", authenticate, validateCreateCollection, CollectionController.create);
 router.patch("/:id", authenticate, validateUpdateCollection, CollectionController.update);
+router.patch("/:id/convert-to-user", authenticate, CollectionController.convertToUser);
+router.patch("/:id/share", authenticate, CollectionController.share);
+router.patch("/:id/unshare", authenticate, CollectionController.unshare);
 router.delete("/:id", authenticate, CollectionController.remove);
 
 export default router;

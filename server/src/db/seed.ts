@@ -4,6 +4,7 @@ import { db } from "./index";
 import { collectionMemories, collections, memories, memoryTags, roles, tags, users } from "./schema";
 import { MemoryType } from "./enums";
 import { seedDefaultFlags } from "../modules/feature-flags/feature-flags.service";
+import { seedDefaultPlans } from "../modules/admin/plans/plans.service";
 
 const defaultRoles = [
   { name: "free_user", description: "Default role granted to every new user on signup", isSystem: true },
@@ -365,6 +366,7 @@ async function seedMemories() {
 async function seed() {
   await seedRoles();
   await seedDefaultFlags();
+  await seedDefaultPlans();
   await seedMemories();
   process.exit(0);
 }

@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { PlusIcon as Plus } from "@hugeicons/core-free-icons";
+import { PlusIcon as Plus, EyeIcon as Eye, EyeOffIcon as EyeOff } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FolderCard } from "@/components/ui/folder-card";
@@ -11,8 +11,12 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { EmojiPicker } from "@/components/ui/emoji-picker";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { useCollectionsQuery, useCreateCollectionMutation } from "@/context/MemoryContext";
+import { useCollectionsQuery, useConvertCollectionMutation, useCreateCollectionMutation } from "@/context/MemoryContext";
 import { QueryErrorState } from "@/components/query-error-state";
+import { toast } from "@/components/ui/toast";
+import { usePlanLimit } from "@/hooks/use-plan-limit";
+import { PlanLimitNotice, ProBadge } from "@/components/plan-limit-notice";
+import { cn } from "@/lib/utils";
 
 const COLOR_PALETTE = [
   "bg-blue-500/10 text-blue-500 border-blue-500/20",
@@ -30,8 +34,27 @@ function colorFor(id: string): string {
 }
 
 export default function CollectionsPage() {
-  const { data: collections = [], isLoading, isError, refetch } = useCollectionsQuery();
+  const [showSystem, setShowSystem] = useState(false);
+  const { data: allCollections = [], isLoading, isError, refetch } = useCollectionsQuery(showSystem);
   const createMutation = useCreateCollectionMutation();
+  const convertMutation = useConvertCollectionMutation();
+  const collectionLimit = usePlanLimit("collection_count");
+
+  const collections = allCollections.filter((c) => c.source === "user");
+  const systemCollections = showSystem ? allCollections.filter((c) => c.source === "system") : [];
+
+  const handleConvert = async (id: string) => {
+    if (collectionLimit.isAtLimit) {
+      toast.add({ title: collectionLimit.message ?? "You've reached your collection limit.", type: "error" });
+      return;
+    }
+    try {
+      await convertMutation.mutateAsync(id);
+      toast.add({ title: "Added to your collections.", type: "success" });
+    } catch (err) {
+      toast.add({ title: err instanceof Error ? err.message : "Couldn't convert this collection.", type: "error" });
+    }
+  };
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [newName, setNewName] = useState("");
@@ -41,17 +64,21 @@ export default function CollectionsPage() {
 
   const handleCreateCollection = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim()) return;
+    if (!newName.trim() || collectionLimit.isAtLimit) return;
 
-    await createMutation.mutateAsync({
-      name: newName.trim(),
-      icon: newEmoji.trim() || "📁",
-      description: newDesc.trim() || undefined,
-    });
-    setNewName("");
-    setNewDesc("");
-    setNewEmoji("📁");
-    setShowAddModal(false);
+    try {
+      await createMutation.mutateAsync({
+        name: newName.trim(),
+        icon: newEmoji.trim() || "📁",
+        description: newDesc.trim() || undefined,
+      });
+      setNewName("");
+      setNewDesc("");
+      setNewEmoji("📁");
+      setShowAddModal(false);
+    } catch (err) {
+      toast.add({ title: err instanceof Error ? err.message : "Couldn't create this collection.", type: "error" });
+    }
   };
 
   const handleModalOpenChange = (open: boolean) => {
@@ -75,13 +102,40 @@ export default function CollectionsPage() {
           </p>
         </div>
 
-        <Button
-          onClick={() => setShowAddModal(true)}
-          className="rounded-full px-4 text-xs font-bold bg-primary text-white flex items-center gap-1.5 shadow-sm"
-        >
-          <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" /> New Collection
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="ghost"
+            onClick={() => setShowSystem((v) => !v)}
+            className="rounded-full px-3 text-xs font-semibold text-muted-foreground flex items-center gap-1.5"
+          >
+            <HugeiconsIcon icon={showSystem ? EyeOff : Eye} strokeWidth={2.25} className="h-3.5 w-3.5" />
+            {showSystem ? "Hide system collections" : "Show system collections"}
+          </Button>
+          <Button
+            disabled={collectionLimit.isAtLimit}
+            title={collectionLimit.isAtLimit ? collectionLimit.message ?? undefined : undefined}
+            onClick={() => setShowAddModal(true)}
+            className={cn(
+              "rounded-full px-4 text-xs font-bold bg-primary text-white flex items-center gap-1.5 shadow-sm",
+              collectionLimit.isAtLimit && "opacity-50 cursor-not-allowed",
+            )}
+          >
+            {collectionLimit.isAtLimit ? (
+              <>
+                Limit reached <ProBadge />
+              </>
+            ) : (
+              <>
+                <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" /> New Collection
+              </>
+            )}
+          </Button>
+        </div>
       </div>
+
+      {collectionLimit.isAtLimit && (
+        <PlanLimitNotice message={collectionLimit.message ?? "You've reached your collection limit."} />
+      )}
 
       {/* Collections Grid */}
       {isError ? (
@@ -122,6 +176,46 @@ export default function CollectionsPage() {
               badgeClassName={colorFor(col.id)}
             />
           ))}
+        </div>
+      )}
+
+      {/* System collections — onboarding defaults / AI-suggested groupings.
+          Deliberately not FolderCard: these aren't full-page navigable until
+          claimed, so "Make it mine" reads as the primary action, not a link. */}
+      {showSystem && systemCollections.length > 0 && (
+        <div className="space-y-3 pt-4 border-t border-border/20">
+          <div>
+            <h2 className="text-sm font-semibold text-foreground">System collections</h2>
+            <p className="text-[10px] text-muted-foreground mt-0.5">
+              Created automatically — claim one to make it yours and start organizing memories into it directly.
+            </p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {systemCollections.map((col) => (
+              <div key={col.id} className="flex items-center justify-between gap-3 p-4 border border-dashed border-border rounded-xl">
+                <div className="flex items-center gap-3 min-w-0">
+                  <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-muted text-base">{col.icon}</span>
+                  <div className="min-w-0">
+                    <p className="text-xs font-semibold text-foreground truncate">{col.name}</p>
+                    <p className="text-[10px] text-muted-foreground">{col.memoryCount} memories</p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  disabled={convertMutation.isPending || collectionLimit.isAtLimit}
+                  title={collectionLimit.isAtLimit ? collectionLimit.message ?? undefined : undefined}
+                  onClick={() => handleConvert(col.id)}
+                  className={cn(
+                    "shrink-0 h-7 rounded-full text-[10px] font-bold px-3 flex items-center gap-1",
+                    collectionLimit.isAtLimit && "opacity-50 cursor-not-allowed",
+                  )}
+                >
+                  Make it mine
+                  {collectionLimit.isAtLimit && <ProBadge />}
+                </Button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
 
@@ -193,13 +287,20 @@ export default function CollectionsPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending}
-                className="flex-1 h-10 rounded-full bg-primary text-white"
+                disabled={createMutation.isPending || collectionLimit.isAtLimit}
+                title={collectionLimit.isAtLimit ? collectionLimit.message ?? undefined : undefined}
+                className={cn(
+                  "flex-1 h-10 rounded-full bg-primary text-white",
+                  collectionLimit.isAtLimit && "opacity-50 cursor-not-allowed",
+                )}
               >
-                {createMutation.isPending ? "Creating..." : "Create Collection"}
+                {createMutation.isPending ? "Creating..." : collectionLimit.isAtLimit ? "Limit reached" : "Create Collection"}
               </Button>
             </div>
 
+            {collectionLimit.isAtLimit && (
+              <PlanLimitNotice message={collectionLimit.message ?? "You've reached your collection limit."} />
+            )}
           </form>
         </DialogContent>
       </Dialog>

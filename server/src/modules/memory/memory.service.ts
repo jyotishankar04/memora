@@ -1,9 +1,10 @@
 import { and, count, desc, eq, inArray, type SQL } from "drizzle-orm";
 import { db } from "../../db";
 import { attachments, collectionMemories, collections, memories, memoryTags, tags } from "../../db/schema";
-import { MemoryStatus, type MemoryType } from "../../db/enums";
+import { MemoryStatus, PlanLimitType, type MemoryType } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
 import { logger } from "../../shared/utils/logger";
+import { assertWithinLimit } from "../plans/plans.service";
 import { enqueueIngestion } from "../ai/ingestion/queue";
 import { getVectorStore } from "../ai/vector-store";
 import { hybridSearch } from "../ai/search";
@@ -351,6 +352,8 @@ export async function createMemory(
   userId: string,
   input: CreateMemoryInput,
 ): Promise<MemoryDetail & { duplicateOf: { id: string; title: string } | null }> {
+  await assertWithinLimit(userId, PlanLimitType.MEMORY_COUNT, 1);
+
   // Non-blocking duplicate detection (docs/URL_CAPTURE_AND_PREVIEW.md) — never
   // a reason to refuse the save, only a hint the client can surface.
   const normalizedUrl = normalizeUrl(input.url);

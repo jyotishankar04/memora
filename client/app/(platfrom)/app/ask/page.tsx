@@ -38,6 +38,8 @@ import {
 import { memoryQueryKey } from "@/context/MemoryContext";
 import { useSidebarState } from "@/context/SidebarContext";
 import { getMemory } from "@/lib/memories";
+import { usePlanLimit } from "@/hooks/use-plan-limit";
+import { PlanLimitNotice, ProBadge } from "@/components/plan-limit-notice";
 import { MemoryPreviewCard } from "@/components/memory-preview-card";
 import { cn } from "@/lib/utils";
 import type { MemoryType } from "@/types/memory";
@@ -333,6 +335,7 @@ export default function AskPage() {
   const [input, setInput] = useState("");
   const seededThreadRef = useRef<string | null>(null);
   const pendingMessageRef = useRef<string | null>(null);
+  const queryLimit = usePlanLimit("ai_monthly_queries");
 
   const { data: threads = [], isLoading: threadsLoading } = useThreadsQuery();
   const { data: history } = useThreadMessagesQuery(activeThreadId);
@@ -404,7 +407,7 @@ export default function AskPage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     const text = input.trim();
-    if (!text || status === "streaming" || status === "submitted") return;
+    if (!text || status === "streaming" || status === "submitted" || queryLimit.isAtLimit) return;
     setInput("");
 
     if (!activeThreadId) {
@@ -597,9 +600,15 @@ export default function AskPage() {
           </MessageScroller>
         </MessageScrollerProvider>
 
-        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto w-full px-6 pt-3 shrink-0">
+        <form onSubmit={handleSubmit} className="max-w-4xl mx-auto w-full px-6 pt-3 shrink-0 space-y-2">
+          {queryLimit.isAtLimit && (
+            <PlanLimitNotice message={queryLimit.message ?? "You've reached your Ask query limit for this month."} />
+          )}
           <div
-            className="rounded-3xl border border-border bg-card shadow-xs transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10"
+            className={cn(
+              "rounded-3xl border border-border bg-card shadow-xs transition-colors focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/10",
+              queryLimit.isAtLimit && "opacity-60",
+            )}
             onClick={(e) => {
               const target = e.target as HTMLElement;
               if (target.tagName === "TEXTAREA" || target.closest("button")) return;
@@ -615,18 +624,20 @@ export default function AskPage() {
                   handleSubmit(e as unknown as React.FormEvent);
                 }
               }}
-              placeholder="Ask anything about what you've saved..."
+              placeholder={queryLimit.isAtLimit ? "You've reached your Ask query limit for this month..." : "Ask anything about what you've saved..."}
               className="min-h-[52px] max-h-40 resize-none border-none bg-transparent px-4 pt-3.5 pb-1 text-sm shadow-none outline-none focus-visible:border-none focus-visible:ring-0 dark:bg-transparent"
-              disabled={isBusy}
+              disabled={isBusy || queryLimit.isAtLimit}
             />
-            <div className="flex items-center justify-end px-3 pb-2.5">
+            <div className="flex items-center justify-end gap-2 px-3 pb-2.5">
+              {queryLimit.isAtLimit && <ProBadge />}
               <Button
                 type="submit"
                 size="icon"
+                title={queryLimit.isAtLimit ? queryLimit.message ?? undefined : undefined}
                 className="rounded-full h-9 w-9 shrink-0"
-                disabled={isBusy || !input.trim()}
+                disabled={isBusy || queryLimit.isAtLimit || !input.trim()}
               >
-                <HugeiconsIcon icon={ArrowUp} strokeWidth={2.25} className={cn("h-4 w-4", isBusy && "opacity-50")} />
+                <HugeiconsIcon icon={ArrowUp} strokeWidth={2.25} className={cn("h-4 w-4", (isBusy || queryLimit.isAtLimit) && "opacity-50")} />
               </Button>
             </div>
           </div>
