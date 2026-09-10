@@ -5,6 +5,7 @@ export const listUsersQuerySchema = z.object({
   q: z.string().trim().max(255).optional(),
   status: z.enum([UserStatus.ACTIVE, UserStatus.INACTIVE, UserStatus.BANNED, UserStatus.SUSPENDED, UserStatus.DELETED]).optional(),
   role: z.string().max(100).optional(),
+  plan: z.string().max(50).optional(), // plan key ("free" | "plus" | "pro"), matched against each user's effective plan
   page: z.coerce.number().int().min(1).default(1),
   limit: z.coerce.number().int().min(1).max(100).default(20),
 });
