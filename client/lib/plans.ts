@@ -66,3 +66,19 @@ export function formatPriceMinor(priceMinor: number, currency: string): string {
   const symbol = currency === "inr" ? "₹" : currency.toUpperCase() + " ";
   return `${symbol}${(priceMinor / 100).toLocaleString()}`;
 }
+
+const LIMIT_ORDER: PlanLimitType[] = ["memory_count", "ai_monthly_queries", "storage_mb", "collection_count"];
+
+/**
+ * Turns a plan's real, admin-editable limits into pricing-page bullet copy
+ * ("Unlimited memories", "20 Ask SaveForLatter queries / month", ...) —
+ * used instead of a hand-written per-plan feature list so the marketing
+ * pricing table can never drift out of sync with what's actually enforced.
+ */
+export function planLimitBullets(limits: PlanLimits): string[] {
+  return LIMIT_ORDER.filter((t) => t in limits).map((t) => {
+    const value = limits[t];
+    const amount = value == null ? "Unlimited" : formatLimitValue(t, value);
+    return `${amount} ${PLAN_LIMIT_LABEL[t].toLowerCase()}`;
+  });
+}
