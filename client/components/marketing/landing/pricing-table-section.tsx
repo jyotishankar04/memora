@@ -11,6 +11,10 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { listPublicPlans, formatPriceMinor, planLimitBullets, type PublicPlan } from "@/lib/plans";
+import { ctaHref } from "@/lib/showcase";
+import { BETA_MODE } from "@/lib/beta";
+import { SquigglyText } from "@/components/ui/squiggly-text";
+import { Rocket01Icon as Rocket } from "@hugeicons/core-free-icons";
 
 // Keyed by the plan's stable `key` (never renamed, unlike `name`) — falls
 // back to Crown for any plan an admin creates later that isn't one of these.
@@ -82,6 +86,10 @@ export default function PricingTableSection() {
         >
           {plans.map((plan, i) => (
             <PlanCard key={plan.id} plan={plan} isRecommended={i === recommendedIndex} />
+      {BETA_MODE ? <PricingBetaPlaceholder /> : (
+        <div className="mt-12 grid grid-cols-1 gap-1 rounded-xl border bg-muted/40 p-1 sm:mt-16 sm:grid-cols-2 md:mt-15 md:grid-cols-3 border-border/50">
+          {pricingPlans.map((plan) => (
+            <PlanCard key={plan.name} plan={plan} />
           ))}
         </div>
       )}
@@ -95,6 +103,26 @@ const PlanCard = ({ plan, isRecommended }: { plan: PublicPlan; isRecommended: bo
   const period = plan.billingInterval === "monthly" ? "/ month" : plan.billingInterval === "yearly" ? "/ year" : undefined;
   const bullets = planLimitBullets(plan.limits);
 
+function PricingBetaPlaceholder() {
+  return (
+    <div className="mt-12 sm:mt-16 md:mt-15 flex flex-col items-center justify-center gap-4 rounded-xl border border-dashed border-border/60 bg-muted/20 py-16 px-6 text-center">
+      <div className="relative w-12 h-12 flex items-center justify-center">
+        <div className="absolute inset-0 bg-primary/20 rounded-full blur-xl" />
+        <div className="w-10 h-10 flex items-center justify-center">
+          <HugeiconsIcon icon={Rocket} strokeWidth={2.25} className="h-5 w-5 text-primary" />
+        </div>
+      </div>
+      <h3 className="text-lg font-semibold text-foreground">
+        Pricing is <SquigglyText scale={[3, 6]} stepDuration={90} className="text-primary">still being built</SquigglyText>
+      </h3>
+      <p className="text-sm text-muted-foreground max-w-sm">
+        We&apos;re in beta and finalizing plans. Join the waitlist and we&apos;ll let you know the moment pricing goes live.
+      </p>
+    </div>
+  );
+}
+
+const PlanCard = ({ plan }: { plan: PricingPlan }) => {
   return (
     <div className="relative rounded-lg border bg-background border-border/50 flex flex-col justify-between h-full hover:border-primary/20 transition-colors duration-300 shadow-xs">
       {isRecommended && (

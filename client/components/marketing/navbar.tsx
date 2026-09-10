@@ -26,6 +26,7 @@ import { ChevronRightIcon as ChevronRight, Menu01Icon as Menu, MoonIcon as Moon,
 import { useCurrentUserQuery } from "@/context/UserContext";
 import { AnnouncementBanner } from "@/components/marketing/announcement-banner";
 import { MaintenanceModal } from "@/components/marketing/maintenance-modal";
+import { ctaHref } from "@/lib/showcase";
 
 const features = [
   {
@@ -100,8 +101,10 @@ export function Navbar() {
         className={cn(
           "mx-auto flex h-14 max-w-6xl items-center px-3 rounded-full border transition-all duration-300",
           isScrolled
-            ? "border-border/50 bg-background/90 backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.24)]"
-            : "border-transparent bg-transparent shadow-none"
+            ? "border-border/50 bg-background backdrop-blur-md shadow-[0_8px_32px_rgba(0,0,0,0.04)] dark:shadow-[0_8px_32px_rgba(0,0,0,0.24)]"
+            : useWhiteText
+              ? "border-white/10 bg-white/10 backdrop-blur-sm shadow-none"
+              : "border-transparent bg-transparent shadow-none"
         )}
       >
         {/* Logo */}
@@ -274,7 +277,7 @@ export function Navbar() {
             />
           ) : isAuthenticated ? (
             <Link
-              href="/app"
+              href={ctaHref("/app")}
               className={cn(
                 buttonVariants({ variant: "default", size: "sm" }),
                 "h-9 rounded-full px-4 text-sm font-medium shadow-sm transition-all duration-200 flex items-center",
@@ -289,7 +292,7 @@ export function Navbar() {
           ) : (
             <>
               <Link
-                href="/auth/login"
+                href={ctaHref("/auth/login")}
                 className={cn(
                   "rounded-full px-4 py-2 text-sm font-medium transition-colors duration-300",
                   useWhiteText
@@ -301,7 +304,7 @@ export function Navbar() {
               </Link>
 
               <Link
-                href="/auth/signup"
+                href={ctaHref("/auth/signup")}
                 className={cn(
                   buttonVariants({ variant: "default", size: "sm" }),
                   "h-9 rounded-full px-4 text-sm font-medium shadow-sm transition-all duration-200 flex items-center",
@@ -342,7 +345,7 @@ export function Navbar() {
           {/* Auth CTA (Mobile sm+) */}
           {!isUserLoading && (
             <Link
-              href={isAuthenticated ? "/app" : "/auth/signup"}
+              href={ctaHref(isAuthenticated ? "/app" : "/auth/signup")}
               className={cn(
                 buttonVariants({ variant: "default", size: "sm" }),
                 "hidden sm:inline-flex h-9 rounded-full px-4 text-xs font-medium shadow-sm transition-all duration-200 flex items-center",
@@ -452,7 +455,7 @@ export function Navbar() {
               <div className="space-y-3 pt-6 border-t border-border mt-auto">
                 {isAuthenticated ? (
                   <Link
-                    href="/app"
+                    href={ctaHref("/app")}
                     className={cn(
                       buttonVariants({ variant: "default", size: "default" }),
                       "w-full h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/95 flex items-center justify-center font-medium"
@@ -464,7 +467,7 @@ export function Navbar() {
                 ) : (
                   <>
                     <Link
-                      href="/auth/login"
+                      href={ctaHref("/auth/login")}
                       className="
                         flex h-10 items-center justify-center rounded-full
                         text-sm font-medium text-foreground border border-border
@@ -474,7 +477,7 @@ export function Navbar() {
                       Sign in
                     </Link>
                     <Link
-                      href="/auth/signup"
+                      href={ctaHref("/auth/signup")}
                       className={cn(
                         buttonVariants({ variant: "default", size: "default" }),
                         "w-full h-10 rounded-full bg-primary text-primary-foreground hover:bg-primary/95 flex items-center justify-center font-medium"

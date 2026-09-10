@@ -8,6 +8,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { MagneticButton } from "@/components/ui/magnetic-button";
 import { ParallaxGlow } from "@/components/ui/parallax-glow";
 import { cn } from "@/lib/utils";
+import { ctaHref } from "@/lib/showcase";
 
 export default function FinalCtaSection() {
   return (
@@ -35,7 +36,7 @@ export default function FinalCtaSection() {
         <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
           <MagneticButton strength={0.4}>
             <Link
-              href="/auth/signup"
+              href={ctaHref("/auth/signup")}
               className={cn(
                 buttonVariants({ variant: "default", size: "lg" }),
                 "h-12 px-8 rounded-full bg-primary text-primary-foreground hover:bg-primary/95 text-sm font-semibold flex items-center gap-1 shadow-sm transition-all duration-200"

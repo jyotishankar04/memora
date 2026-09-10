@@ -4,6 +4,7 @@ import React, { createContext, useContext, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ApiError, getCurrentUser, type AuthUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
+import { SHOWCASE_MODE } from "@/lib/showcase";
 
 export const currentUserQueryKey = ["auth", "me"] as const;
 
@@ -18,7 +19,12 @@ export function useCurrentUserQuery() {
   return useQuery({
     queryKey: currentUserQueryKey,
     queryFn: getCurrentUser,
-    retry: (failureCount, error) => !(error instanceof ApiError && error.status === 401) && failureCount < 3,
+    // In showcase mode there's no backend to reconnect to at all, so retrying
+    // just stalls the nav in its loading state for no benefit — fail once
+    // and settle straight into the signed-out UI.
+    retry: SHOWCASE_MODE
+      ? false
+      : (failureCount, error) => !(error instanceof ApiError && error.status === 401) && failureCount < 3,
     retryDelay: 800,
     staleTime: 60_000,
   });
