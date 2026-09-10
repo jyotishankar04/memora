@@ -4,17 +4,16 @@ import React from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { BoxIcon as Box, CheckmarkCircle01Icon as CheckCircle, GemIcon as Gem, CrownIcon as Crown } from "@hugeicons/core-free-icons";
+import { BoxIcon as Box, CheckmarkCircle01Icon as CheckCircle, GemIcon as Gem, CrownIcon as Crown, Rocket01Icon as Rocket } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { SquigglyText } from "@/components/ui/squiggly-text";
 import { cn } from "@/lib/utils";
 import { listPublicPlans, formatPriceMinor, planLimitBullets, type PublicPlan } from "@/lib/plans";
 import { ctaHref } from "@/lib/showcase";
 import { BETA_MODE } from "@/lib/beta";
-import { SquigglyText } from "@/components/ui/squiggly-text";
-import { Rocket01Icon as Rocket } from "@hugeicons/core-free-icons";
 
 // Keyed by the plan's stable `key` (never renamed, unlike `name`) — falls
 // back to Crown for any plan an admin creates later that isn't one of these.
@@ -39,16 +38,27 @@ export default function PricingTableSection() {
   // Polled like the maintenance-mode/announcement gates elsewhere in
   // marketing — a visitor sitting on the landing page should see a plan an
   // admin just disabled disappear without needing to refresh or refocus.
+  // Skipped entirely in beta mode, since the placeholder below never needs
+  // real plan data.
   const { data: plans, isLoading, isError } = useQuery({
     queryKey: ["plans", "public"],
     queryFn: listPublicPlans,
     refetchInterval: 15 * 1000,
+    enabled: !BETA_MODE,
   });
 
   // The middle tier of 3+ gets the "Most Popular" badge — the classic
   // pricing-psychology nudge away from both Free and the top tier. Fewer
   // than 3 active plans and nothing gets badged rather than guessing.
   const recommendedIndex = plans && plans.length >= 3 ? Math.floor((plans.length - 1) / 2) : -1;
+
+  if (BETA_MODE) {
+    return (
+      <section id="pricing" className="mx-auto max-w-6xl px-6 py-20 border-t border-border/20">
+        <PricingBetaPlaceholder />
+      </section>
+    );
+  }
 
   return (
     <section id="pricing" className="mx-auto max-w-6xl px-6 py-20 border-t border-border/20">
@@ -86,22 +96,12 @@ export default function PricingTableSection() {
         >
           {plans.map((plan, i) => (
             <PlanCard key={plan.id} plan={plan} isRecommended={i === recommendedIndex} />
-      {BETA_MODE ? <PricingBetaPlaceholder /> : (
-        <div className="mt-12 grid grid-cols-1 gap-1 rounded-xl border bg-muted/40 p-1 sm:mt-16 sm:grid-cols-2 md:mt-15 md:grid-cols-3 border-border/50">
-          {pricingPlans.map((plan) => (
-            <PlanCard key={plan.name} plan={plan} />
           ))}
         </div>
       )}
     </section>
   );
 }
-
-const PlanCard = ({ plan, isRecommended }: { plan: PublicPlan; isRecommended: boolean }) => {
-  const icon = PLAN_ICON[plan.key] ?? Crown;
-  const isFree = plan.priceMinor === 0;
-  const period = plan.billingInterval === "monthly" ? "/ month" : plan.billingInterval === "yearly" ? "/ year" : undefined;
-  const bullets = planLimitBullets(plan.limits);
 
 function PricingBetaPlaceholder() {
   return (
@@ -122,7 +122,12 @@ function PricingBetaPlaceholder() {
   );
 }
 
-const PlanCard = ({ plan }: { plan: PricingPlan }) => {
+const PlanCard = ({ plan, isRecommended }: { plan: PublicPlan; isRecommended: boolean }) => {
+  const icon = PLAN_ICON[plan.key] ?? Crown;
+  const isFree = plan.priceMinor === 0;
+  const period = plan.billingInterval === "monthly" ? "/ month" : plan.billingInterval === "yearly" ? "/ year" : undefined;
+  const bullets = planLimitBullets(plan.limits);
+
   return (
     <div className="relative rounded-lg border bg-background border-border/50 flex flex-col justify-between h-full hover:border-primary/20 transition-colors duration-300 shadow-xs">
       {isRecommended && (
@@ -146,7 +151,7 @@ const PlanCard = ({ plan }: { plan: PricingPlan }) => {
           {isFree ? "free forever" : period ? "billed monthly" : "one-time"}
         </p>
         <Button
-          render={<Link href={`/auth/signup?plan=${plan.key}`} />}
+          render={<Link href={ctaHref(`/auth/signup?plan=${plan.key}`)} />}
           nativeButton={false}
           className="my-6 w-full h-10 rounded-full font-medium"
           size="lg"
