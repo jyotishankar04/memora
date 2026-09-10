@@ -18,6 +18,8 @@ import { useMemories } from "@/context/MemoryContext";
 import { SidebarStateProvider } from "@/context/SidebarContext";
 import { UpgradeCard } from "@/components/upgrade-card";
 import { uploadFile, type UploadedFile } from "@/lib/uploads";
+import { usePlanLimit } from "@/hooks/use-plan-limit";
+import { PlanLimitNotice, ProBadge, LimitDot } from "@/components/plan-limit-notice";
 import { detectMemoryType, deriveTitle, splitLinkAndCaption } from "@/lib/detect-memory-type";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 import {
@@ -141,6 +143,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const { theme, setTheme } = useTheme();
   const { user: currentUser } = useUser();
   const { collections, create } = useMemories();
+  const memoryLimit = usePlanLimit("memory_count");
+  const storageLimit = usePlanLimit("storage_mb");
 
   const handleLogout = () => {
     logout().finally(() => {
@@ -238,6 +242,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
   };
 
   const handleFileUpload = async (file: File) => {
+    if (storageLimit.isAtLimit) {
+      setAttachmentError(storageLimit.message ?? "You've reached your storage limit.");
+      return;
+    }
     // Set the name/mime immediately so the Attachment preview (with its
     // shimmer) can show the real filename and the right icon while the
     // upload is still in flight, not just once it resolves.
@@ -304,6 +312,10 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const handleCaptureSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!captureText.trim() && !captureAttachment) return;
+    if (memoryLimit.isAtLimit) {
+      setSaveError(memoryLimit.message ?? "You've reached your memory limit.");
+      return;
+    }
     setIsSaving(true);
     setSaveError(null);
     try {
@@ -575,9 +587,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 transition={{ duration: 0.25, ease: "easeInOut" }}
                 onClick={openCaptureModal}
                 data-tour="quick-capture-btn"
-                className="w-full h-10 rounded-full font-bold text-xs bg-primary text-white flex items-center justify-center gap-1.5 shadow-sm"
+                title={memoryLimit.isAtLimit ? memoryLimit.message ?? undefined : undefined}
+                className="relative w-full h-10 rounded-full font-bold text-xs bg-primary text-white flex items-center justify-center gap-1.5 shadow-sm"
               >
                 <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" /> Quick Capture
+                {memoryLimit.isAtLimit && <LimitDot />}
               </motion.button>
             )}
 
@@ -597,10 +611,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     return phase;
                   });
                 }}
-                className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center shadow-sm shrink-0"
+                title={memoryLimit.isAtLimit ? memoryLimit.message ?? undefined : undefined}
+                className="relative h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center shadow-sm shrink-0"
                 aria-label="Quick Capture (Ctrl+Q)"
               >
                 <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" />
+                {memoryLimit.isAtLimit && <LimitDot />}
               </motion.button>
             )}
           </div>
@@ -891,9 +907,11 @@ function AppShell({ children }: { children: React.ReactNode }) {
           {/* Quick Capture Button (Prominent!) */}
           <button
             onClick={openCaptureModal}
-            className="h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg -translate-y-2 select-none"
+            title={memoryLimit.isAtLimit ? memoryLimit.message ?? undefined : undefined}
+            className="relative h-10 w-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg -translate-y-2 select-none"
           >
             <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-6 w-6 stroke-[2.5]" />
+            {memoryLimit.isAtLimit && <LimitDot />}
           </button>
 
           <Link href="/app/ask" className={cn("flex flex-col items-center gap-0.5 text-[9px] font-bold", isNavItemActive(pathname, "/app/ask") ? "text-primary" : "text-muted-foreground")}>
@@ -989,9 +1007,16 @@ function AppShell({ children }: { children: React.ReactNode }) {
                     )}
 
                     <InputGroupAddon align="block-end" className="w-full justify-between border-t border-border/40 bg-muted/20 px-3 py-2">
-                      <InputGroupButton type="button" onClick={() => fileInputRef.current?.click()}>
+                      <InputGroupButton
+                        type="button"
+                        disabled={storageLimit.isAtLimit}
+                        title={storageLimit.isAtLimit ? storageLimit.message ?? undefined : undefined}
+                        onClick={() => fileInputRef.current?.click()}
+                        className={storageLimit.isAtLimit ? "opacity-50 cursor-not-allowed" : undefined}
+                      >
                         <HugeiconsIcon icon={Paperclip} strokeWidth={2.25} className="h-3.5 w-3.5" />
                         Attach
+                        {storageLimit.isAtLimit && <ProBadge className="ml-1" />}
                       </InputGroupButton>
 
                       <InputGroupText className="rounded-full bg-primary/10 px-2.5 py-1 text-[9px] font-bold uppercase tracking-wide text-primary">
@@ -1048,14 +1073,28 @@ function AppShell({ children }: { children: React.ReactNode }) {
                   )}
                 </div>
 
-                {saveError && <p className="text-[10px] text-red-500">{saveError}</p>}
+                {memoryLimit.isAtLimit ? (
+                  <PlanLimitNotice message={memoryLimit.message ?? "You've reached your memory limit."} />
+                ) : (
+                  saveError && <p className="text-[10px] text-red-500">{saveError}</p>
+                )}
 
                 <Button
                   type="submit"
-                  disabled={isSaving || isUploadingAttachment || (!captureText.trim() && !captureAttachment)}
-                  className="w-full h-11 rounded-full font-bold text-xs bg-primary text-white"
+                  disabled={isSaving || isUploadingAttachment || memoryLimit.isAtLimit || (!captureText.trim() && !captureAttachment)}
+                  title={memoryLimit.isAtLimit ? memoryLimit.message ?? undefined : undefined}
+                  className={cn(
+                    "w-full h-11 rounded-full font-bold text-xs bg-primary text-white",
+                    memoryLimit.isAtLimit && "opacity-50 cursor-not-allowed",
+                  )}
                 >
-                  {isSaving ? "Saving..." : "Save Memory"}
+                  {isSaving ? "Saving..." : memoryLimit.isAtLimit ? (
+                    <span className="flex items-center justify-center gap-1.5">
+                      Limit reached <ProBadge />
+                    </span>
+                  ) : (
+                    "Save Memory"
+                  )}
                 </Button>
               </form>
             )}
@@ -1124,10 +1163,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
               transition={{ duration: 0.25, ease: "easeInOut" }}
               type="button"
               onClick={openCaptureModal}
-              className="h-10 w-10 rounded-full bg-primary text-white shadow-sm flex items-center justify-center hover:opacity-90 transition-opacity shrink-0"
+              title={memoryLimit.isAtLimit ? memoryLimit.message ?? undefined : undefined}
+              className="relative h-10 w-10 rounded-full bg-primary text-white shadow-sm flex items-center justify-center hover:opacity-90 transition-opacity shrink-0"
               aria-label="Quick Capture (Ctrl+Q)"
             >
               <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" />
+              {memoryLimit.isAtLimit && <LimitDot />}
             </motion.button>
           )}
 

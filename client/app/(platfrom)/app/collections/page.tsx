@@ -14,6 +14,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useCollectionsQuery, useConvertCollectionMutation, useCreateCollectionMutation } from "@/context/MemoryContext";
 import { QueryErrorState } from "@/components/query-error-state";
 import { toast } from "@/components/ui/toast";
+import { usePlanLimit } from "@/hooks/use-plan-limit";
+import { PlanLimitNotice, ProBadge } from "@/components/plan-limit-notice";
+import { cn } from "@/lib/utils";
 
 const COLOR_PALETTE = [
   "bg-blue-500/10 text-blue-500 border-blue-500/20",
@@ -35,11 +38,16 @@ export default function CollectionsPage() {
   const { data: allCollections = [], isLoading, isError, refetch } = useCollectionsQuery(showSystem);
   const createMutation = useCreateCollectionMutation();
   const convertMutation = useConvertCollectionMutation();
+  const collectionLimit = usePlanLimit("collection_count");
 
   const collections = allCollections.filter((c) => c.source === "user");
   const systemCollections = showSystem ? allCollections.filter((c) => c.source === "system") : [];
 
   const handleConvert = async (id: string) => {
+    if (collectionLimit.isAtLimit) {
+      toast.add({ title: collectionLimit.message ?? "You've reached your collection limit.", type: "error" });
+      return;
+    }
     try {
       await convertMutation.mutateAsync(id);
       toast.add({ title: "Added to your collections.", type: "success" });
@@ -56,17 +64,21 @@ export default function CollectionsPage() {
 
   const handleCreateCollection = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newName.trim()) return;
+    if (!newName.trim() || collectionLimit.isAtLimit) return;
 
-    await createMutation.mutateAsync({
-      name: newName.trim(),
-      icon: newEmoji.trim() || "📁",
-      description: newDesc.trim() || undefined,
-    });
-    setNewName("");
-    setNewDesc("");
-    setNewEmoji("📁");
-    setShowAddModal(false);
+    try {
+      await createMutation.mutateAsync({
+        name: newName.trim(),
+        icon: newEmoji.trim() || "📁",
+        description: newDesc.trim() || undefined,
+      });
+      setNewName("");
+      setNewDesc("");
+      setNewEmoji("📁");
+      setShowAddModal(false);
+    } catch (err) {
+      toast.add({ title: err instanceof Error ? err.message : "Couldn't create this collection.", type: "error" });
+    }
   };
 
   const handleModalOpenChange = (open: boolean) => {
@@ -100,13 +112,30 @@ export default function CollectionsPage() {
             {showSystem ? "Hide system collections" : "Show system collections"}
           </Button>
           <Button
+            disabled={collectionLimit.isAtLimit}
+            title={collectionLimit.isAtLimit ? collectionLimit.message ?? undefined : undefined}
             onClick={() => setShowAddModal(true)}
-            className="rounded-full px-4 text-xs font-bold bg-primary text-white flex items-center gap-1.5 shadow-sm"
+            className={cn(
+              "rounded-full px-4 text-xs font-bold bg-primary text-white flex items-center gap-1.5 shadow-sm",
+              collectionLimit.isAtLimit && "opacity-50 cursor-not-allowed",
+            )}
           >
-            <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" /> New Collection
+            {collectionLimit.isAtLimit ? (
+              <>
+                Limit reached <ProBadge />
+              </>
+            ) : (
+              <>
+                <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" /> New Collection
+              </>
+            )}
           </Button>
         </div>
       </div>
+
+      {collectionLimit.isAtLimit && (
+        <PlanLimitNotice message={collectionLimit.message ?? "You've reached your collection limit."} />
+      )}
 
       {/* Collections Grid */}
       {isError ? (
@@ -173,11 +202,16 @@ export default function CollectionsPage() {
                 </div>
                 <Button
                   variant="outline"
-                  disabled={convertMutation.isPending}
+                  disabled={convertMutation.isPending || collectionLimit.isAtLimit}
+                  title={collectionLimit.isAtLimit ? collectionLimit.message ?? undefined : undefined}
                   onClick={() => handleConvert(col.id)}
-                  className="shrink-0 h-7 rounded-full text-[10px] font-bold px-3"
+                  className={cn(
+                    "shrink-0 h-7 rounded-full text-[10px] font-bold px-3 flex items-center gap-1",
+                    collectionLimit.isAtLimit && "opacity-50 cursor-not-allowed",
+                  )}
                 >
                   Make it mine
+                  {collectionLimit.isAtLimit && <ProBadge />}
                 </Button>
               </div>
             ))}
@@ -253,13 +287,20 @@ export default function CollectionsPage() {
               </Button>
               <Button
                 type="submit"
-                disabled={createMutation.isPending}
-                className="flex-1 h-10 rounded-full bg-primary text-white"
+                disabled={createMutation.isPending || collectionLimit.isAtLimit}
+                title={collectionLimit.isAtLimit ? collectionLimit.message ?? undefined : undefined}
+                className={cn(
+                  "flex-1 h-10 rounded-full bg-primary text-white",
+                  collectionLimit.isAtLimit && "opacity-50 cursor-not-allowed",
+                )}
               >
-                {createMutation.isPending ? "Creating..." : "Create Collection"}
+                {createMutation.isPending ? "Creating..." : collectionLimit.isAtLimit ? "Limit reached" : "Create Collection"}
               </Button>
             </div>
 
+            {collectionLimit.isAtLimit && (
+              <PlanLimitNotice message={collectionLimit.message ?? "You've reached your collection limit."} />
+            )}
           </form>
         </DialogContent>
       </Dialog>

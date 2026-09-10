@@ -18,6 +18,8 @@ import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
 import { getPlatformFallback } from "@/lib/platform-fallback";
 import { QueryErrorState } from "@/components/query-error-state";
+import { usePlanLimit } from "@/hooks/use-plan-limit";
+import { PlanLimitNotice, LimitDot } from "@/components/plan-limit-notice";
 
 const FILTER_TYPE: Record<string, MemoryType | undefined> = {
   all: undefined,
@@ -41,6 +43,7 @@ export default function MemoriesPage() {
     limit: 100,
   });
   const memories = data?.items ?? [];
+  const memoryLimit = usePlanLimit("memory_count");
   // Derived from the live (auto-refetching) list rather than a frozen
   // snapshot, so the drawer picks up enrichment as soon as it lands instead
   // of staying stuck on "Still processing" until it's closed and reopened.
@@ -94,14 +97,22 @@ export default function MemoriesPage() {
 
           <Link
             href="/app"
+            title={memoryLimit.isAtLimit ? memoryLimit.message ?? undefined : undefined}
             className={cn(
               buttonVariants({ variant: "default", size: "sm" }),
-              "rounded-full px-4 text-xs font-bold bg-primary text-white flex items-center gap-1.5"
+              "relative rounded-full px-4 text-xs font-bold bg-primary text-white flex items-center gap-1.5"
             )}
           >
             <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-4 w-4" /> Save
+            {memoryLimit.isAtLimit && <LimitDot />}
           </Link>
         </div>
+
+        {memoryLimit.isAtLimit && (
+          <div className="md:max-w-10/12 m-auto">
+            <PlanLimitNotice message={memoryLimit.message ?? "You've reached your memory limit."} />
+          </div>
+        )}
 
         {/* Toolbar */}
         <div className="flex flex-col gap-4 pt-2 md:max-w-10/12 m-auto">
