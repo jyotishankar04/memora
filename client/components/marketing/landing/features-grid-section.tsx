@@ -17,6 +17,7 @@ type FeatureCard = {
   title: string;
   description: string;
   image: string;
+  imageDark: string;
   span: "wide" | "narrow";
 };
 
@@ -26,12 +27,14 @@ const featureRows: FeatureCard[][] = [
       title: "Save anything, in one tap.",
       description: "Websites, screenshots, videos, or a quick note — capture it before you forget it, from anywhere.",
       image: "/marketing/features/quick-capture.png",
+      imageDark: "/marketing/features/quick-capture-dark.png",
       span: "wide",
     },
     {
       title: "Search that understands you.",
       description: "Describe what you remember. SaveForLatter finds it, even if you don't recall the exact words.",
       image: "/marketing/features/smart-search.png",
+      imageDark: "/marketing/features/smart-search-dark.png",
       span: "narrow",
     },
   ],
@@ -40,18 +43,21 @@ const featureRows: FeatureCard[][] = [
       title: "Organizes itself, automatically.",
       description: "No folders, no tags to maintain. Every memory is understood and structured for you.",
       image: "/marketing/features/auto-organize.png",
+      imageDark: "/marketing/features/auto-organize-dark.png",
       span: "narrow",
     },
     {
       title: "Every format, one place.",
       description: "Websites, videos, notes, screenshots, and more — all living together, all searchable.",
       image: "/marketing/features/all-formats.png",
+      imageDark: "/marketing/features/all-formats-dark.png",
       span: "narrow",
     },
     {
       title: "Everywhere you are.",
       description: "Web and browser extension today, mobile next — your memory follows you across devices.",
       image: "/marketing/features/everywhere.png",
+      imageDark: "/marketing/features/everywhere-dark.png",
       span: "narrow",
     },
   ],
@@ -100,7 +106,14 @@ export default function FeaturesGridSection() {
                         alt={feature.title}
                         fill
                         sizes="(min-width: 640px) 50vw, 100vw"
-                        className="object-cover"
+                        className="object-cover dark:hidden"
+                      />
+                      <Image
+                        src={feature.imageDark}
+                        alt={feature.title}
+                        fill
+                        sizes="(min-width: 640px) 50vw, 100vw"
+                        className="hidden object-cover dark:block"
                       />
                     </motion.div>
                   </div>
