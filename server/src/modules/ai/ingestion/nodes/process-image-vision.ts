@@ -1,10 +1,17 @@
 import { analyzeImage } from "./lib/analyze-image";
 import { logNode } from "../log";
 import type { IngestionStateType, IngestionUpdate } from "../state";
+import { isWithinLimit } from "../../../plans/plans.service";
+import { PlanLimitType } from "../../../../db/enums";
 
 export async function processImageVision(state: IngestionStateType): Promise<IngestionUpdate> {
   if (!state.attachmentUrl) {
     logNode(state.memoryId, "processImageVision", { skipped: "no attachment" });
+    return { rawContent: "" };
+  }
+
+  if (!(await isWithinLimit(state.userId, PlanLimitType.AI_MONTHLY_VISION_QUERIES))) {
+    logNode(state.memoryId, "processImageVision", { skipped: "vision quota exceeded" });
     return { rawContent: "" };
   }
 

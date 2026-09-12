@@ -45,7 +45,10 @@ interface RetryableConfig extends InternalAxiosRequestConfig {
  * auth cookies along with every request — the backend owns the
  * access/refresh tokens entirely, this client never reads or stores them.
  */
-const api = axios.create({
+// Exported for the rare caller that needs to bypass the {success,data,meta,
+// error} envelope entirely — e.g. a file download (see lib/data-export.ts),
+// which isn't JSON at all. Everything else should go through apiFetch below.
+export const api = axios.create({
   baseURL: API_URL,
   withCredentials: true,
   headers: { "Content-Type": "application/json" },

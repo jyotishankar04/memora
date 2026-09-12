@@ -6,7 +6,13 @@ import { Button } from "@/components/ui/button";
 import { getMyPlan, formatLimitValue, formatPriceMinor, PLAN_LIMIT_LABEL, type PlanLimitType } from "@/lib/plans";
 import { QueryErrorState } from "@/components/query-error-state";
 
-const LIMIT_ORDER: PlanLimitType[] = ["memory_count", "ai_monthly_queries", "storage_mb", "collection_count"];
+const LIMIT_ORDER: PlanLimitType[] = [
+  "memory_count",
+  "ai_monthly_queries",
+  "ai_monthly_vision_queries",
+  "storage_mb",
+  "collection_count",
+];
 
 export default function BillingSettingsPage() {
   const { data, isLoading, isError, refetch } = useQuery({

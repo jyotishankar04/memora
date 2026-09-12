@@ -70,6 +70,7 @@ export enum CollectionSource {
 export enum PlanLimitType {
   MEMORY_COUNT = "memory_count",
   AI_MONTHLY_QUERIES = "ai_monthly_queries",
+  AI_MONTHLY_VISION_QUERIES = "ai_monthly_vision_queries",
   STORAGE_MB = "storage_mb",
   COLLECTION_COUNT = "collection_count",
 }

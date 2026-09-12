@@ -9,7 +9,13 @@ import { toast } from "@/components/ui/toast";
 import { listAdminPlans, createPlan, updatePlan, type AdminPlan, type PlanLimitInput } from "@/lib/admin-plans";
 import { PLAN_LIMIT_LABEL, formatPriceMinor, type PlanLimitType } from "@/lib/plans";
 
-const LIMIT_TYPES: PlanLimitType[] = ["memory_count", "ai_monthly_queries", "storage_mb", "collection_count"];
+const LIMIT_TYPES: PlanLimitType[] = [
+  "memory_count",
+  "ai_monthly_queries",
+  "ai_monthly_vision_queries",
+  "storage_mb",
+  "collection_count",
+];
 
 type Draft = {
   name: string;

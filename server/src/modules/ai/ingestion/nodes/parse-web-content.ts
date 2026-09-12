@@ -3,6 +3,8 @@ import { extractPdfContent } from "./lib/parse-pdf";
 import { analyzeImage } from "./lib/analyze-image";
 import { logNode } from "../log";
 import type { IngestionStateType, IngestionUpdate } from "../state";
+import { isWithinLimit } from "../../../plans/plans.service";
+import { PlanLimitType } from "../../../../db/enums";
 
 const MAX_CONTENT_LENGTH = 20000;
 
@@ -68,8 +70,17 @@ export async function parseWebContent(state: IngestionStateType): Promise<Ingest
 
   if (fetchResult.status === "success" && fetchResult.contentType?.includes("image/")) {
     const imageUrl = fetchResult.finalUrl ?? state.url;
-    const rawContent = await analyzeImage(imageUrl, { userId: state.userId, requestType: "ingestion:vision", memoryId: state.memoryId });
-    logNode(state.memoryId, "parseWebContent", { url: state.url, fetchStatus: fetchResult.status, kind: "image", contentLength: rawContent.length });
+    const withinVisionLimit = await isWithinLimit(state.userId, PlanLimitType.AI_MONTHLY_VISION_QUERIES);
+    const rawContent = withinVisionLimit
+      ? await analyzeImage(imageUrl, { userId: state.userId, requestType: "ingestion:vision", memoryId: state.memoryId })
+      : "";
+    logNode(state.memoryId, "parseWebContent", {
+      url: state.url,
+      fetchStatus: fetchResult.status,
+      kind: "image",
+      contentLength: rawContent.length,
+      ...(withinVisionLimit ? {} : { skipped: "vision quota exceeded" }),
+    });
     return {
       rawContent,
       platform,

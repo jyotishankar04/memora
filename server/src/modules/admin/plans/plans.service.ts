@@ -35,6 +35,7 @@ const DEFAULT_PLANS: DefaultPlanSeed[] = [
     limits: [
       { limitType: PlanLimitType.MEMORY_COUNT, limitValue: 100 },
       { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 20 },
+      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 20 },
       { limitType: PlanLimitType.STORAGE_MB, limitValue: 250 },
       { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 5 },
     ],
@@ -51,6 +52,7 @@ const DEFAULT_PLANS: DefaultPlanSeed[] = [
     limits: [
       { limitType: PlanLimitType.MEMORY_COUNT, limitValue: null },
       { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 300 },
+      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 300 },
       { limitType: PlanLimitType.STORAGE_MB, limitValue: 5000 },
       { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 100 },
     ],
@@ -67,10 +69,11 @@ const DEFAULT_PLANS: DefaultPlanSeed[] = [
     limits: [
       { limitType: PlanLimitType.MEMORY_COUNT, limitValue: null },
       { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 2000 },
+      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 2000 },
       { limitType: PlanLimitType.STORAGE_MB, limitValue: 50000 },
       { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: null },
     ],
-    features: { publicCollections: true },
+    features: { publicCollections: true, dataExport: true },
   },
 ];
 

@@ -3,7 +3,9 @@ import { ApiResponse } from "../../shared/response/api-response";
 import {
   createMemory,
   deleteMemory,
+  exportAllMemories,
   getMemoryById,
+  getMemoryGraph,
   getProcessingStatus,
   listMemories,
   refreshPreview,
@@ -57,5 +59,21 @@ export class MemoryController {
   static async processingStatus(req: Request, res: Response) {
     const status = await getProcessingStatus(req.user!.id, req.params.id as string);
     res.status(200).json(ApiResponse.success(status));
+  }
+
+  static async graph(req: Request, res: Response) {
+    const graph = await getMemoryGraph(req.user!.id);
+    res.status(200).json(ApiResponse.success(graph));
+  }
+
+  // The one non-JSON-envelope response in this codebase — a file download,
+  // not an ApiResponse-wrapped result. exportAllMemories throws the
+  // FEATURE_NOT_AVAILABLE AppError itself (same pattern as
+  // collection.service.ts's shareCollection) before any of this runs.
+  static async exportAll(req: Request, res: Response) {
+    const items = await exportAllMemories(req.user!.id);
+    res.setHeader("Content-Type", "application/json");
+    res.setHeader("Content-Disposition", `attachment; filename="saveforlatter-export-${Date.now()}.json"`);
+    res.send(JSON.stringify(items, null, 2));
   }
 }

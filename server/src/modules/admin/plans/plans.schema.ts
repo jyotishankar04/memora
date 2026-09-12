@@ -5,6 +5,7 @@ const planLimitInputSchema = z.object({
   limitType: z.enum([
     PlanLimitType.MEMORY_COUNT,
     PlanLimitType.AI_MONTHLY_QUERIES,
+    PlanLimitType.AI_MONTHLY_VISION_QUERIES,
     PlanLimitType.STORAGE_MB,
     PlanLimitType.COLLECTION_COUNT,
   ]),

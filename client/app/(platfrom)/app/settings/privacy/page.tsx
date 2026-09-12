@@ -1,28 +1,63 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { usePlanFeature } from "@/hooks/use-plan-limit";
+import { ProBadge } from "@/components/plan-limit-notice";
+import { downloadMemoriesExport } from "@/lib/data-export";
+import { toast } from "@/components/ui/toast";
 
 export default function PrivacySettingsPage() {
+  const dataExport = usePlanFeature("dataExport");
+  const [exporting, setExporting] = useState(false);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      await downloadMemoriesExport();
+    } catch {
+      toast.add({ title: "Export failed. Please try again.", type: "error" });
+    } finally {
+      setExporting(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-md text-xs font-semibold">
-      
+
       <div className="space-y-1 pb-4 border-b border-border/25">
         <h3 className="text-sm font-bold text-foreground">Privacy & Data</h3>
         <p className="text-[10px] text-muted-foreground">Manage your personal databases exports.</p>
       </div>
 
       <div className="space-y-4 text-xs font-semibold text-foreground/80">
-        
+
         {/* Export Data */}
         <div className="p-4 border border-border bg-card rounded-xl flex items-center justify-between">
           <div>
-            <h4 className="text-foreground">Export all memories</h4>
+            <h4 className="text-foreground flex items-center gap-1.5">
+              Export all memories
+              {!dataExport.loading && !dataExport.enabled && <ProBadge />}
+            </h4>
             <p className="text-[9.5px] text-muted-foreground mt-0.5 font-medium">Download JSON dump representing all parsed cards metadata.</p>
           </div>
-          <Button disabled title="Coming soon" className="h-8 rounded-full text-[10px] font-bold border border-border bg-transparent text-muted-foreground opacity-60 cursor-not-allowed">
-            Coming soon
-          </Button>
+          {dataExport.enabled ? (
+            <Button
+              onClick={handleExport}
+              disabled={exporting}
+              className="h-8 rounded-full text-[10px] font-bold"
+            >
+              {exporting ? "Exporting..." : "Export"}
+            </Button>
+          ) : (
+            <Button
+              disabled
+              title={dataExport.loading ? undefined : "Exporting your data is a Pro feature"}
+              className="h-8 rounded-full text-[10px] font-bold border border-border bg-transparent text-muted-foreground opacity-60 cursor-not-allowed"
+            >
+              Pro feature
+            </Button>
+          )}
         </div>
 
         {/* Download media */}
@@ -42,7 +77,7 @@ export default function PrivacySettingsPage() {
             <h4 className="text-red-500 font-bold">Danger Zone</h4>
             <p className="text-[9.5px] text-muted-foreground mt-0.5 font-medium">Irreversible actions regarding account records.</p>
           </div>
-          
+
           <div className="flex gap-2">
             <button
               disabled

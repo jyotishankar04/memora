@@ -105,6 +105,7 @@ export const collectionSourceEnum = pgEnum("collection_source", [
 export const planLimitTypeEnum = pgEnum("plan_limit_type", [
   PlanLimitType.MEMORY_COUNT,
   PlanLimitType.AI_MONTHLY_QUERIES,
+  PlanLimitType.AI_MONTHLY_VISION_QUERIES,
   PlanLimitType.STORAGE_MB,
   PlanLimitType.COLLECTION_COUNT,
 ]);

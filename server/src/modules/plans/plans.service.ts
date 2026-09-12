@@ -115,7 +115,45 @@ export async function getCurrentUsage(userId: string, limitType: PlanLimitType, 
         );
       return row?.value ?? 0;
     }
+    case PlanLimitType.AI_MONTHLY_VISION_QUERIES: {
+      // Same exact-match convention as AI_MONTHLY_QUERIES above — counts
+      // "ingestion:vision" rows only, one per image actually analyzed
+      // (process-image-vision.ts and parse-web-content.ts's image branch).
+      const [row] = await dbClient
+        .select({ value: sql<number>`count(*)::int` })
+        .from(aiUsageLogs)
+        .where(
+          and(
+            eq(aiUsageLogs.userId, userId),
+            eq(aiUsageLogs.requestType, "ingestion:vision"),
+            gte(aiUsageLogs.createdAt, startOfCurrentMonth()),
+          ),
+        );
+      return row?.value ?? 0;
+    }
   }
+}
+
+interface LimitCheckResult {
+  ok: boolean;
+  plan: Awaited<ReturnType<typeof resolveEffectivePlan>>["plan"];
+  limitValue: number | null;
+  current: number;
+}
+
+async function checkLimit(
+  userId: string,
+  limitType: PlanLimitType,
+  delta: number,
+  dbClient: DbOrTx,
+): Promise<LimitCheckResult> {
+  const { plan } = await resolveEffectivePlan(userId, dbClient);
+  const limits = await getPlanLimits(plan.id, dbClient);
+  const limitValue = limits[limitType];
+  if (limitValue == null) return { ok: true, plan, limitValue: null, current: 0 }; // unlimited
+
+  const current = await getCurrentUsage(userId, limitType, dbClient);
+  return { ok: current + delta <= limitValue, plan, limitValue, current };
 }
 
 /**
@@ -130,20 +168,31 @@ export async function assertWithinLimit(
   delta: number,
   dbClient: DbOrTx = db,
 ): Promise<void> {
-  const { plan } = await resolveEffectivePlan(userId, dbClient);
-  const limits = await getPlanLimits(plan.id, dbClient);
-  const limitValue = limits[limitType];
-  if (limitValue == null) return; // unlimited
-
-  const current = await getCurrentUsage(userId, limitType, dbClient);
-  if (current + delta > limitValue) {
+  const result = await checkLimit(userId, limitType, delta, dbClient);
+  if (!result.ok) {
     throw new AppError(
-      `This would exceed your ${plan.name} plan's limit (${limitValue}).`,
+      `This would exceed your ${result.plan.name} plan's limit (${result.limitValue}).`,
       403,
       "PLAN_LIMIT_EXCEEDED",
-      { limitType, limitValue, current, delta },
+      { limitType, limitValue: result.limitValue, current: result.current, delta },
     );
   }
+}
+
+/**
+ * Boolean counterpart to assertWithinLimit, for callers that should degrade
+ * gracefully on exceeding a limit rather than fail outright — e.g. the
+ * ingestion pipeline skipping vision analysis on an over-quota image instead
+ * of failing the whole memory.
+ */
+export async function isWithinLimit(
+  userId: string,
+  limitType: PlanLimitType,
+  delta = 1,
+  dbClient: DbOrTx = db,
+): Promise<boolean> {
+  const result = await checkLimit(userId, limitType, delta, dbClient);
+  return result.ok;
 }
 
 /**

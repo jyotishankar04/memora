@@ -1,6 +1,11 @@
 import { apiFetch } from "@/lib/auth";
 
-export type PlanLimitType = "memory_count" | "ai_monthly_queries" | "storage_mb" | "collection_count";
+export type PlanLimitType =
+  | "memory_count"
+  | "ai_monthly_queries"
+  | "ai_monthly_vision_queries"
+  | "storage_mb"
+  | "collection_count";
 
 export interface Plan {
   id: string;
@@ -51,6 +56,7 @@ export async function listPublicPlans(): Promise<PublicPlan[]> {
 export const PLAN_LIMIT_LABEL: Record<PlanLimitType, string> = {
   memory_count: "Memories",
   ai_monthly_queries: "Ask SaveForLatter queries / month",
+  ai_monthly_vision_queries: "Vision analysis / month",
   storage_mb: "Storage",
   collection_count: "Collections",
 };
@@ -68,7 +74,13 @@ export function formatPriceMinor(priceMinor: number, currency: string): string {
   return `${symbol}${(priceMinor / 100).toLocaleString()}`;
 }
 
-const LIMIT_ORDER: PlanLimitType[] = ["memory_count", "ai_monthly_queries", "storage_mb", "collection_count"];
+const LIMIT_ORDER: PlanLimitType[] = [
+  "memory_count",
+  "ai_monthly_queries",
+  "ai_monthly_vision_queries",
+  "storage_mb",
+  "collection_count",
+];
 
 /**
  * Turns a plan's real, admin-editable limits into pricing-page bullet copy
