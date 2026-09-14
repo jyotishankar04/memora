@@ -6,9 +6,11 @@ import { MemoryType } from "./enums";
 import { seedDefaultFlags } from "../modules/feature-flags/feature-flags.service";
 import { seedDefaultPlans } from "../modules/admin/plans/plans.service";
 
+// Access levels only — billing tier lives in `plans`, never here. A role
+// named after a paid tier would be a second, unenforced source of truth
+// for what someone has paid for.
 const defaultRoles = [
-  { name: "free_user", description: "Default role granted to every new user on signup", isSystem: true },
-  { name: "pro_user", description: "Paid tier with expanded limits", isSystem: true },
+  { name: "user", description: "Default role granted to every new user on signup", isSystem: true },
   { name: "admin", description: "Full administrative access", isSystem: true },
 ];
 

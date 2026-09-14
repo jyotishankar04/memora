@@ -176,7 +176,7 @@ export default function MemoryDetailPage() {
           <AlertDialogHeader>
             <AlertDialogTitle>Move &quot;{memory.title}&quot; to trash?</AlertDialogTitle>
             <AlertDialogDescription>
-              You can restore it from Trash within 30 days.
+              You can restore it from Trash within 15 days.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>

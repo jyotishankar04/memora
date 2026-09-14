@@ -6,17 +6,21 @@ import { AppError } from "../../shared/errors/app-error";
 import { getClientIp } from "../../shared/utils/device-fingerprint";
 import { isProviderEnabled, isSignupsEnabled } from "../feature-flags/feature-flags.service";
 import {
+  OAUTH_NEXT_COOKIE,
   OAUTH_STATE_COOKIE,
   REFERRAL_CODE_COOKIE,
   REFRESH_TOKEN_COOKIE,
   clearAuthCookies,
+  clearOAuthNextCookie,
   clearOAuthStateCookie,
   clearReferralCodeCookie,
   setAuthCookies,
+  setOAuthNextCookie,
   setOAuthStateCookie,
   setReferralCodeCookie,
 } from "../../shared/utils/cookies";
 import { recordReferralSignup } from "../referrals/referrals.service";
+import { claimPendingGrantsForEmail } from "../share/share.service";
 import {
   assignDefaultRole,
   buildGithubAuthUrl,
@@ -35,11 +39,33 @@ function loginUrl(error: string): string {
   return `${env.FRONTEND_URL}/auth/login?error=${error}`;
 }
 
+/**
+ * Where to send someone after sign-in, when they arrived from a shared
+ * link ("sign in to view this").
+ *
+ * The allowlist is intentionally one exact shape — a shared-link path and
+ * nothing else. This value comes in on a query string that is reachable
+ * straight from an invite email, so anything looser is an open redirect
+ * with a credible delivery mechanism attached. Rejecting rather than
+ * sanitizing keeps that impossible to get subtly wrong: no protocol-relative
+ * "//evil.com", no "/app/settings", no encoded traversal.
+ */
+const SAFE_NEXT_PATH = /^\/s\/[A-Za-z0-9_-]{1,32}$/;
+
+export function sanitizeNextPath(next: unknown): string | null {
+  return typeof next === "string" && SAFE_NEXT_PATH.test(next) ? next : null;
+}
+
 async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (code: string) => Promise<OAuthProfile>) {
   const cookieState = req.cookies?.[OAUTH_STATE_COOKIE];
   const referralCode = req.cookies?.[REFERRAL_CODE_COOKIE] as string | undefined;
+  // Re-validated on the way out as well as on the way in: the cookie is
+  // ours and httpOnly, but the redirect is the dangerous side, so the check
+  // belongs where the value is used.
+  const nextPath = sanitizeNextPath(req.cookies?.[OAUTH_NEXT_COOKIE]);
   clearOAuthStateCookie(res);
   clearReferralCodeCookie(res);
+  clearOAuthNextCookie(res);
 
   const { code, state, error: providerError } = req.query as { code?: string; state?: string; error?: string };
 
@@ -64,6 +90,12 @@ async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (c
       }
     }
 
+    // Runs on every login, not just signup: an invite that arrives between
+    // account creation and this point would otherwise sit pending until the
+    // next sign-in. Only claims grants when the provider vouched for the
+    // email — see claimPendingGrantsForEmail.
+    await claimPendingGrantsForEmail(user.id, user.email, user.emailVerified).catch(() => {});
+
     const userWithRoles = await getUserWithRoles(user.id);
     const tokens = await issueTokenPair(
       user,
@@ -73,7 +105,15 @@ async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (c
     );
 
     setAuthCookies(res, tokens);
-    res.redirect(`${env.FRONTEND_URL}${userWithRoles.onboardingCompleted ? "/app" : "/onboard"}`);
+
+    // Onboarding still comes first for a new account, but carries the
+    // destination through so an invited user finishes on the thing they
+    // were invited to rather than a generic dashboard.
+    const destination = userWithRoles.onboardingCompleted
+      ? (nextPath ?? "/app")
+      : `/onboard${nextPath ? `?next=${encodeURIComponent(nextPath)}` : ""}`;
+
+    res.redirect(`${env.FRONTEND_URL}${destination}`);
   } catch {
     res.redirect(loginUrl("oauth_failed"));
   }
@@ -88,6 +128,8 @@ export class AuthController {
     setOAuthStateCookie(res, state);
     const ref = req.query.ref as string | undefined;
     if (ref) setReferralCodeCookie(res, ref);
+    const next = sanitizeNextPath(req.query.next);
+    if (next) setOAuthNextCookie(res, next);
     res.redirect(buildGoogleAuthUrl(state));
   }
 
@@ -99,6 +141,8 @@ export class AuthController {
     setOAuthStateCookie(res, state);
     const ref = req.query.ref as string | undefined;
     if (ref) setReferralCodeCookie(res, ref);
+    const next = sanitizeNextPath(req.query.next);
+    if (next) setOAuthNextCookie(res, next);
     res.redirect(buildGithubAuthUrl(state));
   }
 

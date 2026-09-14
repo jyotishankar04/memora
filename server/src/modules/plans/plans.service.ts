@@ -1,7 +1,7 @@
 import { and, desc, eq, gte, isNull, or, sql, sum } from "drizzle-orm";
 import { db, type DbOrTx } from "../../db";
-import { attachments, collections, memories, aiUsageLogs, plans, planLimits, userPlanAssignments } from "../../db/schema";
-import { CollectionSource, PlanAssignmentStatus, PlanLimitType } from "../../db/enums";
+import { attachments, collections, memories, aiUsageLogs, plans, planLimits, shares, userPlanAssignments } from "../../db/schema";
+import { CollectionSource, PlanAssignmentStatus, PlanLimitType, ShareLinkAccess } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
 
 export type PlanLimits = Partial<Record<PlanLimitType, number | null>>;
@@ -129,6 +129,17 @@ export async function getCurrentUsage(userId: string, limitType: PlanLimitType, 
             gte(aiUsageLogs.createdAt, startOfCurrentMonth()),
           ),
         );
+      return row?.value ?? 0;
+    }
+    case PlanLimitType.PUBLIC_SHARE_COUNT: {
+      // Only links actually set to "public" count against the cap — an
+      // invite-only or password-protected share is gated by a features flag
+      // instead, not by this quota. The `shares` table is imported directly
+      // rather than calling share.service: that module imports this one.
+      const [row] = await dbClient
+        .select({ value: sql<number>`count(*)::int` })
+        .from(shares)
+        .where(and(eq(shares.ownerId, userId), eq(shares.linkAccess, ShareLinkAccess.PUBLIC)));
       return row?.value ?? 0;
     }
   }

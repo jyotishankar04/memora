@@ -12,6 +12,7 @@ const LIMIT_ORDER: PlanLimitType[] = [
   "ai_monthly_vision_queries",
   "storage_mb",
   "collection_count",
+  "public_share_count",
 ];
 
 export default function BillingSettingsPage() {

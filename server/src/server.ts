@@ -3,6 +3,7 @@ import { createApp } from "./app";
 import { env } from "./config/env";
 import { logger } from "./shared/utils/logger";
 import { startIngestionWorker } from "./modules/ai";
+import { startTrashPurgeWorker } from "./modules/memory/trash-purge.job";
 
 const app = createApp();
 const port = env.PORT;
@@ -18,4 +19,11 @@ try {
   logger.info("Ingestion worker started");
 } catch (err) {
   logger.error({ err }, "Failed to start ingestion worker — AI ingestion will not run");
+}
+
+try {
+  startTrashPurgeWorker();
+  logger.info("Trash purge worker started");
+} catch (err) {
+  logger.error({ err }, "Failed to start trash purge worker — trashed memories will not be auto-deleted");
 }

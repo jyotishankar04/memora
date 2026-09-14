@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import React, { Suspense, useState, useEffect } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { SparklesIcon as Sparkles, CheckIcon as Check, ArrowRight01Icon as ArrowRight, GlobeIcon as Globe, LaptopIcon as Laptop, SmartPhone01Icon as Smartphone, Video01Icon as Video, CodeIcon as Code, Image01Icon as Image, FileTextIcon as FileText, StickyNote01Icon as StickyNote, SlidersHorizontalIcon as Sliders, PlusIcon as Plus } from "@hugeicons/core-free-icons";
@@ -36,8 +36,17 @@ const captureChannels = [
   { label: "Quick Save", desc: "Paste anything instantly", icon: Laptop },
 ];
 
-export default function OnboardingPage() {
+function OnboardingFlow() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+
+  // Someone who arrived from a shared link finishes on that link rather
+  // than a generic dashboard. The OAuth callback puts ?next here, and only
+  // ever after validating it against an exact /s/<slug> allowlist — this
+  // re-checks the same shape, since by the time it reaches the browser it
+  // is once again just a query param anyone can edit.
+  const requestedNext = searchParams.get("next");
+  const nextDestination = requestedNext && /^\/s\/[A-Za-z0-9_-]{1,32}$/.test(requestedNext) ? requestedNext : "/app";
   const [step, setStep] = useState(1);
   const [progressWidth, setProgressWidth] = useState("14%");
 
@@ -555,7 +564,7 @@ export default function OnboardingPage() {
             </div>
 
             <Button
-              onClick={() => router.push("/app")}
+              onClick={() => router.push(nextDestination)}
               className="w-full max-w-xs h-11 rounded-full font-medium flex items-center justify-center gap-1.5 shadow-md"
             >
               Enter SaveForLatter <HugeiconsIcon icon={ArrowRight} strokeWidth={2.25} className="h-4 w-4" />
@@ -577,5 +586,19 @@ export default function OnboardingPage() {
       `}</style>
 
     </div>
+  );
+}
+
+/**
+ * useSearchParams() opts a page out of static prerendering unless it sits
+ * under a Suspense boundary — `next build` fails on it, `next dev` does
+ * not. The flow itself renders nothing meaningful until the auth check
+ * resolves, so a null fallback costs nothing here.
+ */
+export default function OnboardingPage() {
+  return (
+    <Suspense fallback={null}>
+      <OnboardingFlow />
+    </Suspense>
   );
 }

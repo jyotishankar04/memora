@@ -1,4 +1,4 @@
-import rateLimit from "express-rate-limit";
+import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { ApiResponse } from "../response/api-response";
 
 const rateLimitHandler = (_req: unknown, res: import("express").Response) => {
@@ -21,4 +21,36 @@ export const refreshRateLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   handler: rateLimitHandler,
+});
+
+// Guessing a share password. Keyed per link as well as per IP so one
+// attacker hammering one link can't lock every other visitor out of it.
+export const shareUnlockRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler,
+  keyGenerator: (req) => `${ipKeyGenerator(req.ip ?? "")}:${req.params.slug ?? ""}`,
+});
+
+// Blunts slug enumeration. Generous, because one person browsing a shared
+// collection makes several of these.
+export const sharePublicRateLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler,
+});
+
+// Access-request spam. Per account, not per IP — requesting requires being
+// signed in, so the account is the meaningful identity.
+export const shareRequestRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 20,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler,
+  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip ?? ""),
 });

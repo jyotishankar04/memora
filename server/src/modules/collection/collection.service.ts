@@ -1,10 +1,16 @@
-import crypto from "node:crypto";
 import { and, count, eq } from "drizzle-orm";
 import { db } from "../../db";
-import { collectionMemories, collections, memories } from "../../db/schema";
-import { CollectionSource, MemoryType, PlanLimitType } from "../../db/enums";
+import { collectionMemories, collections } from "../../db/schema";
+import { CollectionSource, MemoryType, PlanLimitType, ShareResourceType } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
-import { assertWithinLimit, hasFeature } from "../plans/plans.service";
+import { assertWithinLimit } from "../plans/plans.service";
+import { getSharedPayload, resolveShareAccess } from "../share/share.access";
+import {
+  getCollectionShareState,
+  getCollectionShareStates,
+  publishCollection,
+  unpublishCollection,
+} from "../share/share.service";
 import type { CreateCollectionInput, ListCollectionsQuery, UpdateCollectionInput } from "./collection.schema";
 
 export interface CollectionResponse {
@@ -50,15 +56,13 @@ export async function listCollections(userId: string, query: ListCollectionsQuer
     conditions.push(eq(collections.source, CollectionSource.USER));
   }
 
-  return db
+  const rows = await db
     .select({
       id: collections.id,
       name: collections.name,
       icon: collections.icon,
       description: collections.description,
       source: collections.source,
-      isPublic: collections.isPublic,
-      publicSlug: collections.publicSlug,
       createdAt: collections.createdAt,
       updatedAt: collections.updatedAt,
       memoryCount: count(collectionMemories.memoryId),
@@ -67,6 +71,16 @@ export async function listCollections(userId: string, query: ListCollectionsQuer
     .leftJoin(collectionMemories, eq(collectionMemories.collectionId, collections.id))
     .where(and(...conditions))
     .groupBy(collections.id);
+
+  // isPublic/publicSlug now live on `shares`, not on this table. They're
+  // still returned so the existing client keeps working unchanged until the
+  // new share UI lands — see the note on shareCollection below.
+  const states = await getCollectionShareStates(rows.map((row) => row.id));
+
+  return rows.map((row) => ({
+    ...row,
+    ...(states.get(row.id) ?? { isPublic: false, publicSlug: null }),
+  }));
 }
 
 export async function createCollection(
@@ -83,7 +97,8 @@ export async function createCollection(
     .values({ userId, name: input.name, icon: input.icon, description: input.description, source: CollectionSource.USER })
     .returning();
 
-  return { ...row, memoryCount: 0 };
+  // A brand-new collection has no share row yet.
+  return { ...row, memoryCount: 0, isPublic: false, publicSlug: null };
 }
 
 export async function updateCollection(
@@ -111,7 +126,7 @@ export async function updateCollection(
     .from(collectionMemories)
     .where(eq(collectionMemories.collectionId, id));
 
-  return { ...row, memoryCount };
+  return { ...row, memoryCount, ...(await getCollectionShareState(id)) };
 }
 
 /**
@@ -148,7 +163,7 @@ export async function convertToUser(userId: string, id: string): Promise<Collect
     .from(collectionMemories)
     .where(eq(collectionMemories.collectionId, id));
 
-  return { ...row, memoryCount };
+  return { ...row, memoryCount, ...(await getCollectionShareState(id)) };
 }
 
 export async function deleteCollection(userId: string, id: string): Promise<void> {
@@ -162,51 +177,35 @@ export async function deleteCollection(userId: string, id: string): Promise<void
   }
 }
 
-function generatePublicSlug(): string {
-  return crypto.randomBytes(12).toString("base64url");
-}
-
 /**
- * Pro-only perk (plans.features.publicCollections). The slug is generated
- * once and kept forever once assigned — re-sharing after an unshare reuses
- * the same slug rather than rotating it, so a link a user already handed
- * out doesn't silently die just because they paused sharing.
+ * Legacy endpoint, now a thin wrapper over the sharing module.
+ *
+ * Publishing is no longer a Pro perk gated by plans.features — it's free
+ * and capped by the PUBLIC_SHARE_COUNT plan limit, which publishCollection
+ * enforces. The slug is still minted once and kept across unshare/reshare,
+ * which is now a property of the share row rather than of this table.
+ *
+ * Kept only so the current client keeps working; it goes away with the
+ * is_public/public_slug columns once the new share UI ships.
  */
 export async function shareCollection(userId: string, id: string): Promise<CollectionResponse> {
-  const [existing] = await db
+  await publishCollection(userId, id);
+  return getCollectionResponse(userId, id);
+}
+
+/** Legacy endpoint — see shareCollection. Keeps the slug, as it always did. */
+export async function unshareCollection(userId: string, id: string): Promise<CollectionResponse> {
+  await unpublishCollection(userId, id);
+  return getCollectionResponse(userId, id);
+}
+
+/** Shared helper for the two legacy share endpoints above. */
+async function getCollectionResponse(userId: string, id: string): Promise<CollectionResponse> {
+  const [row] = await db
     .select()
     .from(collections)
     .where(and(eq(collections.id, id), eq(collections.userId, userId)))
     .limit(1);
-
-  if (!existing) {
-    throw new AppError("Collection not found", 404, "NOT_FOUND");
-  }
-
-  if (!(await hasFeature(userId, "publicCollections"))) {
-    throw new AppError("Sharing collections publicly is a Pro feature", 403, "FEATURE_NOT_AVAILABLE");
-  }
-
-  const [row] = await db
-    .update(collections)
-    .set({ isPublic: true, publicSlug: existing.publicSlug ?? generatePublicSlug(), updatedAt: new Date() })
-    .where(eq(collections.id, id))
-    .returning();
-
-  const [{ value: memoryCount }] = await db
-    .select({ value: count() })
-    .from(collectionMemories)
-    .where(eq(collectionMemories.collectionId, id));
-
-  return { ...row, memoryCount };
-}
-
-export async function unshareCollection(userId: string, id: string): Promise<CollectionResponse> {
-  const [row] = await db
-    .update(collections)
-    .set({ isPublic: false, updatedAt: new Date() })
-    .where(and(eq(collections.id, id), eq(collections.userId, userId)))
-    .returning();
 
   if (!row) {
     throw new AppError("Collection not found", 404, "NOT_FOUND");
@@ -217,38 +216,30 @@ export async function unshareCollection(userId: string, id: string): Promise<Col
     .from(collectionMemories)
     .where(eq(collectionMemories.collectionId, id));
 
-  return { ...row, memoryCount };
+  return { ...row, memoryCount, ...(await getCollectionShareState(id)) };
 }
 
-/** Unauthenticated — looked up by slug alone, and only ever returns a collection that's currently public. */
+/**
+ * Legacy unauthenticated reader for /c/:slug.
+ *
+ * Delegates to the sharing module so there is exactly one place that
+ * decides whether a slug may be read — this used to be a second, parallel
+ * implementation of that rule, which is precisely the drift the new model
+ * exists to prevent. Only a genuinely public link resolves here; the
+ * password and request modes are unreachable through this route by design,
+ * since the old client has no UI for either.
+ */
 export async function getPublicCollection(slug: string): Promise<PublicCollectionResponse> {
-  const [collection] = await db
-    .select({ name: collections.name, icon: collections.icon, description: collections.description })
-    .from(collections)
-    .where(and(eq(collections.publicSlug, slug), eq(collections.isPublic, true)))
-    .limit(1);
+  const decision = await resolveShareAccess(slug, null, []);
 
-  if (!collection) {
+  if (decision.outcome !== "allow" || decision.share.resourceType !== ShareResourceType.COLLECTION) {
     throw new AppError("Collection not found", 404, "NOT_FOUND");
   }
 
-  const items = await db
-    .select({
-      id: memories.id,
-      type: memories.type,
-      title: memories.title,
-      url: memories.url,
-      description: memories.description,
-      content: memories.content,
-      faviconUrl: memories.faviconUrl,
-      previewImageUrl: memories.previewImageUrl,
-      createdAt: memories.createdAt,
-    })
-    .from(collectionMemories)
-    .innerJoin(memories, eq(memories.id, collectionMemories.memoryId))
-    .innerJoin(collections, eq(collections.id, collectionMemories.collectionId))
-    .where(and(eq(collections.publicSlug, slug), eq(collections.isPublic, true), eq(memories.inTrash, false)))
-    .orderBy(memories.createdAt);
+  const payload = await getSharedPayload(decision.share);
+  if (!payload.collection) {
+    throw new AppError("Collection not found", 404, "NOT_FOUND");
+  }
 
-  return { ...collection, memories: items };
+  return { ...payload.collection, memories: payload.memories };
 }

@@ -8,6 +8,7 @@ const planLimitInputSchema = z.object({
     PlanLimitType.AI_MONTHLY_VISION_QUERIES,
     PlanLimitType.STORAGE_MB,
     PlanLimitType.COLLECTION_COUNT,
+    PlanLimitType.PUBLIC_SHARE_COUNT,
   ]),
   limitValue: z.coerce.number().int().min(0).nullable(), // null = unlimited
 });

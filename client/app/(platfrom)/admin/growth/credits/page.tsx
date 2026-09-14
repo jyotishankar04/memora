@@ -5,7 +5,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/components/ui/toast";
-import { StatTile } from "@/components/admin/stat-tile";
+import { StatTile } from "@/components/stat-tile";
 import { adjustUserCredits, getUserCreditDetail } from "@/lib/admin-credits";
 
 export default function AdminCreditsPage() {

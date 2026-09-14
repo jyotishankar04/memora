@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { copyToClipboard } from "@/lib/clipboard";
 import { toast } from "@/components/ui/toast";
 import {
   DropdownMenu,
@@ -27,19 +28,11 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import {
-  useCollectionsQuery,
-  useDeleteCollectionMutation,
-  useMemoriesQuery,
-  useShareCollectionMutation,
-  useUnshareCollectionMutation,
-} from "@/context/MemoryContext";
+import { useCollectionsQuery, useDeleteCollectionMutation, useMemoriesQuery } from "@/context/MemoryContext";
+import { ShareDialog } from "@/components/share/share-dialog";
 import { timeAgo } from "@/lib/time";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
 import { QueryErrorState } from "@/components/query-error-state";
-import { usePlanFeature } from "@/hooks/use-plan-limit";
-import { ProBadge } from "@/components/plan-limit-notice";
 
 export default function CollectionDetailPage() {
   const params = useParams();
@@ -57,27 +50,9 @@ export default function CollectionDetailPage() {
   const memories = data?.items ?? [];
 
   const deleteMutation = useDeleteCollectionMutation();
-  const shareMutation = useShareCollectionMutation();
-  const unshareMutation = useUnshareCollectionMutation();
-  const publicCollections = usePlanFeature("publicCollections");
-  const [sharePopoverOpen, setSharePopoverOpen] = useState(false);
+  const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
-  const handleShare = async () => {
-    try {
-      await shareMutation.mutateAsync(id);
-    } catch (err) {
-      toast.add({ title: err instanceof Error ? err.message : "Couldn't share this collection.", type: "error" });
-    }
-  };
 
-  const handleUnshare = async () => {
-    try {
-      await unshareMutation.mutateAsync(id);
-      toast.add({ title: "Sharing turned off.", type: "success" });
-    } catch (err) {
-      toast.add({ title: err instanceof Error ? err.message : "Couldn't stop sharing this collection.", type: "error" });
-    }
-  };
 
   if (!collection) {
     return (
@@ -128,85 +103,13 @@ export default function CollectionDetailPage() {
           >
             <HugeiconsIcon icon={Edit} strokeWidth={2.25} className="h-3.5 w-3.5" /> Edit
           </Button>
-          <Popover open={sharePopoverOpen} onOpenChange={setSharePopoverOpen}>
-            <PopoverTrigger
-              render={
-                <Button variant="outline" className="h-9 px-3 rounded-full text-xs font-semibold">
-                  <HugeiconsIcon icon={Share2} strokeWidth={2.25} className="h-3.5 w-3.5" /> Share
-                  {!publicCollections.loading && !publicCollections.enabled && <ProBadge className="ml-1" />}
-                </Button>
-              }
-            />
-            <PopoverContent align="end" className="w-80 p-4 space-y-3 text-xs">
-              {publicCollections.loading ? (
-                <p className="text-muted-foreground">Loading...</p>
-              ) : !publicCollections.enabled ? (
-                <div className="space-y-2">
-                  <div className="flex items-center gap-1.5 font-semibold text-foreground">
-                    Sharing is a Pro feature <ProBadge />
-                  </div>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Publish a read-only link to this collection that anyone can view, no account needed.
-                  </p>
-                  <Link
-                    href="/app/settings/billing"
-                    className="inline-block text-primary font-semibold hover:underline"
-                    onClick={() => setSharePopoverOpen(false)}
-                  >
-                    View plan &rarr;
-                  </Link>
-                </div>
-              ) : collection.isPublic && collection.publicSlug ? (
-                <div className="space-y-2.5">
-                  <p className="font-semibold text-foreground">Public link</p>
-                  <div className="flex items-center gap-1.5">
-                    <Input
-                      readOnly
-                      value={typeof window !== "undefined" ? `${window.location.origin}/c/${collection.publicSlug}` : ""}
-                      className="h-8 text-[11px] font-mono"
-                      onFocus={(e) => e.currentTarget.select()}
-                    />
-                    <Button
-                      size="icon"
-                      variant="outline"
-                      className="h-8 w-8 shrink-0"
-                      onClick={() => {
-                        if (typeof navigator !== "undefined" && navigator.clipboard) {
-                          navigator.clipboard.writeText(`${window.location.origin}/c/${collection.publicSlug}`);
-                        }
-                        toast.add({ title: "Link copied", type: "success" });
-                      }}
-                    >
-                      <HugeiconsIcon icon={Copy} strokeWidth={2.25} className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-                  <p className="text-muted-foreground">Anyone with this link can view this collection.</p>
-                  <Button
-                    variant="outline"
-                    disabled={unshareMutation.isPending}
-                    onClick={handleUnshare}
-                    className="w-full h-8 rounded-full text-[11px] font-semibold text-destructive hover:text-destructive"
-                  >
-                    {unshareMutation.isPending ? "Stopping..." : "Stop sharing"}
-                  </Button>
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <p className="font-semibold text-foreground">Share this collection</p>
-                  <p className="text-muted-foreground leading-relaxed">
-                    Publish a read-only link that anyone can view, no account needed.
-                  </p>
-                  <Button
-                    disabled={shareMutation.isPending}
-                    onClick={handleShare}
-                    className="w-full h-8 rounded-full text-[11px] font-semibold bg-primary text-white"
-                  >
-                    {shareMutation.isPending ? "Publishing..." : "Publish collection"}
-                  </Button>
-                </div>
-              )}
-            </PopoverContent>
-          </Popover>
+          <Button
+            variant="outline"
+            onClick={() => setShareDialogOpen(true)}
+            className="h-9 px-3 rounded-full text-xs font-semibold"
+          >
+            <HugeiconsIcon icon={Share2} strokeWidth={2.25} className="h-3.5 w-3.5" /> Share
+          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger
@@ -351,6 +254,14 @@ export default function CollectionDetailPage() {
           ))}
         </div>
       )}
+
+      <ShareDialog
+        resourceType="collection"
+        resourceId={collection.id}
+        resourceName={collection.name}
+        open={shareDialogOpen}
+        onOpenChange={setShareDialogOpen}
+      />
 
       {/* Local animation keyframes */}
       <style>{`

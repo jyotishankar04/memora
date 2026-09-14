@@ -10,8 +10,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
+import { copyToClipboard } from "@/lib/clipboard";
 import type { Memory, MemoryType } from "@/types/memory";
-import { useMemoriesQuery, useToggleFavoriteMutation, useDeleteMemoryMutation } from "@/context/MemoryContext";
+import { useMemoriesQuery, useToggleFavoriteMutation, useMoveToTrashMutation } from "@/context/MemoryContext";
 import { timeAgo, timelineGroup } from "@/lib/time";
 import { isMemoryProcessing } from "@/lib/memory-processing";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
@@ -50,11 +51,16 @@ export default function MemoriesPage() {
   const selectedMemory = memories.find((m) => m.id === selectedMemoryId) ?? null;
 
   const toggleFavoriteMutation = useToggleFavoriteMutation();
-  const deleteMutation = useDeleteMemoryMutation();
+  // Soft delete, matching the memory detail page's "Move to trash" action —
+  // this used to call the hard-delete mutation directly, which skipped
+  // trash (and its 15-day safety window) entirely for anything deleted
+  // from this list.
+  const moveToTrashMutation = useMoveToTrashMutation();
 
-  const handleDelete = (id: string) => {
-    deleteMutation.mutate(id, {
-      onError: (err) => toast.add({ title: "Couldn't delete that memory", description: err instanceof Error ? err.message : undefined, type: "error" }),
+  const handleDelete = (id: string, title: string) => {
+    moveToTrashMutation.mutate(id, {
+      onSuccess: () => toast.add({ title: "Moved to trash", description: title, type: "success" }),
+      onError: (err) => toast.add({ title: "Couldn't move that memory to trash", description: err instanceof Error ? err.message : undefined, type: "error" }),
     });
     if (selectedMemoryId === id) setSelectedMemoryId(null);
   };
@@ -273,8 +279,8 @@ export default function MemoriesPage() {
                                 {activeCardMenu === item.id && (
                                   <div className="absolute right-0 top-6 w-32 bg-card border border-border rounded-lg shadow-lg py-1 z-30 text-[10px] font-bold text-foreground">
                                     {[
-                                      { label: "Copy link", icon: Copy, action: () => navigator.clipboard.writeText(item.url ?? item.source ?? "") },
-                                      { label: "Delete", icon: Trash2, action: () => handleDelete(item.id) }
+                                      { label: "Copy link", icon: Copy, action: () => void copyToClipboard(item.url ?? item.source ?? "", "Source link copied") },
+                                      { label: "Move to trash", icon: Trash2, action: () => handleDelete(item.id, item.title) }
                                     ].map((m) => (
                                       <button
                                         key={m.label}
@@ -335,7 +341,8 @@ export default function MemoriesPage() {
                               <div className="flex items-center gap-4 shrink-0 font-mono text-[9px] text-muted-foreground">
                                 <span className="hidden sm:inline">{timeAgo(item.createdAt)}</span>
                                 <button
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(item.id); }}
+                                  onClick={(e) => { e.stopPropagation(); handleDelete(item.id, item.title); }}
+                                  title="Move to trash"
                                   className="h-8 w-8 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-500 flex items-center justify-center transition-colors"
                                 >
                                   <HugeiconsIcon icon={Trash2} strokeWidth={2.25} className="h-3.5 w-3.5" />

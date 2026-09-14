@@ -20,6 +20,17 @@ import {
 import { useDeleteMemoryMutation, useMemoriesQuery, useUpdateMemoryMutation } from "@/context/MemoryContext";
 import { QueryErrorState } from "@/components/query-error-state";
 
+// Mirrors TRASH_RETENTION_DAYS in server/src/modules/memory/trash-purge.job.ts —
+// display-only, so keep the two in sync if the retention window ever changes.
+const TRASH_RETENTION_DAYS = 15;
+
+/** Days left before the purge job hard-deletes this, or null if trashedAt is missing (shouldn't happen once a memory is actually trashed). */
+function daysUntilPurge(trashedAt: string | null): number | null {
+  if (!trashedAt) return null;
+  const purgesAt = new Date(trashedAt).getTime() + TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+  return Math.max(0, Math.ceil((purgesAt - Date.now()) / (24 * 60 * 60 * 1000)));
+}
+
 export default function TrashPage() {
   const { data, isLoading, isError, refetch } = useMemoriesQuery({ inTrash: true, limit: 100 });
   const trashedItems = data?.items ?? [];
@@ -59,7 +70,7 @@ export default function TrashPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Trash</h1>
           <p className="text-xs text-muted-foreground mt-1">
-            Deleted memories stay here until you delete them permanently or restore them.
+            Deleted memories stay here for {TRASH_RETENTION_DAYS} days before they&apos;re permanently deleted, unless you restore them first.
           </p>
         </div>
 
@@ -105,11 +116,20 @@ export default function TrashPage() {
         </div>
       ) : trashedItems.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 max-w-2xl text-xs font-semibold">
-          {trashedItems.map((item) => (
+          {trashedItems.map((item) => {
+            const daysLeft = daysUntilPurge(item.trashedAt);
+            return (
             <div key={item.id} className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs">
               <div className="p-4 rounded-lg border border-border/75 bg-card flex flex-col justify-between min-h-[130px] space-y-4">
                 <div>
-                  <span className="text-[8.5px] font-mono text-red-500 font-bold mb-1 block">TRASHED</span>
+                  <div className="flex items-center justify-between gap-2 mb-1">
+                    <span className="text-[8.5px] font-mono text-red-500 font-bold">TRASHED</span>
+                    {daysLeft !== null && (
+                      <span className="text-[8.5px] font-mono text-muted-foreground">
+                        {daysLeft === 0 ? "Purges today" : `Purges in ${daysLeft}d`}
+                      </span>
+                    )}
+                  </div>
                   <h4 className="text-foreground leading-snug">{item.title}</h4>
                   <span className="text-[9px] text-muted-foreground font-mono mt-0.5 block">{item.source}</span>
                 </div>
@@ -155,7 +175,8 @@ export default function TrashPage() {
                 </div>
               </div>
             </div>
-          ))}
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-20 max-w-sm mx-auto space-y-3">

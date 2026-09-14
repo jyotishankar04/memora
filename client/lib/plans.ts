@@ -5,7 +5,8 @@ export type PlanLimitType =
   | "ai_monthly_queries"
   | "ai_monthly_vision_queries"
   | "storage_mb"
-  | "collection_count";
+  | "collection_count"
+  | "public_share_count";
 
 export interface Plan {
   id: string;
@@ -59,6 +60,7 @@ export const PLAN_LIMIT_LABEL: Record<PlanLimitType, string> = {
   ai_monthly_vision_queries: "Vision analysis / month",
   storage_mb: "Storage",
   collection_count: "Collections",
+  public_share_count: "Public share links",
 };
 
 export function formatLimitValue(limitType: PlanLimitType, value: number): string {
@@ -80,6 +82,7 @@ const LIMIT_ORDER: PlanLimitType[] = [
   "ai_monthly_vision_queries",
   "storage_mb",
   "collection_count",
+  "public_share_count",
 ];
 
 /**

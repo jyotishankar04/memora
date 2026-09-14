@@ -87,8 +87,7 @@ export default function AdminUsersPage() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All roles</SelectItem>
-            <SelectItem value="free_user">free_user</SelectItem>
-            <SelectItem value="pro_user">pro_user</SelectItem>
+            <SelectItem value="user">user</SelectItem>
             <SelectItem value="admin">admin</SelectItem>
           </SelectContent>
         </Select>

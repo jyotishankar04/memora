@@ -67,12 +67,64 @@ export enum CollectionSource {
   SYSTEM = "system",
 }
 
+export enum ShareResourceType {
+  COLLECTION = "collection",
+  MEMORY = "memory",
+}
+
+/**
+ * What the share's *link* does, independent of the per-user grants in
+ * share_grants — the two compose, so a link can be public while specific
+ * people are also invited by name.
+ *
+ * DISABLED is not "unshared": the row and its slug survive, so an
+ * invite-only share still has a stable URL, and re-publishing reuses the
+ * same link rather than rotating it. That carries forward the behaviour of
+ * the old collections.publicSlug, which was deliberately never regenerated.
+ */
+export enum ShareLinkAccess {
+  DISABLED = "disabled",
+  PUBLIC = "public",
+  REQUEST = "request",
+  PASSWORD = "password",
+}
+
+export enum ShareGrantStatus {
+  /** Invited by email, but nobody has signed up with that address yet. */
+  PENDING = "pending",
+  ACTIVE = "active",
+  REVOKED = "revoked",
+}
+
+export enum ShareGrantSource {
+  DIRECT_INVITE = "direct_invite",
+  ACCESS_REQUEST = "access_request",
+}
+
+export enum ShareAccessRequestStatus {
+  PENDING = "pending",
+  APPROVED = "approved",
+  DENIED = "denied",
+  CANCELLED = "cancelled",
+}
+
+export enum NotificationType {
+  SHARE_INVITE_RECEIVED = "share_invite_received",
+  SHARE_ACCESS_REQUESTED = "share_access_requested",
+  SHARE_ACCESS_APPROVED = "share_access_approved",
+  SHARE_ACCESS_DENIED = "share_access_denied",
+  SHARE_REVOKED = "share_revoked",
+}
+
 export enum PlanLimitType {
   MEMORY_COUNT = "memory_count",
   AI_MONTHLY_QUERIES = "ai_monthly_queries",
   AI_MONTHLY_VISION_QUERIES = "ai_monthly_vision_queries",
   STORAGE_MB = "storage_mb",
   COLLECTION_COUNT = "collection_count",
+  // Counts shares whose link is set to "public". Free plans get a handful;
+  // the other sharing modes are gated by plans.features instead.
+  PUBLIC_SHARE_COUNT = "public_share_count",
 }
 
 export enum PlanBillingInterval {

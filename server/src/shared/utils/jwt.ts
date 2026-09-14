@@ -27,6 +27,44 @@ export function generateRefreshToken(): string {
   return crypto.randomBytes(64).toString("hex");
 }
 
+/**
+ * Unsalted SHA-256, for looking a refresh token up by its hash.
+ *
+ * NOT a password hash — it's deliberately fast and has no salt. Anything
+ * user-chosen goes through modules/share/share.password.ts instead.
+ */
 export function hashToken(token: string): string {
   return crypto.createHash("sha256").update(token).digest("hex");
+}
+
+/** Proof that a visitor entered the password for one or more shared links. */
+export interface ShareTokenPayload {
+  /** Discriminator checked on verify, so this can never be read as an access token. */
+  typ: "share";
+  /** `pv` is the share's passwordUpdatedAt epoch — see verifyShareToken. */
+  shares: { id: string; pv: number }[];
+}
+
+const SHARE_TOKEN_TTL = "12h";
+
+export function signShareToken(payload: ShareTokenPayload): string {
+  return jwt.sign(payload, env.SHARE_TOKEN_SECRET, { expiresIn: SHARE_TOKEN_TTL });
+}
+
+/**
+ * Returns null on any failure rather than throwing — an absent or stale
+ * unlock cookie means "show the password form", never a 500.
+ *
+ * Callers must still compare each entry's `pv` against the share's current
+ * passwordUpdatedAt: that's what makes changing the password revoke every
+ * cookie already handed out, without tracking them server-side.
+ */
+export function verifyShareToken(token: string): ShareTokenPayload | null {
+  try {
+    const payload = jwt.verify(token, env.SHARE_TOKEN_SECRET) as ShareTokenPayload & jwt.JwtPayload;
+    if (payload.typ !== "share" || !Array.isArray(payload.shares)) return null;
+    return { typ: "share", shares: payload.shares };
+  } catch {
+    return null;
+  }
 }

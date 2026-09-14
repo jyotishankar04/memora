@@ -9,16 +9,17 @@ import { MaintenanceFullPage } from "@/components/maintenance/maintenance-full-p
 import { getMaintenanceStatus } from "@/lib/maintenance";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SparklesIcon as Sparkles, PlusIcon as Plus, Search01Icon as Search, Settings01Icon as Settings, HelpCircleIcon as HelpCircle, BellIcon as Bell, XIcon as X, MoonIcon as Moon, Sun01Icon as Sun, FolderOpenIcon as FolderOpen, CompassIcon as Compass, CheckIcon as Check, ChevronRightIcon as ChevronRight, ChevronDownIcon as ChevronDown, FolderPlusIcon as FolderPlus, HeartIcon as Heart, Clock01Icon as Clock, CompassIcon, BarChartIcon as BarChart2, FileTextIcon as FileText, PaperclipIcon as Paperclip, CloudUploadIcon as UploadCloud, Layers01Icon as Layers, PanelLeftCloseIcon as PanelLeftClose, PanelLeftOpenIcon as PanelLeftOpen, Menu01Icon as Menu, Tag01Icon as Tag, KeyboardIcon as Keyboard, Archive01Icon as Archive, Delete02Icon as Trash2, TrendingUpIcon as TrendingUp, Plug01Icon as Plug, MessageSquarePlusIcon as MessageSquarePlus, HistoryIcon as History, ShieldUserIcon as ShieldUser } from "@hugeicons/core-free-icons";
+import { SparklesIcon as Sparkles, PlusIcon as Plus, Search01Icon as Search, Settings01Icon as Settings, HelpCircleIcon as HelpCircle, BellIcon as Bell, XIcon as X, MoonIcon as Moon, Sun01Icon as Sun, FolderOpenIcon as FolderOpen, CompassIcon as Compass, CheckIcon as Check, ChevronRightIcon as ChevronRight, ChevronDownIcon as ChevronDown, FolderPlusIcon as FolderPlus, HeartIcon as Heart, Clock01Icon as Clock, CompassIcon, BarChartIcon as BarChart2, FileTextIcon as FileText, PaperclipIcon as Paperclip, CloudUploadIcon as UploadCloud, Layers01Icon as Layers, PanelLeftCloseIcon as PanelLeftClose, PanelLeftOpenIcon as PanelLeftOpen, Menu01Icon as Menu, Tag01Icon as Tag, KeyboardIcon as Keyboard, Archive01Icon as Archive, Delete02Icon as Trash2, TrendingUpIcon as TrendingUp, Plug01Icon as Plug, MessageSquarePlusIcon as MessageSquarePlus, HistoryIcon as History, ShieldUserIcon as ShieldUser, Share02Icon as Share2 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
-import { UserAvatar, UserProvider, useUser, formatPlan, useCurrentUserQuery, useSetCurrentUser } from "@/context/UserContext";
+import { UserAvatar, UserProvider, useUser, useCurrentUserQuery, useSetCurrentUser } from "@/context/UserContext";
 import { useMemories } from "@/context/MemoryContext";
 import { SidebarStateProvider } from "@/context/SidebarContext";
 import { UpgradeCard } from "@/components/upgrade-card";
 import { uploadFile, type UploadedFile } from "@/lib/uploads";
-import { usePlanLimit } from "@/hooks/use-plan-limit";
+import { usePlanLabel, usePlanLimit } from "@/hooks/use-plan-limit";
+import { useUnreadCountQuery } from "@/hooks/use-notifications";
 import { PlanLimitNotice, ProBadge, LimitDot } from "@/components/plan-limit-notice";
 import { detectMemoryType, deriveTitle, splitLinkAndCaption } from "@/lib/detect-memory-type";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
@@ -522,7 +523,12 @@ function AppShell({ children }: { children: React.ReactNode }) {
     }
   }, [sidebarFlyoutOpen, sidebarFullyCollapsed]);
 
-  const isFreeUser = !currentUser.roles.includes("pro_user") && !currentUser.roles.includes("admin");
+  // Drive this off the billing plan, not roles. This used to check for a
+  // `pro_user` role that was seeded but never granted to anyone, so every
+  // paying non-admin user got shown the upgrade prompt.
+  const planLabel = usePlanLabel();
+  const isFreeUser = planLabel.isFree;
+  const unreadCount = useUnreadCountQuery().data?.count ?? 0;
 
   const primaryNavItems = [
     { label: "Home", href: "/app", icon: Compass },
@@ -538,6 +544,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
     { label: "Explore", href: "/app/explore", icon: CompassIcon },
     { label: "Archive", href: "/app/archive", icon: Archive },
     { label: "Trash", href: "/app/trash", icon: Trash2 },
+    { label: "Shared", href: "/app/shared", icon: Share2 },
     { label: "Notifications", href: "/app/notifications", icon: Bell },
     { label: "Insights", href: "/app/insights", icon: TrendingUp },
     { label: "Integrations", href: "/app/integrations", icon: Plug },
@@ -763,7 +770,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
                 <UserAvatar user={currentUser} className="h-8 w-8 text-xs" />
                 <div className="min-w-0">
                   <p className="text-xs font-bold text-foreground truncate">{currentUser.name ?? currentUser.email}</p>
-                  <p className="text-[9px] text-muted-foreground font-mono leading-none">{formatPlan(currentUser.roles)}</p>
+                  <p className="text-[9px] text-muted-foreground font-mono leading-none">{planLabel.label}</p>
                 </div>
               </div>
               <HugeiconsIcon icon={ChevronDown} strokeWidth={2.25} className="h-3.5 w-3.5 text-muted-foreground opacity-60" />
@@ -786,7 +793,7 @@ function AppShell({ children }: { children: React.ReactNode }) {
             <div className="absolute left-4 right-4 bottom-16 bg-card border border-border rounded-xl shadow-xl py-1 z-50 text-[10px] font-bold text-foreground">
               <div className="px-3 py-2 border-b border-border/20">
                 <p className="text-[10px] text-foreground">{currentUser.name ?? currentUser.email}</p>
-                <p className="text-[9px] text-muted-foreground font-mono font-medium">{formatPlan(currentUser.roles)}</p>
+                <p className="text-[9px] text-muted-foreground font-mono font-medium">{planLabel.label}</p>
               </div>
 
               <Link href="/app/settings" onClick={() => setUserDropdownOpen(false)} className="w-full px-3 py-2 hover:bg-muted text-left flex items-center gap-2">
@@ -854,9 +861,15 @@ function AppShell({ children }: { children: React.ReactNode }) {
 
           {/* Actions */}
           <div className="flex items-center gap-4">
-            <Link href="/app/notifications" aria-label="Notifications (Ctrl+N)" className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative">
+            <Link
+              href="/app/notifications"
+              aria-label={unreadCount > 0 ? `Notifications (${unreadCount} unread)` : "Notifications (Ctrl+N)"}
+              className="h-8 w-8 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors relative"
+            >
               <HugeiconsIcon icon={Bell} strokeWidth={2.25} className="h-4 w-4" />
-              <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-primary rounded-full" />
+              {/* Real now. This used to be a hardcoded dot that was always
+                  lit, which made it meaningless as a signal. */}
+              {unreadCount > 0 && <span className="absolute top-1 right-1 h-1.5 w-1.5 bg-primary rounded-full" />}
             </Link>
 
             <button

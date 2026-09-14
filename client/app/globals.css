@@ -151,10 +151,28 @@
   --font-mono: var(--font-mono);
   --font-serif: var(--font-serif);
 
+  /* The scale stays a gentle, monotonic ladder. --radius-2xl was previously
+     left undefined, so `rounded-2xl` fell through to Tailwind's 1rem default —
+     i.e. *less* round than `rounded-xl` at 20.8px. Pinning it here fixes that
+     inversion; the step sizes are otherwise unchanged. */
   --radius-sm: calc(var(--radius) - 4px);
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
+  /* +6px (22.8px) rather than a rounder value on purpose: the smallest thing
+     wearing `rounded-2xl` in this app is a 48px icon badge, and CSS clamps
+     radius to half the box — anything from 24px up would turn those into
+     circles. */
+  --radius-2xl: calc(var(--radius) + 6px);
+
+  /* The app's large-surface radius, matching components/ui/github-activity.tsx
+     (`rounded-[28px]`), which is the reference for this design system. It is a
+     separate token rather than a bigger --radius-xl on purpose: `rounded-xl`
+     and `rounded-2xl` are used in this codebase for both page-level panels and
+     40–56px icon tiles, and CSS clamps radius to half the box — so raising the
+     scale turns every one of those tiles into a circle. Reach for
+     `rounded-surface` only on genuinely large surfaces. */
+  --radius-surface: 1.75rem;
 
   --shadow-2xs: var(--shadow-2xs);
   --shadow-xs: var(--shadow-xs);

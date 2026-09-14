@@ -15,6 +15,7 @@ const LIMIT_TYPES: PlanLimitType[] = [
   "ai_monthly_vision_queries",
   "storage_mb",
   "collection_count",
+  "public_share_count",
 ];
 
 type Draft = {

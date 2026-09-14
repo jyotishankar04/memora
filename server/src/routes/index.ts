@@ -6,6 +6,9 @@ import settingsRoutes from "../modules/settings";
 import memoryRoutes from "../modules/memory";
 import collectionRoutes from "../modules/collection";
 import tagRoutes from "../modules/tag";
+import insightsRoutes from "../modules/insights";
+import notificationRoutes from "../modules/notification";
+import { shareOwnerRouter, sharePublicRouter } from "../modules/share";
 import uploadRoutes from "../modules/upload";
 import aiRoutes from "../modules/ai";
 import { adminRouter as featureFlagsAdminRoutes, publicRouter as featureFlagsPublicRoutes } from "../modules/feature-flags";
@@ -32,6 +35,12 @@ router.use("/settings", settingsRoutes);
 router.use("/memories", memoryRoutes);
 router.use("/collections", collectionRoutes);
 router.use("/tags", tagRoutes);
+router.use("/insights", insightsRoutes);
+router.use("/notifications", notificationRoutes);
+// Owner-side share management, addressed by share uuid.
+router.use("/shares", shareOwnerRouter);
+// The public reader, addressed by slug — mirrors the client's /s/:slug URL.
+router.use("/s", sharePublicRouter);
 router.use("/uploads", uploadRoutes);
 router.use("/ai", aiRoutes);
 router.use("/plans", plansRoutes);

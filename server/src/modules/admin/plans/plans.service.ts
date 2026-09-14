@@ -38,6 +38,7 @@ const DEFAULT_PLANS: DefaultPlanSeed[] = [
       { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 20 },
       { limitType: PlanLimitType.STORAGE_MB, limitValue: 250 },
       { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 5 },
+      { limitType: PlanLimitType.PUBLIC_SHARE_COUNT, limitValue: 3 },
     ],
     features: {},
   },
@@ -55,8 +56,9 @@ const DEFAULT_PLANS: DefaultPlanSeed[] = [
       { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 300 },
       { limitType: PlanLimitType.STORAGE_MB, limitValue: 5000 },
       { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 100 },
+      { limitType: PlanLimitType.PUBLIC_SHARE_COUNT, limitValue: 25 },
     ],
-    features: {},
+    features: { directShares: true, privateShareRequests: true, passwordProtectedShares: true },
   },
   {
     key: "pro",
@@ -72,8 +74,14 @@ const DEFAULT_PLANS: DefaultPlanSeed[] = [
       { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 2000 },
       { limitType: PlanLimitType.STORAGE_MB, limitValue: 50000 },
       { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: null },
+      { limitType: PlanLimitType.PUBLIC_SHARE_COUNT, limitValue: null },
     ],
-    features: { publicCollections: true, dataExport: true },
+    features: {
+      directShares: true,
+      privateShareRequests: true,
+      passwordProtectedShares: true,
+      dataExport: true,
+    },
   },
 ];
 

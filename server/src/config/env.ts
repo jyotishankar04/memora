@@ -25,6 +25,14 @@ const envSchema = z
     JWT_ACCESS_EXPIRES_IN: z.string().default("15m"),
     JWT_REFRESH_EXPIRES_IN: z.string().default("7d"),
 
+    // Signs the "I entered the password for this shared link" proof cookie.
+    // Deliberately NOT JWT_ACCESS_SECRET: a share token is minted for
+    // anonymous visitors, so if the two shared a secret, a forged share
+    // token carrying a `sub` claim would sail straight through
+    // authenticate(). Separate secrets make that class of confusion
+    // impossible rather than merely unlikely.
+    SHARE_TOKEN_SECRET: z.string().min(32, "SHARE_TOKEN_SECRET must be at least 32 characters"),
+
     GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
     GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
     GITHUB_CLIENT_ID: z.string().min(1, "GITHUB_CLIENT_ID is required"),
@@ -59,6 +67,15 @@ const envSchema = z
     message: "JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different",
     path: ["JWT_REFRESH_SECRET"],
   })
+  .refine(
+    (data) =>
+      data.SHARE_TOKEN_SECRET !== data.JWT_ACCESS_SECRET &&
+      data.SHARE_TOKEN_SECRET !== data.JWT_REFRESH_SECRET,
+    {
+      message: "SHARE_TOKEN_SECRET must differ from both JWT secrets",
+      path: ["SHARE_TOKEN_SECRET"],
+    }
+  )
   .refine(
     (data) =>
       data.VECTOR_STORE_PROVIDER !== "upstash" ||

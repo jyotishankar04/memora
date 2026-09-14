@@ -1,6 +1,7 @@
 // Extracted from the near-identical copies that used to live inline in
-// app/(platfrom)/admin/page.tsx and admin/ai-usage/page.tsx — every new
-// admin page should import this instead of redefining it locally.
+// app/(platfrom)/admin/page.tsx and admin/ai-usage/page.tsx — every new page
+// should import this instead of redefining it locally. Lives outside
+// components/admin/ because the user-facing insights page uses it too.
 export function StatTile({ label, value }: { label: string; value: string }) {
   return (
     <div className="rounded-xl border border-border p-4">

@@ -24,13 +24,13 @@ import {
 import type { IconSvgElement } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
+import { usePlanLabel } from "@/hooks/use-plan-limit";
 import {
   UserProvider,
   UserAvatar,
   useUser,
   useCurrentUserQuery,
   useSetCurrentUser,
-  formatPlan,
 } from "@/context/UserContext";
 
 interface NavLeaf {
@@ -144,6 +144,8 @@ function AdminShell({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { theme, setTheme } = useTheme();
   const { user } = useUser();
+  // The billing plan, not the RBAC role — an admin is still on some plan.
+  const planLabel = usePlanLabel();
 
   const handleLogout = () => {
     logout().finally(() => router.push("/"));
@@ -247,7 +249,7 @@ function AdminShell({ children }: { children: React.ReactNode }) {
               <UserAvatar user={user} className="h-8 w-8 text-xs border border-primary/20" />
               <div className="hidden sm:block min-w-0">
                 <p className="text-xs font-bold text-foreground truncate max-w-32">{user.name ?? user.email}</p>
-                <p className="text-[9px] text-muted-foreground font-mono leading-none">{formatPlan(user.roles)}</p>
+                <p className="text-[9px] text-muted-foreground font-mono leading-none">{planLabel.label}</p>
               </div>
             </div>
 

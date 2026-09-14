@@ -12,6 +12,8 @@ export interface Memory {
   isFavorite: boolean;
   isArchived: boolean;
   inTrash: boolean;
+  /** When this was trashed. Null unless inTrash is true — see the server's 15-day purge job. */
+  trashedAt: string | null;
   tags: string[];
   createdAt: string;
   updatedAt: string;

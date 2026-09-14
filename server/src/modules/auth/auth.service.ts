@@ -246,7 +246,7 @@ export async function findOrCreateUser(profile: OAuthProfile): Promise<{ user: U
 }
 
 export async function assignDefaultRole(userId: string): Promise<void> {
-  const [defaultRole] = await db.select().from(roles).where(eq(roles.name, "free_user")).limit(1);
+  const [defaultRole] = await db.select().from(roles).where(eq(roles.name, "user")).limit(1);
 
   if (!defaultRole) {
     throw new AppError("Default role not seeded — run pnpm db:seed", 500, "ROLE_NOT_SEEDED");

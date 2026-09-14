@@ -14,7 +14,9 @@ import { listAdminPlans } from "@/lib/admin-plans";
 import { toast } from "@/components/ui/toast";
 import { Input } from "@/components/ui/input";
 
-const ASSIGNABLE_ROLES = ["free_user", "pro_user", "admin"];
+// Access levels only. Billing tier is assigned separately, via the
+// plan controls — a role here grants permissions, not entitlements.
+const ASSIGNABLE_ROLES = ["user", "admin"];
 const STATUS_OPTIONS: AdminUser["status"][] = ["active", "inactive", "suspended", "banned"];
 
 export default function AdminUserDetailPage({ params }: { params: Promise<{ id: string }> }) {

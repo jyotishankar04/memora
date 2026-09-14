@@ -5,7 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import * as RechartsPrimitive from "recharts";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from "@/components/ui/chart";
-import { StatTile } from "@/components/admin/stat-tile";
+import { StatTile } from "@/components/stat-tile";
 import { getRevenue } from "@/lib/admin-billing";
 import { listAdminPlans } from "@/lib/admin-plans";
 import { formatPriceMinor } from "@/lib/plans";

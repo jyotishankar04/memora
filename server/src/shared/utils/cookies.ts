@@ -6,8 +6,12 @@ export const ACCESS_TOKEN_COOKIE = "memora_access_token";
 export const REFRESH_TOKEN_COOKIE = "memora_refresh_token";
 export const OAUTH_STATE_COOKIE = "memora_oauth_state";
 export const REFERRAL_CODE_COOKIE = "memora_referral_code";
+export const OAUTH_NEXT_COOKIE = "memora_oauth_next";
+export const SHARE_TOKEN_COOKIE = "memora_share_token";
 
 const AUTH_PATH = "/api/v1/auth";
+const SHARE_PATH = "/api/v1/s";
+const SHARE_TOKEN_MAX_AGE = 12 * 60 * 60 * 1000;
 
 const baseCookieOptions = {
   httpOnly: true,
@@ -63,4 +67,34 @@ export function setReferralCodeCookie(res: Response, code: string) {
 
 export function clearReferralCodeCookie(res: Response) {
   res.clearCookie(REFERRAL_CODE_COOKIE, { ...baseCookieOptions, path: AUTH_PATH });
+}
+
+// Where to land after OAuth completes, when the sign-in started from a
+// shared link ("sign in to view this"). Only ever holds a validated
+// same-site path — see assertSafeNextPath in the auth module. Same 10-minute
+// life as the state cookie: it belongs to one OAuth round trip.
+export function setOAuthNextCookie(res: Response, next: string) {
+  res.cookie(OAUTH_NEXT_COOKIE, next, {
+    ...baseCookieOptions,
+    path: AUTH_PATH,
+    maxAge: 10 * 60 * 1000,
+  });
+}
+
+export function clearOAuthNextCookie(res: Response) {
+  res.clearCookie(OAUTH_NEXT_COOKIE, { ...baseCookieOptions, path: AUTH_PATH });
+}
+
+// Scoped to the public share routes so an unlock proof isn't attached to
+// every other API call the browser makes.
+export function setShareTokenCookie(res: Response, token: string) {
+  res.cookie(SHARE_TOKEN_COOKIE, token, {
+    ...baseCookieOptions,
+    path: SHARE_PATH,
+    maxAge: SHARE_TOKEN_MAX_AGE,
+  });
+}
+
+export function clearShareTokenCookie(res: Response) {
+  res.clearCookie(SHARE_TOKEN_COOKIE, { ...baseCookieOptions, path: SHARE_PATH });
 }

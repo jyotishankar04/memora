@@ -29,6 +29,7 @@ export interface MemoryListItem {
   isFavorite: boolean;
   isArchived: boolean;
   inTrash: boolean;
+  trashedAt: Date | null;
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -138,6 +139,7 @@ function toListItem(
     isFavorite: row.isFavorite,
     isArchived: row.isArchived,
     inTrash: row.inTrash,
+    trashedAt: row.trashedAt,
     tags: memoryTagsList,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -702,7 +704,14 @@ export async function updateMemory(
     if (input.description !== undefined) columns.description = input.description;
     if (input.isFavorite !== undefined) columns.isFavorite = input.isFavorite;
     if (input.isArchived !== undefined) columns.isArchived = input.isArchived;
-    if (input.inTrash !== undefined) columns.inTrash = input.inTrash;
+    if (input.inTrash !== undefined) {
+      columns.inTrash = input.inTrash;
+      // Starts (or clears) the 15-day purge clock — see trash-purge.job.ts.
+      // Restoring clears it rather than leaving a stale timestamp behind,
+      // so re-trashing later starts a fresh window instead of inheriting
+      // however much of the old one was left.
+      columns.trashedAt = input.inTrash ? new Date() : null;
+    }
 
     const [updated] = await tx
       .update(memories)

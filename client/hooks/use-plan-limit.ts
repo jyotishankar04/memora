@@ -49,6 +49,25 @@ export function usePlanLimit(limitType: PlanLimitType): PlanLimitStatus {
   };
 }
 
+/**
+ * The user's actual billing plan, for display ("FREE", "PLUS", "PRO").
+ *
+ * Reads the plan, not the RBAC role. The two are independent: a role says
+ * what you may do (`user` / `admin`), a plan says what you've paid for.
+ * See formatRole in context/UserContext.tsx.
+ */
+export function usePlanLabel(): { loading: boolean; label: string; isFree: boolean } {
+  const { data, isLoading } = useMyPlanQuery();
+
+  return {
+    loading: isLoading,
+    label: (data?.plan.name ?? "Free").toUpperCase(),
+    // Treated as free until we know otherwise, so upgrade prompts don't
+    // flash at a paying user on every page load.
+    isFree: Boolean(data) && data!.plan.key === "free",
+  };
+}
+
 export interface PlanFeatureStatus {
   loading: boolean;
   enabled: boolean;
