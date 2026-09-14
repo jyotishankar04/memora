@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../../shared/middlewares/authenticate";
 import { MemoryController } from "./memory.controller";
+import { requireUnlockToUnvault, requireVaultUnlockedForQuery } from "../vault";
 import {
   validateBrowserCapture,
   validateCreateMemory,
@@ -10,13 +11,13 @@ import {
 
 const router = Router();
 
-router.get("/", authenticate, validateListMemories, MemoryController.list);
+router.get("/", authenticate, validateListMemories, requireVaultUnlockedForQuery, MemoryController.list);
 router.post("/", authenticate, validateCreateMemory, MemoryController.create);
 // Must come before "/:id" — otherwise Express matches these as :id="export"/"graph".
 router.get("/export", authenticate, MemoryController.exportAll);
 router.get("/graph", authenticate, MemoryController.graph);
 router.get("/:id", authenticate, MemoryController.get);
-router.patch("/:id", authenticate, validateUpdateMemory, MemoryController.update);
+router.patch("/:id", authenticate, validateUpdateMemory, requireUnlockToUnvault, MemoryController.update);
 router.delete("/:id", authenticate, MemoryController.remove);
 
 router.post("/:id/browser-capture", authenticate, validateBrowserCapture, MemoryController.browserCapture);

@@ -9,10 +9,10 @@ const scrypt = promisify(crypto.scrypt) as (
 ) => Promise<Buffer>;
 
 // Node's only password-grade KDF, and it needs no native dependency —
-// bcrypt and argon2 both do, and this codebase has none. A share password
-// guards a read-only link, not an account (there are no account passwords
-// here at all — auth is OAuth-only), and gets hashed a handful of times a
-// day, so the tradeoff lands comfortably on "no new native build step".
+// bcrypt and argon2 both do, and this codebase has none. Shared by share
+// passwords and the vault PIN — neither is an account password (there are
+// no account passwords here at all, auth is OAuth-only), and both get
+// hashed rarely enough that "no new native build step" is the right trade.
 const N = 2 ** 15;
 const R = 8;
 const P = 1;
@@ -30,19 +30,19 @@ function options(): crypto.ScryptOptions {
 }
 
 /** Self-describing so the cost parameters can be raised later without a flag day. */
-export async function hashSharePassword(plain: string): Promise<string> {
+export async function hashPassword(plain: string): Promise<string> {
   const salt = crypto.randomBytes(SALT_LEN);
   const key = await scrypt(plain, salt, KEY_LEN, options());
   return [SCHEME, N, R, P, salt.toString("base64url"), key.toString("base64url")].join("$");
 }
 
 /**
- * Always does the full derivation, including when the share has no password
- * set — otherwise "this link isn't password-protected" would return in
- * microseconds while a wrong password took ~100ms, which is enough to probe
- * a link's configuration without ever guessing correctly.
+ * Always does the full derivation, including when nothing is set yet —
+ * otherwise "nothing configured" would return in microseconds while a
+ * wrong guess took ~100ms, which is enough to probe whether a share/vault
+ * is protected at all without ever guessing correctly.
  */
-export async function verifySharePassword(plain: string, stored: string | null): Promise<boolean> {
+export async function verifyPassword(plain: string, stored: string | null): Promise<boolean> {
   const parsed = stored ? parse(stored) : null;
 
   if (!parsed) {

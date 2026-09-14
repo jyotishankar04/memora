@@ -1,6 +1,6 @@
-import { and, count, eq } from "drizzle-orm";
+import { and, count, eq, inArray } from "drizzle-orm";
 import { db } from "../../db";
-import { collectionMemories, collections } from "../../db/schema";
+import { collectionMemories, collections, memories } from "../../db/schema";
 import { CollectionSource, MemoryType, PlanLimitType, ShareResourceType } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
 import { assertWithinLimit } from "../plans/plans.service";
@@ -22,6 +22,7 @@ export interface CollectionResponse {
   memoryCount: number;
   isPublic: boolean;
   publicSlug: string | null;
+  isVaulted: boolean;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -51,7 +52,10 @@ export interface PublicCollectionResponse {
 }
 
 export async function listCollections(userId: string, query: ListCollectionsQuery): Promise<CollectionResponse[]> {
-  const conditions = [eq(collections.userId, userId)];
+  // Toggleable like memories' isVaulted — hidden by default; the vault page
+  // is the only caller that passes isVaulted=true, and only after the route
+  // guard (requireVaultUnlockedForQuery) has confirmed the PIN was entered.
+  const conditions = [eq(collections.userId, userId), eq(collections.isVaulted, query.isVaulted)];
   if (!query.includeSystem) {
     conditions.push(eq(collections.source, CollectionSource.USER));
   }
@@ -63,6 +67,7 @@ export async function listCollections(userId: string, query: ListCollectionsQuer
       icon: collections.icon,
       description: collections.description,
       source: collections.source,
+      isVaulted: collections.isVaulted,
       createdAt: collections.createdAt,
       updatedAt: collections.updatedAt,
       memoryCount: count(collectionMemories.memoryId),
@@ -110,16 +115,43 @@ export async function updateCollection(
   if (input.name !== undefined) columns.name = input.name;
   if (input.icon !== undefined) columns.icon = input.icon;
   if (input.description !== undefined) columns.description = input.description;
+  if (input.isVaulted !== undefined) columns.isVaulted = input.isVaulted;
 
-  const [row] = await db
-    .update(collections)
-    .set(columns)
-    .where(and(eq(collections.id, id), eq(collections.userId, userId)))
-    .returning();
+  const row = await db.transaction(async (tx) => {
+    const [updated] = await tx
+      .update(collections)
+      .set(columns)
+      .where(and(eq(collections.id, id), eq(collections.userId, userId)))
+      .returning();
 
-  if (!row) {
-    throw new AppError("Collection not found", 404, "NOT_FOUND");
-  }
+    if (!updated) {
+      throw new AppError("Collection not found", 404, "NOT_FOUND");
+    }
+
+    // Vaulting/un-vaulting a collection cascades to its member memories —
+    // that's the whole point of hiding a *collection*, and it means every
+    // normal read path only ever needs to check memories.isVaulted, never
+    // join through collection_memories to ask "is this in a vaulted folder".
+    //
+    // Known imprecision, accepted deliberately: un-vaulting the collection
+    // un-vaults every member memory too, even one a user vaulted
+    // individually before adding it here. Tracking "vaulted via which
+    // collection" would need its own column; not worth it for a personal
+    // privacy feature where the fix is one click.
+    if (input.isVaulted !== undefined) {
+      await tx
+        .update(memories)
+        .set({ isVaulted: input.isVaulted })
+        .where(
+          inArray(
+            memories.id,
+            tx.select({ id: collectionMemories.memoryId }).from(collectionMemories).where(eq(collectionMemories.collectionId, id)),
+          ),
+        );
+    }
+
+    return updated;
+  });
 
   const [{ value: memoryCount }] = await db
     .select({ value: count() })

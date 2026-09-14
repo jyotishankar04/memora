@@ -33,6 +33,10 @@ const envSchema = z
     // impossible rather than merely unlikely.
     SHARE_TOKEN_SECRET: z.string().min(32, "SHARE_TOKEN_SECRET must be at least 32 characters"),
 
+    // Signs the vault-unlock proof cookie — same token-confusion reasoning
+    // as SHARE_TOKEN_SECRET, kept as its own secret rather than reused.
+    VAULT_TOKEN_SECRET: z.string().min(32, "VAULT_TOKEN_SECRET must be at least 32 characters"),
+
     GOOGLE_CLIENT_ID: z.string().min(1, "GOOGLE_CLIENT_ID is required"),
     GOOGLE_CLIENT_SECRET: z.string().min(1, "GOOGLE_CLIENT_SECRET is required"),
     GITHUB_CLIENT_ID: z.string().min(1, "GITHUB_CLIENT_ID is required"),
@@ -74,6 +78,16 @@ const envSchema = z
     {
       message: "SHARE_TOKEN_SECRET must differ from both JWT secrets",
       path: ["SHARE_TOKEN_SECRET"],
+    }
+  )
+  .refine(
+    (data) =>
+      data.VAULT_TOKEN_SECRET !== data.JWT_ACCESS_SECRET &&
+      data.VAULT_TOKEN_SECRET !== data.JWT_REFRESH_SECRET &&
+      data.VAULT_TOKEN_SECRET !== data.SHARE_TOKEN_SECRET,
+    {
+      message: "VAULT_TOKEN_SECRET must differ from the other token secrets",
+      path: ["VAULT_TOKEN_SECRET"],
     }
   )
   .refine(

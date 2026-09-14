@@ -30,6 +30,7 @@ export interface MemoryListItem {
   isArchived: boolean;
   inTrash: boolean;
   trashedAt: Date | null;
+  isVaulted: boolean;
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -140,6 +141,7 @@ function toListItem(
     isArchived: row.isArchived,
     inTrash: row.inTrash,
     trashedAt: row.trashedAt,
+    isVaulted: row.isVaulted,
     tags: memoryTagsList,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -159,7 +161,7 @@ function toListItem(
 }
 
 /**
- * userId/inTrash/isArchived/type/isFavorite/collectionId/tag scoping shared
+ * userId/inTrash/isArchived/isVaulted/type/isFavorite/collectionId/tag scoping shared
  * by both the plain list path and the hybrid-search path below — does NOT
  * include the `q` predicate itself, that's handled entirely differently by
  * each path (ILIKE-free now; see searchMemories). Returns null when a
@@ -169,12 +171,17 @@ function toListItem(
  */
 async function buildFilterConditions(
   userId: string,
-  query: Pick<ListMemoriesQuery, "type" | "isFavorite" | "isArchived" | "inTrash" | "collectionId" | "tag">,
+  query: Pick<ListMemoriesQuery, "type" | "isFavorite" | "isArchived" | "inTrash" | "isVaulted" | "collectionId" | "tag">,
 ): Promise<SQL[] | null> {
   const conditions: SQL[] = [
     eq(memories.userId, userId),
     eq(memories.inTrash, query.inTrash ?? false),
     eq(memories.isArchived, query.isArchived ?? false),
+    // Same toggle shape as inTrash: hidden by default, shown only when
+    // explicitly asked for — the vault page is the only caller that does,
+    // and only once /vault/unlock has proven the PIN (enforced at the route,
+    // not here — this function doesn't have access to the request).
+    eq(memories.isVaulted, query.isVaulted ?? false),
   ];
 
   if (query.type) conditions.push(eq(memories.type, query.type as MemoryType));
@@ -375,7 +382,11 @@ export async function exportAllMemories(userId: string): Promise<MemoryDetail[]>
   const rows = await db
     .select()
     .from(memories)
-    .where(and(eq(memories.userId, userId), eq(memories.inTrash, false)))
+    // Vaulted memories are excluded unconditionally here — export is a
+    // Pro data-portability feature, not a vault-aware surface, so it never
+    // includes vault contents regardless of whether the vault happens to
+    // be unlocked in this request.
+    .where(and(eq(memories.userId, userId), eq(memories.inTrash, false), eq(memories.isVaulted, false)))
     .orderBy(desc(memories.createdAt));
 
   const memoryIds = rows.map((row) => row.id);
@@ -445,7 +456,7 @@ const MAX_SHARED_GROUP_OVERLAP = 3;
 const graphNodeCte = (userId: string) => sql`
   SELECT id, document_embedding
   FROM memories
-  WHERE user_id = ${userId} AND in_trash = false
+  WHERE user_id = ${userId} AND in_trash = false AND is_vaulted = false
   ORDER BY created_at DESC
   LIMIT ${GRAPH_NODE_LIMIT}
 `;
@@ -557,7 +568,7 @@ export async function getMemoryGraph(userId: string): Promise<MemoryGraph> {
   const [{ value: total }] = await db
     .select({ value: count() })
     .from(memories)
-    .where(and(eq(memories.userId, userId), eq(memories.inTrash, false)));
+    .where(and(eq(memories.userId, userId), eq(memories.inTrash, false), eq(memories.isVaulted, false)));
 
   const rows = await db
     .select({
@@ -569,7 +580,7 @@ export async function getMemoryGraph(userId: string): Promise<MemoryGraph> {
       createdAt: memories.createdAt,
     })
     .from(memories)
-    .where(and(eq(memories.userId, userId), eq(memories.inTrash, false)))
+    .where(and(eq(memories.userId, userId), eq(memories.inTrash, false), eq(memories.isVaulted, false)))
     .orderBy(desc(memories.createdAt))
     .limit(GRAPH_NODE_LIMIT);
 
@@ -662,13 +673,20 @@ export async function createMemory(
 
     if (input.collectionIds?.length) {
       const owned = await tx
-        .select({ id: collections.id })
+        .select({ id: collections.id, isVaulted: collections.isVaulted })
         .from(collections)
         .where(and(eq(collections.userId, userId), inArray(collections.id, input.collectionIds)));
       if (owned.length > 0) {
         await tx
           .insert(collectionMemories)
           .values(owned.map((collection) => ({ collectionId: collection.id, memoryId: row.id })));
+
+        // Filing straight into a vaulted collection hides the memory too —
+        // otherwise "vault this collection" wouldn't actually hide anything
+        // saved into it afterward.
+        if (owned.some((collection) => collection.isVaulted)) {
+          await tx.update(memories).set({ isVaulted: true }).where(eq(memories.id, row.id));
+        }
       }
     }
 
@@ -712,6 +730,11 @@ export async function updateMemory(
       // however much of the old one was left.
       columns.trashedAt = input.inTrash ? new Date() : null;
     }
+    // Un-vaulting (isVaulted: false) requires the vault to already be
+    // unlocked — enforced by requireUnlockToUnvault at the route, before
+    // this ever runs. Vaulting (true) needs no such check: hiding something
+    // is always safe to do.
+    if (input.isVaulted !== undefined) columns.isVaulted = input.isVaulted;
 
     const [updated] = await tx
       .update(memories)
@@ -727,13 +750,18 @@ export async function updateMemory(
       await tx.delete(collectionMemories).where(eq(collectionMemories.memoryId, id));
       if (input.collectionIds.length > 0) {
         const owned = await tx
-          .select({ id: collections.id })
+          .select({ id: collections.id, isVaulted: collections.isVaulted })
           .from(collections)
           .where(and(eq(collections.userId, userId), inArray(collections.id, input.collectionIds)));
         if (owned.length > 0) {
           await tx
             .insert(collectionMemories)
             .values(owned.map((collection) => ({ collectionId: collection.id, memoryId: id })));
+
+          // Same inherit-on-file-in rule as createMemory.
+          if (owned.some((collection) => collection.isVaulted)) {
+            await tx.update(memories).set({ isVaulted: true }).where(eq(memories.id, id));
+          }
         }
       }
     }

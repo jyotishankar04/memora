@@ -55,7 +55,7 @@ export const searchMemoriesByDateTool = tool(
         content: memories.content,
       })
       .from(memories)
-      .where(and(eq(memories.userId, userId), eq(memories.inTrash, false), gte(memories.createdAt, start), lt(memories.createdAt, end)))
+      .where(and(eq(memories.userId, userId), eq(memories.inTrash, false), eq(memories.isVaulted, false), gte(memories.createdAt, start), lt(memories.createdAt, end)))
       .orderBy(desc(memories.createdAt))
       .limit(limit);
 

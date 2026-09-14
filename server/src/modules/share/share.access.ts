@@ -229,7 +229,7 @@ export async function getSharedPayload(share: ShareRow): Promise<SharedResourceP
     const items = await db
       .select(sharedMemoryColumns)
       .from(memories)
-      .where(and(eq(memories.id, share.memoryId!), eq(memories.inTrash, false)))
+      .where(and(eq(memories.id, share.memoryId!), eq(memories.inTrash, false), eq(memories.isVaulted, false)))
       .limit(1);
 
     return { ...base, collection: null, memories: items as SharedMemoryItem[] };
@@ -252,6 +252,7 @@ export async function getSharedPayload(share: ShareRow): Promise<SharedResourceP
       and(
         eq(collectionMemories.collectionId, share.collectionId!),
         eq(memories.inTrash, false),
+        eq(memories.isVaulted, false),
         eq(memories.isArchived, false)
       )
     )

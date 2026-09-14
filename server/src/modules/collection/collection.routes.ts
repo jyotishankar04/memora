@@ -1,6 +1,7 @@
 import { Router } from "express";
 import { authenticate } from "../../shared/middlewares/authenticate";
 import { CollectionController } from "./collection.controller";
+import { requireUnlockToUnvault, requireVaultUnlockedForQuery } from "../vault";
 import { validateCreateCollection, validateListCollections, validateUpdateCollection } from "./collection.validator";
 
 const router = Router();
@@ -9,9 +10,9 @@ const router = Router();
 // "public" is never swallowed as an :id param.
 router.get("/public/:slug", CollectionController.getPublic);
 
-router.get("/", authenticate, validateListCollections, CollectionController.list);
+router.get("/", authenticate, validateListCollections, requireVaultUnlockedForQuery, CollectionController.list);
 router.post("/", authenticate, validateCreateCollection, CollectionController.create);
-router.patch("/:id", authenticate, validateUpdateCollection, CollectionController.update);
+router.patch("/:id", authenticate, validateUpdateCollection, requireUnlockToUnvault, CollectionController.update);
 router.patch("/:id/convert-to-user", authenticate, CollectionController.convertToUser);
 router.patch("/:id/share", authenticate, CollectionController.share);
 router.patch("/:id/unshare", authenticate, CollectionController.unshare);

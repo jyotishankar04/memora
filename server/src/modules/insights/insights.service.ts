@@ -46,7 +46,10 @@ function daysAgo(days: number): Date {
  * Every stat is scoped to the user's live memories — trashed ones are
  * excluded everywhere, same as every other read path in this codebase.
  */
-const liveMemories = (userId: string) => and(eq(memories.userId, userId), eq(memories.inTrash, false));
+// Vaulted memories are excluded unconditionally — insights never reflects
+// vault contents, whether or not the vault happens to be unlocked.
+const liveMemories = (userId: string) =>
+  and(eq(memories.userId, userId), eq(memories.inTrash, false), eq(memories.isVaulted, false));
 
 export async function getInsights(userId: string): Promise<Insights> {
   const [
@@ -66,7 +69,7 @@ export async function getInsights(userId: string): Promise<Insights> {
     getTopDomains(userId),
     getActivity(userId),
     listTags(userId),
-    listCollections(userId, { includeSystem: true }),
+    listCollections(userId, { includeSystem: true, isVaulted: false }),
   ]);
 
   return {

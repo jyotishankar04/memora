@@ -8,6 +8,7 @@ import collectionRoutes from "../modules/collection";
 import tagRoutes from "../modules/tag";
 import insightsRoutes from "../modules/insights";
 import notificationRoutes from "../modules/notification";
+import vaultRoutes from "../modules/vault";
 import { shareOwnerRouter, sharePublicRouter } from "../modules/share";
 import uploadRoutes from "../modules/upload";
 import aiRoutes from "../modules/ai";
@@ -37,6 +38,7 @@ router.use("/collections", collectionRoutes);
 router.use("/tags", tagRoutes);
 router.use("/insights", insightsRoutes);
 router.use("/notifications", notificationRoutes);
+router.use("/vault", vaultRoutes);
 // Owner-side share management, addressed by share uuid.
 router.use("/shares", shareOwnerRouter);
 // The public reader, addressed by slug — mirrors the client's /s/:slug URL.

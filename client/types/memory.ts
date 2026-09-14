@@ -14,6 +14,7 @@ export interface Memory {
   inTrash: boolean;
   /** When this was trashed. Null unless inTrash is true — see the server's 15-day purge job. */
   trashedAt: string | null;
+  isVaulted: boolean;
   tags: string[];
   createdAt: string;
   updatedAt: string;
@@ -60,6 +61,7 @@ export interface Collection {
   memoryCount: number;
   isPublic: boolean;
   publicSlug: string | null;
+  isVaulted: boolean;
   createdAt: string;
   updatedAt: string;
 }

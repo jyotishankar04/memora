@@ -9,7 +9,9 @@ import {
   listCollections,
   shareCollection,
   unshareCollection,
+  updateCollection,
   type CreateCollectionInput,
+  type UpdateCollectionInput,
 } from "@/lib/collections";
 import { listTags } from "@/lib/tags";
 import {
@@ -84,6 +86,19 @@ export function useConvertCollectionMutation() {
     mutationFn: (id: string) => convertCollectionToUser(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
+    },
+  });
+}
+
+export function useUpdateCollectionMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: UpdateCollectionInput }) => updateCollection(id, patch),
+    onSuccess: () => {
+      // A vault toggle can also move memories in/out of view (cascade to
+      // members), so both caches need a refetch, not just collections.
+      queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ["memories"] });
     },
   });
 }

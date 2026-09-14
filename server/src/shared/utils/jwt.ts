@@ -68,3 +68,40 @@ export function verifyShareToken(token: string): ShareTokenPayload | null {
     return null;
   }
 }
+
+/** Proof that this browser entered the vault PIN, within the idle window. */
+export interface VaultTokenPayload {
+  typ: "vault";
+  userId: string;
+  /** The user's vaultPinUpdatedAt epoch — see verifyVaultToken. */
+  pv: number;
+}
+
+// A short, sliding window rather than a long-lived cookie: the vault holds
+// deliberately hidden content, so re-issuing on every authenticated vault
+// request (see requireVaultUnlocked) is what makes this "unlocked while
+// active" instead of "unlocked until this arbitrary long TTL expires
+// regardless of activity."
+const VAULT_TOKEN_TTL = "30m";
+
+export function signVaultToken(payload: VaultTokenPayload): string {
+  return jwt.sign(payload, env.VAULT_TOKEN_SECRET, { expiresIn: VAULT_TOKEN_TTL });
+}
+
+/**
+ * Returns null on any failure — an absent, expired, or stale unlock cookie
+ * means "show the PIN form," never a 500.
+ *
+ * Callers must still compare `pv` against the user's current
+ * vaultPinUpdatedAt: that's what makes changing the PIN revoke every
+ * cookie already handed out, without tracking them server-side.
+ */
+export function verifyVaultToken(token: string): VaultTokenPayload | null {
+  try {
+    const payload = jwt.verify(token, env.VAULT_TOKEN_SECRET) as VaultTokenPayload & jwt.JwtPayload;
+    if (payload.typ !== "vault" || typeof payload.userId !== "string" || typeof payload.pv !== "number") return null;
+    return { typ: "vault", userId: payload.userId, pv: payload.pv };
+  } catch {
+    return null;
+  }
+}

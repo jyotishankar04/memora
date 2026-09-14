@@ -234,6 +234,13 @@ export const users = pgTable("users", {
   status: userStatusEnum("status").notNull().default(UserStatus.ACTIVE),
   emailVerified: boolean("email_verified").notNull().default(false),
   emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+  // The vault PIN, scrypt-hashed (shared/crypto/scrypt-password.ts) — same
+  // KDF as share-link passwords. Null until the user sets one up. Embedded
+  // as the `pv` claim in the vault-unlock token, so changing the PIN
+  // invalidates every unlock proof already issued, the same trick used for
+  // share-link passwords.
+  vaultPinHash: text("vault_pin_hash"),
+  vaultPinUpdatedAt: timestamp("vault_pin_updated_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true })
     .notNull()
@@ -517,6 +524,10 @@ export const collections = pgTable(
     // doesn't silently break just because they paused sharing.
     isPublic: boolean("is_public").notNull().default(false),
     publicSlug: varchar("public_slug", { length: 32 }).unique(),
+    // Hides the whole collection (and cascades isVaulted onto every memory
+    // in it — see vault.service.ts) from every normal read path until the
+    // vault PIN is unlocked.
+    isVaulted: boolean("is_vaulted").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -577,6 +588,12 @@ export const memories = pgTable(
     // restored). Drives the 15-day safety window before the purge job hard-
     // deletes it — see modules/memory/trash-purge.job.ts.
     trashedAt: timestamp("trashed_at", { withTimezone: true }),
+    // Hidden from every normal read path (list/search/graph/insights/share)
+    // until the vault PIN is unlocked — see modules/vault/. Also set true
+    // automatically when the memory belongs to a vaulted collection (see
+    // vault.service.ts's cascade), so hiding a whole collection doesn't
+    // require every read path to also join collection_memories.
+    isVaulted: boolean("is_vaulted").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()

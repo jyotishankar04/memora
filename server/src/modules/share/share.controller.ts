@@ -5,7 +5,7 @@ import { setShareTokenCookie } from "../../shared/utils/cookies";
 import { signShareToken } from "../../shared/utils/jwt";
 import { ShareResourceType } from "../../db/enums";
 import { getSharedPayload, readUnlockedShares, resolveShareAccess } from "./share.access";
-import { verifySharePassword } from "./share.password";
+import { verifyPassword as verifySharePassword } from "../../shared/crypto/scrypt-password";
 import { getShareViewSummary, getShareViewsDaily, listShareViewers, recordShareView } from "./share.views";
 import { getClientIp } from "../../shared/utils/device-fingerprint";
 import * as shareService from "./share.service";

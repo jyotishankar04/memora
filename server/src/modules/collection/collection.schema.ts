@@ -10,6 +10,7 @@ export const updateCollectionSchema = z.object({
   name: z.string().min(1).max(100).optional(),
   icon: z.string().max(50).optional(),
   description: z.string().optional(),
+  isVaulted: z.boolean().optional(),
 });
 
 export const listCollectionsQuerySchema = z.object({
@@ -17,6 +18,10 @@ export const listCollectionsQuerySchema = z.object({
   // hidden unless explicitly requested — the app's "show system collections"
   // toggle sends includeSystem=true.
   includeSystem: z.coerce.boolean().default(false),
+  // Same shape as memories' isVaulted toggle — hidden by default, shown
+  // only when explicitly requested, and only once the vault route guard
+  // (requireVaultUnlockedForQuery) has confirmed the PIN was entered.
+  isVaulted: z.coerce.boolean().default(false),
 });
 
 export type CreateCollectionInput = z.infer<typeof createCollectionSchema>;

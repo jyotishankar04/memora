@@ -20,7 +20,7 @@ import {
 } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
 import { assertWithinLimit, hasFeature } from "../plans/plans.service";
-import { hashSharePassword } from "./share.password";
+import { hashPassword as hashSharePassword } from "../../shared/crypto/scrypt-password";
 import { notifyAccessDecision, notifyAccessRequested, notifyShareInvite } from "./share.notify";
 import type { ShareRow } from "./share.access";
 import type { CreateShareInput, ListSharesQuery, UpdateShareInput } from "./share.schema";
@@ -104,7 +104,7 @@ async function assertOwnsResource(
   const [row] = await dbClient
     .select({ id: memories.id })
     .from(memories)
-    .where(and(eq(memories.id, resourceId), eq(memories.userId, userId), eq(memories.inTrash, false)))
+    .where(and(eq(memories.id, resourceId), eq(memories.userId, userId), eq(memories.inTrash, false), eq(memories.isVaulted, false)))
     .limit(1);
   if (!row) throw new AppError("Memory not found", 404, "NOT_FOUND");
 }

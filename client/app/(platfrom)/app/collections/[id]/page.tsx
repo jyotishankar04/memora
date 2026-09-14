@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { Search01Icon as Search, ArrowLeft01Icon as ArrowLeft, MoreHorizontalIcon as MoreHorizontal, Edit01Icon as Edit, Share02Icon as Share2, GridIcon as Grid, ListIcon as List, Delete02Icon as Trash2, Copy01Icon as Copy } from "@hugeicons/core-free-icons";
+import { Search01Icon as Search, ArrowLeft01Icon as ArrowLeft, MoreHorizontalIcon as MoreHorizontal, Edit01Icon as Edit, Share02Icon as Share2, GridIcon as Grid, ListIcon as List, Delete02Icon as Trash2, Copy01Icon as Copy, LockPasswordIcon as Lock } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -28,7 +28,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { useCollectionsQuery, useDeleteCollectionMutation, useMemoriesQuery } from "@/context/MemoryContext";
+import { useCollectionsQuery, useDeleteCollectionMutation, useMemoriesQuery, useUpdateCollectionMutation } from "@/context/MemoryContext";
 import { ShareDialog } from "@/components/share/share-dialog";
 import { timeAgo } from "@/lib/time";
 import { MemoryThumbnail } from "@/components/memory-thumbnail";
@@ -50,6 +50,7 @@ export default function CollectionDetailPage() {
   const memories = data?.items ?? [];
 
   const deleteMutation = useDeleteCollectionMutation();
+  const updateMutation = useUpdateCollectionMutation();
   const [shareDialogOpen, setShareDialogOpen] = useState(false);
 
 
@@ -122,6 +123,22 @@ export default function CollectionDetailPage() {
             <DropdownMenuContent align="end">
               <DropdownMenuItem onClick={() => toast.add({ title: "Duplicating collections isn't available yet.", type: "info" })}>
                 <HugeiconsIcon icon={Copy} strokeWidth={2.25} className="h-3.5 w-3.5" /> Duplicate
+              </DropdownMenuItem>
+              {/* Vaulting a collection hides every memory inside it too, and
+                  needs no unlock — hiding is always safe. Un-vaulting from
+                  the Vault page is what requires the PIN. */}
+              <DropdownMenuItem
+                onClick={async () => {
+                  try {
+                    await updateMutation.mutateAsync({ id: collection.id, patch: { isVaulted: true } });
+                    toast.add({ title: "Moved to vault", description: collection.name, type: "success" });
+                    router.push("/app/collections");
+                  } catch (err) {
+                    toast.add({ title: err instanceof Error ? err.message : "Couldn't move this to the vault.", type: "error" });
+                  }
+                }}
+              >
+                <HugeiconsIcon icon={Lock} strokeWidth={2.25} className="h-3.5 w-3.5" /> Add to vault
               </DropdownMenuItem>
               <DropdownMenuSeparator />
               <DropdownMenuItem variant="destructive" onClick={() => setDeleteDialogOpen(true)}>

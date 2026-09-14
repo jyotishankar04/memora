@@ -9,6 +9,7 @@ export interface ListMemoriesParams {
   isFavorite?: boolean;
   isArchived?: boolean;
   inTrash?: boolean;
+  isVaulted?: boolean;
   collectionId?: string;
   tag?: string;
   q?: string;
@@ -51,6 +52,7 @@ export type UpdateMemoryInput = Partial<
     isFavorite: boolean;
     isArchived: boolean;
     inTrash: boolean;
+    isVaulted: boolean;
   }
 >;
 
