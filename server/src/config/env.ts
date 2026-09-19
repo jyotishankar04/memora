@@ -11,12 +11,18 @@ const envSchema = z
       .default("info"),
     DATABASE_URL: z.string().min(1, "DATABASE_URL is required"),
     REDIS_URL: z.string().min(1, "REDIS_URL is required"),
-    MAILHOG_URL: z.string().min(1, "MAILHOG_URL is required"),
-    // SMTP_HOST: z.string().min(1, "SMTP_HOST is required"),
-    // SMTP_PORT: z.coerce.number().default(1025),
-    // SMTP_USERNAME: z.string().optional(),
-    // SMTP_PASSWORD: z.string().optional(),
-    // SMTP_FROM_ADDRESS: z.string().email().optional(),
+    // SMTP transport for outgoing email — Mailhog in dev (docker-compose's
+    // `mailhog` service: SMTP on 1025, web UI at http://localhost:8025).
+    // Defaults target that local Mailhog with no auth, so a plain `.env`
+    // with none of these set still works; swap in a real provider in
+    // production by setting env, no code change needed.
+    SMTP_HOST: z.string().min(1).default("localhost"),
+    SMTP_PORT: z.coerce.number().default(1025),
+    SMTP_SECURE: z.coerce.boolean().default(false),
+    SMTP_USERNAME: z.string().optional(),
+    SMTP_PASSWORD: z.string().optional(),
+    SMTP_FROM_ADDRESS: z.string().email().default("noreply@memora.local"),
+    SMTP_FROM_NAME: z.string().default("Memora"),
     FRONTEND_URL: z.string().url().min(1, "FRONTEND_URL is required"),
     SERVER_URL: z.string().url().min(1, "SERVER_URL is required"),
 
@@ -66,6 +72,41 @@ const envSchema = z
     LANGFUSE_PUBLIC_KEY: z.string().optional(),
     LANGFUSE_SECRET_KEY: z.string().optional(),
     LANGFUSE_BASE_URL: z.string().url().default("http://localhost:3001"),
+
+    // Stripe Checkout — optional, same degrade-gracefully pattern as
+    // Langfuse above. If unset, getStripeClient() returns null and every
+    // billing route responds with a clear "not configured" error rather
+    // than crashing. No real keys exist yet; wire test-mode ones in later.
+    STRIPE_SECRET_KEY: z.string().optional(),
+    STRIPE_WEBHOOK_SECRET: z.string().optional(),
+    STRIPE_PUBLISHABLE_KEY: z.string().optional(),
+
+    // Calendar OAuth connect (separate from the login-only Google scope
+    // above). Google reuses GOOGLE_CLIENT_ID/SECRET via incremental
+    // authorization — the human operator must enable the Calendar API and
+    // approve the calendar.events scope on the existing GCP OAuth client;
+    // no new Google credentials needed. Microsoft needs an entirely new
+    // Azure AD App Registration (the human must create one — cannot be
+    // automated) with a redirect URI of
+    // `${SERVER_URL}/api/v1/integrations/calendar/microsoft/callback` and the delegated
+    // Graph permission Calendars.ReadWrite. Both optional, same
+    // degrade-gracefully pattern as Stripe above.
+    MICROSOFT_CLIENT_ID: z.string().optional(),
+    MICROSOFT_CLIENT_SECRET: z.string().optional(),
+    MICROSOFT_TENANT_ID: z.string().default("common"),
+    // AES-256-GCM key for encrypting stored OAuth tokens — 32 raw bytes,
+    // base64-encoded. Generate with:
+    // node -e "console.log(require('crypto').randomBytes(32).toString('base64'))"
+    // Optional so the app still boots without it; every calendar route
+    // degrades to 503 CALENDAR_NOT_CONFIGURED when unset.
+    TOKEN_ENCRYPTION_KEY: z.string().optional(),
+    // Signs the calendar-connect OAuth "state" param, carrying the
+    // initiating user's id across the redirect (the callback route has no
+    // session/cookie of its own — see modules/integrations/calendar/calendar.controller.ts).
+    // Same reasoning as SHARE_TOKEN_SECRET/VAULT_TOKEN_SECRET: a dedicated
+    // secret, not reused, so a forged calendar-state token can never be
+    // read as any other kind.
+    CALENDAR_STATE_SECRET: z.string().min(32, "CALENDAR_STATE_SECRET must be at least 32 characters"),
   })
   .refine((data) => data.JWT_ACCESS_SECRET !== data.JWT_REFRESH_SECRET, {
     message: "JWT_ACCESS_SECRET and JWT_REFRESH_SECRET must be different",
@@ -88,6 +129,17 @@ const envSchema = z
     {
       message: "VAULT_TOKEN_SECRET must differ from the other token secrets",
       path: ["VAULT_TOKEN_SECRET"],
+    }
+  )
+  .refine(
+    (data) =>
+      data.CALENDAR_STATE_SECRET !== data.JWT_ACCESS_SECRET &&
+      data.CALENDAR_STATE_SECRET !== data.JWT_REFRESH_SECRET &&
+      data.CALENDAR_STATE_SECRET !== data.SHARE_TOKEN_SECRET &&
+      data.CALENDAR_STATE_SECRET !== data.VAULT_TOKEN_SECRET,
+    {
+      message: "CALENDAR_STATE_SECRET must differ from the other token secrets",
+      path: ["CALENDAR_STATE_SECRET"],
     }
   )
   .refine(

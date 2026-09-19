@@ -11,7 +11,16 @@ export function createApp() {
   const app = express();
 
   app.use(requestLogger);
-  app.use(express.json());
+
+  // Stripe needs the raw body for webhook signature verification — must be
+  // registered with express.raw() on this exact path BEFORE the global
+  // express.json() below, or json() will have already consumed the stream.
+  app.use("/api/v1/billing/webhook", express.raw({ type: "application/json" }));
+
+  // 5mb, not the 100kb default — a Netscape bookmark export with hundreds/
+  // thousands of entries can be several hundred KB to a few MB (see
+  // modules/import).
+  app.use(express.json({ limit: "5mb" }));
   app.use(cookieParser());
   app.use(cors(corsOptions));
   app.use("/api/v1", routes);

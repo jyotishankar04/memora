@@ -105,3 +105,42 @@ export function verifyVaultToken(token: string): VaultTokenPayload | null {
     return null;
   }
 }
+
+/**
+ * Carries the initiating user's id across a calendar-connect OAuth
+ * redirect. The connect route (`GET /integrations/calendar/:provider/connect`) is
+ * authenticated normally, but Google/Microsoft's callback redirect carries
+ * no session cookie of its own — this token, passed as the OAuth `state`
+ * param, is how the callback recovers who initiated the connection.
+ */
+export interface CalendarStateTokenPayload {
+  typ: "calendar_connect";
+  userId: string;
+  provider: "google" | "microsoft";
+}
+
+// Matches the existing OAuth login flow's state-cookie window
+// (OAUTH_STATE_COOKIE, 10 minutes) — plenty of time for the provider's own
+// consent screen, short enough that a leaked/logged state token is useless
+// soon after.
+const CALENDAR_STATE_TTL = "10m";
+
+export function signCalendarStateToken(payload: CalendarStateTokenPayload): string {
+  return jwt.sign(payload, env.CALENDAR_STATE_SECRET, { expiresIn: CALENDAR_STATE_TTL });
+}
+
+/** Returns null on any failure — an invalid/expired/tampered state means "reject the callback," never a 500. */
+export function verifyCalendarStateToken(token: string): CalendarStateTokenPayload | null {
+  try {
+    const payload = jwt.verify(token, env.CALENDAR_STATE_SECRET) as CalendarStateTokenPayload & jwt.JwtPayload;
+    if (
+      payload.typ !== "calendar_connect" ||
+      typeof payload.userId !== "string" ||
+      (payload.provider !== "google" && payload.provider !== "microsoft")
+    )
+      return null;
+    return { typ: "calendar_connect", userId: payload.userId, provider: payload.provider };
+  } catch {
+    return null;
+  }
+}
