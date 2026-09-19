@@ -15,7 +15,8 @@ import type { AssignPlanInput, ListAssignmentsQuery, ListTransactionsQuery, Reve
  * exactly what a future Stripe webhook handler will do automatically; today
  * an admin triggers it by hand since there's no live checkout yet.
  */
-export async function assignPlanToUser(userId: string, input: AssignPlanInput, adminUserId: string, ipAddress?: string) {
+/** adminUserId is null for an automated assignment (e.g. a Stripe webhook) — never a fake actor id, and the admin-audit-log write below is skipped entirely in that case, since an automated payment isn't an admin action. */
+export async function assignPlanToUser(userId: string, input: AssignPlanInput, adminUserId: string | null, ipAddress?: string) {
   return db.transaction(async (tx) => {
     const [plan] = await tx.select({ currency: plans.currency }).from(plans).where(eq(plans.id, input.planId)).limit(1);
     if (!plan) throw new AppError("Plan not found", 404);
@@ -33,11 +34,13 @@ export async function assignPlanToUser(userId: string, input: AssignPlanInput, a
         userId,
         planId: input.planId,
         status: PlanAssignmentStatus.ACTIVE,
-        source: input.couponRedemptionId
-          ? PlanAssignmentSource.COUPON_REDEMPTION
-          : input.referralConversionId
-            ? PlanAssignmentSource.REFERRAL_REWARD
-            : PlanAssignmentSource.ADMIN_MANUAL,
+        source: input.provider
+          ? PlanAssignmentSource.PAYMENT
+          : input.couponRedemptionId
+            ? PlanAssignmentSource.COUPON_REDEMPTION
+            : input.referralConversionId
+              ? PlanAssignmentSource.REFERRAL_REWARD
+              : PlanAssignmentSource.ADMIN_MANUAL,
         endsAt: input.endsAt ? new Date(input.endsAt) : null,
         assignedBy: adminUserId,
         reason: input.reason ?? null,
@@ -56,6 +59,8 @@ export async function assignPlanToUser(userId: string, input: AssignPlanInput, a
         status: TransactionStatus.SUCCEEDED,
         amountMinor: input.amountMinor,
         currency: plan.currency,
+        provider: input.provider ?? null,
+        providerRef: input.providerRef ?? null,
         initiatedBy: adminUserId,
         occurredAt: new Date(),
       })
@@ -68,14 +73,19 @@ export async function assignPlanToUser(userId: string, input: AssignPlanInput, a
       await markConversionConverted(input.referralConversionId, transaction.id, tx);
     }
 
-    await logAdminAction({
-      adminUserId,
-      action: "plan.assigned",
-      targetType: "user",
-      targetId: userId,
-      afterValue: { planId: input.planId, assignmentId: assignment.id, transactionId: transaction.id },
-      ipAddress,
-    });
+    // Skipped for an automated assignment (adminUserId null) — this isn't an
+    // admin action, and logAdminAction's adminUserId column is a required
+    // (non-nullable) actor id.
+    if (adminUserId) {
+      await logAdminAction({
+        adminUserId,
+        action: "plan.assigned",
+        targetType: "user",
+        targetId: userId,
+        afterValue: { planId: input.planId, assignmentId: assignment.id, transactionId: transaction.id },
+        ipAddress,
+      });
+    }
 
     return { assignment, transaction };
   });

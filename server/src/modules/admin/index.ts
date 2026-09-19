@@ -7,6 +7,7 @@ import creditsRoutes from "./credits/credits.routes";
 import couponsRoutes from "./coupons/coupons.routes";
 import referralsRoutes from "./referrals/referrals.routes";
 import billingRoutes from "./billing/billing.routes";
+import emailRoutes from "./email/email.routes";
 
 // Aggregates every admin sub-module onto one router, mounted at /api/v1/admin
 // by ../../routes/index.ts. Each sub-module owns its own routes/controller/
@@ -23,5 +24,6 @@ router.use("/credits", creditsRoutes);
 router.use("/coupons", couponsRoutes);
 router.use("/referrals", referralsRoutes);
 router.use("/billing", billingRoutes);
+router.use("/emails", emailRoutes);
 
 export default router;

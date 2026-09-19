@@ -1,9 +1,12 @@
 import { and, count, desc, eq, gte, ilike, isNull, or, sql } from "drizzle-orm";
 import { db } from "../../../db";
 import { collections, memories, plans, roles, users, userPlanAssignments, userRoles } from "../../../db/schema";
-import { PlanAssignmentStatus } from "../../../db/enums";
+import { EmailCategory, EmailTemplateKey, PlanAssignmentStatus } from "../../../db/enums";
 import { AppError } from "../../../shared/errors/app-error";
 import { logAdminAction } from "../../../shared/utils/audit-log";
+import { logger } from "../../../shared/utils/logger";
+import { sendEmail } from "../../email";
+import { userStatusChangedEmailTemplate } from "../../../shared/mailer/templates";
 import type { ListUsersQuery, UpdateUserRolesInput, UpdateUserStatusInput } from "./users.schema";
 
 export interface AdminUserListItem {
@@ -255,6 +258,18 @@ export async function updateUserStatus(
     afterValue: { status: after.status },
     ipAddress,
   });
+
+  if (before.status !== after.status) {
+    const { subject, html } = userStatusChangedEmailTemplate({ name: after.name, status: after.status });
+    sendEmail({
+      to: after.email,
+      recipientUserId: after.id,
+      category: EmailCategory.TRANSACTIONAL,
+      templateKey: EmailTemplateKey.USER_STATUS_CHANGED,
+      subject,
+      html,
+    }).catch((err) => logger.warn({ err, userId }, "Failed to enqueue status-change email"));
+  }
 
   return after;
 }

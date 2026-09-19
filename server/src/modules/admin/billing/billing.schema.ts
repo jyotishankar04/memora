@@ -12,6 +12,12 @@ export const assignPlanSchema = z.object({
   // a future Stripe webhook handler would do.
   couponRedemptionId: z.string().uuid().optional(),
   referralConversionId: z.string().uuid().optional(),
+  // Set by an automated payment webhook (Stripe today) — never by the admin
+  // UI. `providerRef` is the checkout-session/payment-intent id, which the
+  // transactions table's unique(provider, providerRef) index uses to dedupe
+  // webhook replays.
+  provider: z.string().max(50).optional(),
+  providerRef: z.string().max(255).optional(),
 });
 
 export const listTransactionsQuerySchema = z.object({
