@@ -1,10 +1,16 @@
 import type { Request, Response } from "express";
 import { ApiResponse } from "../../shared/response/api-response";
+import { isImportEnabled } from "../feature-flags/feature-flags.service";
 import type { ImportInput, ListImportItemsQuery } from "./import.schema";
 import { getImportBatch, listImportItems, runImport } from "./import.service";
 
 export class ImportController {
   static async run(req: Request, res: Response) {
+    const isEnabled = await isImportEnabled();
+    if (!isEnabled) {
+      return res.status(403).json(ApiResponse.error("IMPORT_DISABLED", "Import is currently disabled"));
+    }
+
     const result = await runImport(req.user!.id, req.body as ImportInput);
     res.status(201).json(ApiResponse.success(result));
   }
