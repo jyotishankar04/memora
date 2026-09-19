@@ -10,6 +10,7 @@ import {
   CancelCircleIcon as Declined,
   Share02Icon as Shared,
   Delete02Icon as Trash,
+  Calendar03Icon as CalendarIcon,
 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -18,7 +19,7 @@ import { Reveal } from "@/components/ui/reveal";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
 import { timeAgo } from "@/lib/time";
-import { accessRequestRefs, type AppNotification, type NotificationType } from "@/lib/notifications";
+import { accessRequestRefs, eventDetectedRefs, type AppNotification, type NotificationType } from "@/lib/notifications";
 import {
   useDeleteNotificationMutation,
   useMarkAllReadMutation,
@@ -26,6 +27,7 @@ import {
   useNotificationsQuery,
 } from "@/hooks/use-notifications";
 import { useApproveRequestMutation, useDenyRequestMutation, usePendingRequestsQuery } from "@/hooks/use-shares";
+import { EventDetectedPopup } from "@/components/memory/event-detected-popup";
 
 const ICONS: Record<NotificationType, typeof Bell> = {
   share_invite_received: Shared,
@@ -33,6 +35,7 @@ const ICONS: Record<NotificationType, typeof Bell> = {
   share_access_approved: Approved,
   share_access_denied: Declined,
   share_revoked: Declined,
+  event_detected: CalendarIcon,
 };
 
 export default function NotificationsPage() {
@@ -140,6 +143,7 @@ function NotificationRow({ notification }: { notification: AppNotification }) {
 
       <div className="flex shrink-0 flex-col items-end gap-1.5">
         {notification.type === "share_access_requested" && <InlineDecision notification={notification} />}
+        {notification.type === "event_detected" && <InlineCalendarAction notification={notification} />}
         <div className="flex items-center gap-1">
           {unread && (
             <button
@@ -212,6 +216,34 @@ function InlineDecision({ notification }: { notification: AppNotification }) {
         Decline
       </Button>
     </div>
+  );
+}
+
+/** Same "act inline" pattern as InlineDecision above, but for an AI-detected event — opens the shared confirm-then-commit popup rather than acting directly. */
+function InlineCalendarAction({ notification }: { notification: AppNotification }) {
+  const refs = eventDetectedRefs(notification);
+  const [open, setOpen] = React.useState(false);
+  const markRead = useMarkReadMutation();
+
+  if (!refs) return null;
+
+  return (
+    <>
+      <div className="flex gap-1.5">
+        <Button size="sm" onClick={() => setOpen(true)} className="h-6 rounded-full px-2.5 text-[10px]">
+          Add to calendar
+        </Button>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={() => !notification.readAt && markRead.mutate(notification.id)}
+          className="h-6 rounded-full px-2.5 text-[10px]"
+        >
+          Dismiss
+        </Button>
+      </div>
+      {open && <EventDetectedPopup notification={notification} onClose={() => setOpen(false)} />}
+    </>
   );
 }
 

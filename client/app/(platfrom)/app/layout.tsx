@@ -9,7 +9,7 @@ import { MaintenanceFullPage } from "@/components/maintenance/maintenance-full-p
 import { getMaintenanceStatus } from "@/lib/maintenance";
 import { AnimatePresence, motion } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SparklesIcon as Sparkles, PlusIcon as Plus, Search01Icon as Search, Settings01Icon as Settings, HelpCircleIcon as HelpCircle, BellIcon as Bell, XIcon as X, MoonIcon as Moon, Sun01Icon as Sun, FolderOpenIcon as FolderOpen, CompassIcon as Compass, CheckIcon as Check, ChevronRightIcon as ChevronRight, ChevronDownIcon as ChevronDown, FolderPlusIcon as FolderPlus, HeartIcon as Heart, Clock01Icon as Clock, CompassIcon, BarChartIcon as BarChart2, FileTextIcon as FileText, PaperclipIcon as Paperclip, CloudUploadIcon as UploadCloud, Layers01Icon as Layers, PanelLeftCloseIcon as PanelLeftClose, PanelLeftOpenIcon as PanelLeftOpen, Menu01Icon as Menu, Tag01Icon as Tag, KeyboardIcon as Keyboard, Archive01Icon as Archive, Delete02Icon as Trash2, TrendingUpIcon as TrendingUp, Plug01Icon as Plug, MessageSquarePlusIcon as MessageSquarePlus, HistoryIcon as History, ShieldUserIcon as ShieldUser, Share02Icon as Share2, LockPasswordIcon as VaultIcon } from "@hugeicons/core-free-icons";
+import { SparklesIcon as Sparkles, PlusIcon as Plus, Search01Icon as Search, Settings01Icon as Settings, HelpCircleIcon as HelpCircle, BellIcon as Bell, XIcon as X, MoonIcon as Moon, Sun01Icon as Sun, FolderOpenIcon as FolderOpen, CompassIcon as Compass, CheckIcon as Check, ChevronRightIcon as ChevronRight, ChevronDownIcon as ChevronDown, FolderPlusIcon as FolderPlus, HeartIcon as Heart, Clock01Icon as Clock, CompassIcon, BarChartIcon as BarChart2, FileTextIcon as FileText, PaperclipIcon as Paperclip, CloudUploadIcon as UploadCloud, Layers01Icon as Layers, PanelLeftCloseIcon as PanelLeftClose, PanelLeftOpenIcon as PanelLeftOpen, Menu01Icon as Menu, Tag01Icon as Tag, KeyboardIcon as Keyboard, Archive01Icon as Archive, Delete02Icon as Trash2, TrendingUpIcon as TrendingUp, Plug01Icon as Plug, MessageSquarePlusIcon as MessageSquarePlus, HistoryIcon as History, ShieldUserIcon as ShieldUser, Share02Icon as Share2, LockPasswordIcon as VaultIcon, Calendar03Icon as CalendarIcon } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { logout } from "@/lib/auth";
@@ -19,7 +19,10 @@ import { SidebarStateProvider } from "@/context/SidebarContext";
 import { UpgradeCard } from "@/components/upgrade-card";
 import { uploadFile, type UploadedFile } from "@/lib/uploads";
 import { usePlanLabel, usePlanLimit } from "@/hooks/use-plan-limit";
-import { useUnreadCountQuery } from "@/hooks/use-notifications";
+import { useRecentEventNotificationsQuery, useUnreadCountQuery } from "@/hooks/use-notifications";
+import type { AppNotification } from "@/lib/notifications";
+import { EventDetectedPopup } from "@/components/memory/event-detected-popup";
+import { useLockVaultMutation } from "@/hooks/use-vault";
 import { PlanLimitNotice, ProBadge, LimitDot } from "@/components/plan-limit-notice";
 import { detectMemoryType, deriveTitle, splitLinkAndCaption } from "@/lib/detect-memory-type";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
@@ -146,6 +149,45 @@ function AppShell({ children }: { children: React.ReactNode }) {
   const { collections, create } = useMemories();
   const memoryLimit = usePlanLimit("memory_count");
   const storageLimit = usePlanLimit("storage_mb");
+
+  // Leaving /app/vault for any other page locks it — this lives here rather
+  // than in the vault page itself because this shell persists across every
+  // /app/* navigation, so a real route change is the only thing that can
+  // trigger it. An unmount-cleanup on the vault page would also fire once,
+  // synthetically, from React's StrictMode double-invoke in development,
+  // re-locking the vault the instant that page first mounts.
+  const lockVaultMutation = useLockVaultMutation();
+  const lockVaultRef = useRef(lockVaultMutation.mutate);
+  useEffect(() => {
+    lockVaultRef.current = lockVaultMutation.mutate;
+  });
+  const previousPathnameRef = useRef(pathname);
+  useEffect(() => {
+    if (previousPathnameRef.current === "/app/vault" && pathname !== "/app/vault") {
+      lockVaultRef.current();
+    }
+    previousPathnameRef.current = pathname;
+  }, [pathname]);
+
+  // Live "want to add this to your calendar?" popup — surfaces a detected
+  // event immediately if the user happens to be on the site when ingestion
+  // finishes, rather than waiting for them to visit /app/notifications.
+  // Rides the same 60s poll as the bell badge (no websocket in this app);
+  // the email sent alongside this notification already covers the case
+  // where the user isn't around to see it live.
+  const { data: recentNotifications } = useRecentEventNotificationsQuery();
+  const seenEventPopupIds = useRef<Set<string>>(new Set());
+  const [eventPopupNotification, setEventPopupNotification] = useState<AppNotification | null>(null);
+  useEffect(() => {
+    if (eventPopupNotification) return;
+    const next = recentNotifications?.find(
+      (n) => n.type === "event_detected" && !seenEventPopupIds.current.has(n.id),
+    );
+    if (next) {
+      seenEventPopupIds.current.add(next.id);
+      setEventPopupNotification(next);
+    }
+  }, [recentNotifications, eventPopupNotification]);
 
   const handleLogout = () => {
     logout().finally(() => {
@@ -548,6 +590,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
     { label: "Vault", href: "/app/vault", icon: VaultIcon },
     { label: "Notifications", href: "/app/notifications", icon: Bell },
     { label: "Insights", href: "/app/insights", icon: TrendingUp },
+    { label: "Calendar", href: "/app/calendar", icon: CalendarIcon },
+    { label: "Import", href: "/app/import", icon: UploadCloud },
     { label: "Integrations", href: "/app/integrations", icon: Plug },
     { label: "Memory Graph", href: "/app/graph", icon: BarChart2 },
   ];
@@ -1374,6 +1418,13 @@ function AppShell({ children }: { children: React.ReactNode }) {
           </ul>
         </DialogContent>
       </Dialog>
+
+      {eventPopupNotification && (
+        <EventDetectedPopup
+          notification={eventPopupNotification}
+          onClose={() => setEventPopupNotification(null)}
+        />
+      )}
 
       {/* Global CSS animations styles */}
       <style>{`

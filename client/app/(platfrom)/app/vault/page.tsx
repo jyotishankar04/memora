@@ -1,26 +1,84 @@
 "use client";
 
 import React from "react";
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { HugeiconsIcon } from "@hugeicons/react";
-import {
-  LockPasswordIcon as Lock,
-  Layers01Icon as Layers,
-  FileTextIcon as FileText,
-  RotateCcwIcon as RotateCcw,
-} from "@hugeicons/core-free-icons";
+import { LockPasswordIcon as Lock, ArrowLeft01Icon as ArrowLeft } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { Reveal } from "@/components/ui/reveal";
-import { useMemoriesQuery, useUpdateCollectionMutation, useUpdateMemoryMutation } from "@/context/MemoryContext";
+import { FolderCard } from "@/components/ui/folder-card";
+import { MemoryGridCard } from "@/components/memory/memory-grid-card";
+import { CollectionActionsMenu } from "@/components/collection/collection-actions-menu";
+import { useMemoriesQuery } from "@/context/MemoryContext";
 import { listCollections } from "@/lib/collections";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useLockVaultMutation, useSetVaultPinMutation, useUnlockVaultMutation, useVaultStatusQuery } from "@/hooks/use-vault";
+import { cn } from "@/lib/utils";
+import type { Collection, Memory } from "@/types/memory";
+
+const COLOR_PALETTE = [
+  "bg-blue-500/10 text-blue-500 border-blue-500/20",
+  "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  "bg-pink-500/10 text-pink-500 border-pink-500/20",
+  "bg-teal-500/10 text-teal-500 border-teal-500/20",
+  "bg-amber-500/10 text-amber-500 border-amber-500/20",
+  "bg-emerald-500/10 text-emerald-500 border-emerald-500/20",
+];
+
+function colorFor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) >>> 0;
+  return COLOR_PALETTE[hash % COLOR_PALETTE.length];
+}
 
 export default function VaultPage() {
   const status = useVaultStatusQuery();
+  const lockMutation = useLockVaultMutation();
+
+  // Read via a ref inside the effects below so they can depend on `[]` (run
+  // once, clean up once) without capturing a stale `mutate` closure or
+  // re-registering listeners — and without re-firing the "leaving" lock on
+  // every render, which would happen if the mutation's own (identity-
+  // changing) return object were a dependency instead.
+  const lockRef = React.useRef(lockMutation.mutate);
+  React.useEffect(() => {
+    lockRef.current = lockMutation.mutate;
+  });
+
+  const [obscured, setObscured] = React.useState(false);
+
+  // Privacy blur: dim the content immediately when this window loses
+  // OS-level focus (e.g. alt-tabbing to another app) — a fast visual
+  // response for the moment before a real lock (below) can round-trip.
+  React.useEffect(() => {
+    const obscure = () => setObscured(true);
+    const reveal = () => setObscured(false);
+    window.addEventListener("blur", obscure);
+    window.addEventListener("focus", reveal);
+    return () => {
+      window.removeEventListener("blur", obscure);
+      window.removeEventListener("focus", reveal);
+    };
+  }, []);
+
+  // Real lock: switching browser tabs (or minimizing) revokes the unlock
+  // outright — coming back requires the PIN again, not just an unblur.
+  React.useEffect(() => {
+    const onVisibilityChange = () => {
+      if (document.hidden) lockRef.current();
+    };
+    document.addEventListener("visibilitychange", onVisibilityChange);
+    return () => document.removeEventListener("visibilitychange", onVisibilityChange);
+  }, []);
+
+  // Leaving the vault page entirely (route change) also locks it — handled
+  // in the shared app layout (via a pathname-change effect), not here: an
+  // unmount-cleanup in this component would also fire once, synthetically,
+  // from React's StrictMode double-invoke in development, re-locking the
+  // vault the instant this page first mounts.
 
   if (status.isLoading) return <PageSkeleton />;
 
@@ -34,7 +92,11 @@ export default function VaultPage() {
 
   if (!status.data?.hasPin) return <SetupGate />;
   if (!status.data.unlocked) return <UnlockGate />;
-  return <VaultContents />;
+  return (
+    <div className={cn("transition-[filter] duration-150", obscured && "pointer-events-none blur-md select-none")}>
+      <VaultContents />
+    </div>
+  );
 }
 
 function GateShell({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
@@ -147,134 +209,113 @@ function UnlockGate() {
   );
 }
 
+/** Once unlocked, the vault looks and behaves exactly like the main app:
+ * collections render as the same folder cards as /app/collections, memories
+ * render as the same grid cards as /app/memories (full action menus
+ * included), and clicking a collection drills into its own memories instead
+ * of leaving the vault. */
 function VaultContents() {
-  const queryClient = useQueryClient();
-  const memoriesKey = ["memories", { isVaulted: true, limit: 100 }] as const;
-  const collectionsKey = ["collections", { vaulted: true }] as const;
-  const { data: memoriesData, isLoading: memoriesLoading } = useMemoriesQuery({ isVaulted: true, limit: 100 });
-  const collectionsQuery = useQuery({ queryKey: collectionsKey, queryFn: () => listCollections(false, true) });
+  const [selectedCollectionId, setSelectedCollectionId] = React.useState<string | null>(null);
   const lockMutation = useLockVaultMutation();
-  const unvaultMemory = useUpdateMemoryMutation();
-  const unvaultCollection = useUpdateCollectionMutation();
 
-  // The generic mutations' own onSettled already invalidates the broad
-  // ["memories"]/["collections"] prefixes, which normally refetches every
-  // observer including this one. Belt-and-suspenders: this page's own two
-  // vault-scoped keys are invalidated explicitly too, so a removal is
-  // guaranteed to disappear from this exact view without waiting on a
-  // reload — cheap, since a no-op invalidate on an already-fresh key costs
-  // nothing.
-  const refreshVaultViews = () => {
-    queryClient.invalidateQueries({ queryKey: memoriesKey });
-    queryClient.invalidateQueries({ queryKey: collectionsKey });
-  };
-
-  const memories = memoriesData?.items ?? [];
+  const collectionsQuery = useQuery({
+    queryKey: ["collections", { vaulted: true }] as const,
+    queryFn: () => listCollections(false, true),
+  });
   const collections = collectionsQuery.data ?? [];
-  const loading = memoriesLoading || collectionsQuery.isLoading;
+  const selectedCollection = collections.find((c) => c.id === selectedCollectionId) ?? null;
+
+  // If the collection currently open was just removed from the vault (or
+  // deleted) from within its own menu, snap back to the vault root instead
+  // of showing a stale, empty nested view.
+  if (selectedCollectionId && !collectionsQuery.isLoading && !selectedCollection) {
+    setSelectedCollectionId(null);
+  }
+
+  const { data: memoriesData, isLoading: memoriesLoading } = useMemoriesQuery({ isVaulted: true, limit: 100 });
+  const memories = memoriesData?.items ?? [];
+
+  const loading = collectionsQuery.isLoading || memoriesLoading;
   const empty = !loading && memories.length === 0 && collections.length === 0;
 
-  return (
-    <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
-      <div className="flex items-start justify-between gap-4">
-        <div className="space-y-1">
-          <h1 className="text-lg font-bold text-foreground">Vault</h1>
-          <p className="text-xs text-muted-foreground">
-            Hidden from search, the graph, insights, and sharing until you unlock it.
-          </p>
-        </div>
-        <Button
-          variant="outline"
-          size="sm"
-          disabled={lockMutation.isPending}
-          onClick={() => lockMutation.mutate()}
-          className="h-8 shrink-0 rounded-full px-3 text-[11px] font-semibold"
-        >
-          <HugeiconsIcon icon={Lock} strokeWidth={2.25} className="h-3 w-3" /> Lock now
-        </Button>
+  const header = (
+    <div className="flex items-start justify-between gap-4">
+      <div className="space-y-1">
+        <h1 className="text-2xl font-bold tracking-tight">Vault</h1>
+        <p className="text-xs text-muted-foreground">Hidden from search, the graph, insights, and sharing until you unlock it.</p>
       </div>
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={lockMutation.isPending}
+        onClick={() => lockMutation.mutate()}
+        className="h-9 shrink-0 rounded-full px-3.5 text-xs font-semibold"
+      >
+        <HugeiconsIcon icon={Lock} strokeWidth={2.25} className="h-3.5 w-3.5" /> Lock now
+      </Button>
+    </div>
+  );
+
+  if (selectedCollection) {
+    return <VaultCollectionView collection={selectedCollection} onBack={() => setSelectedCollectionId(null)} header={header} />;
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-8 px-6 py-10 animate-fade-in">
+      {header}
 
       {loading ? (
-        <div className="space-y-2">
-          {Array.from({ length: 3 }).map((_, i) => (
-            <Skeleton key={i} className="h-14 w-full rounded-xl" />
+        <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-6">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <Skeleton key={i} className="h-44 w-full rounded-2xl" />
           ))}
         </div>
       ) : empty ? (
-        <p className="rounded-xl border border-dashed border-border px-4 py-12 text-center text-xs text-muted-foreground">
+        <p className="rounded-xl border border-dashed border-border px-4 py-20 text-center text-xs text-muted-foreground">
           Nothing in the vault yet. Use &ldquo;Move to vault&rdquo; on a memory or collection to hide it here.
         </p>
       ) : (
-        <div className="space-y-6">
+        <div className="space-y-10">
           {collections.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-xs font-bold text-foreground">Collections</h2>
-              <ul className="space-y-2">
-                {collections.map((collection, index) => (
-                  <Reveal key={collection.id} index={Math.min(index, 6)}>
-                    <li className="flex items-center gap-3 rounded-xl border border-border p-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                        <HugeiconsIcon icon={Layers} strokeWidth={2.25} className="h-4 w-4" />
-                      </span>
-                      <Link href={`/app/collections/${collection.id}`} className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground hover:text-primary">
-                        {collection.name}
-                      </Link>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={unvaultCollection.isPending}
-                        onClick={async () => {
-                          try {
-                            await unvaultCollection.mutateAsync({ id: collection.id, patch: { isVaulted: false } });
-                            refreshVaultViews();
-                            toast.add({ title: "Removed from vault", description: collection.name, type: "success" });
-                          } catch (err) {
-                            toast.add({ title: err instanceof Error ? err.message : "Couldn't remove that.", type: "error" });
-                          }
-                        }}
-                        className="h-7 shrink-0 rounded-full px-2.5 text-[10px]"
-                      >
-                        <HugeiconsIcon icon={RotateCcw} strokeWidth={2.25} className="h-3 w-3" /> Remove
-                      </Button>
-                    </li>
-                  </Reveal>
+            <section className="space-y-4">
+              <h2 className="text-sm font-bold text-foreground">Collections</h2>
+              <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(200px,1fr))] gap-6">
+                {collections.map((col) => (
+                  <div key={col.id} className="relative">
+                    <FolderCard
+                      onClick={() => setSelectedCollectionId(col.id)}
+                      count={col.memoryCount}
+                      label={col.name}
+                      badge={col.icon}
+                      badgeClassName={colorFor(col.id)}
+                    />
+                    <div className="absolute right-3 top-3 z-10">
+                      <CollectionActionsMenu
+                        collection={col}
+                        trigger={
+                          <button
+                            type="button"
+                            className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-card/90 text-muted-foreground shadow-sm backdrop-blur-sm hover:text-foreground"
+                          >
+                            <HugeiconsIcon icon={Lock} strokeWidth={2.25} className="h-3 w-3" />
+                          </button>
+                        }
+                      />
+                    </div>
+                  </div>
                 ))}
-              </ul>
+              </div>
             </section>
           )}
 
           {memories.length > 0 && (
-            <section className="space-y-2">
-              <h2 className="text-xs font-bold text-foreground">Memories</h2>
-              <ul className="space-y-2">
-                {memories.map((memory, index) => (
-                  <Reveal key={memory.id} index={Math.min(index, 8)}>
-                    <li className="flex items-center gap-3 rounded-xl border border-border p-3">
-                      <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-muted text-muted-foreground">
-                        <HugeiconsIcon icon={FileText} strokeWidth={2.25} className="h-4 w-4" />
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-xs font-semibold text-foreground">{memory.title}</span>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        disabled={unvaultMemory.isPending}
-                        onClick={async () => {
-                          try {
-                            await unvaultMemory.mutateAsync({ id: memory.id, patch: { isVaulted: false } });
-                            refreshVaultViews();
-                            toast.add({ title: "Removed from vault", description: memory.title, type: "success" });
-                          } catch (err) {
-                            toast.add({ title: err instanceof Error ? err.message : "Couldn't remove that.", type: "error" });
-                          }
-                        }}
-                        className="h-7 shrink-0 rounded-full px-2.5 text-[10px]"
-                      >
-                        <HugeiconsIcon icon={RotateCcw} strokeWidth={2.25} className="h-3 w-3" /> Remove
-                      </Button>
-                    </li>
-                  </Reveal>
+            <section className="space-y-4">
+              <h2 className="text-sm font-bold text-foreground">Memories</h2>
+              <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
+                {memories.map((item) => (
+                  <MemoryGridCardLink key={item.id} item={item} />
                 ))}
-              </ul>
+              </div>
             </section>
           )}
         </div>
@@ -283,11 +324,71 @@ function VaultContents() {
   );
 }
 
+function VaultCollectionView({ collection, onBack, header }: { collection: Collection; onBack: () => void; header: React.ReactNode }) {
+  const { data, isLoading } = useMemoriesQuery({ collectionId: collection.id, isVaulted: true, limit: 100 });
+  const memories = data?.items ?? [];
+
+  return (
+    <div className="mx-auto max-w-4xl space-y-8 px-6 py-10 animate-fade-in">
+      {header}
+
+      <div className="space-y-6 border-t border-border/20 pt-6">
+        <button
+          onClick={onBack}
+          className="flex items-center gap-1 text-xs font-semibold text-muted-foreground transition-colors hover:text-primary"
+        >
+          <HugeiconsIcon icon={ArrowLeft} strokeWidth={2.25} className="h-4 w-4" /> Back to vault
+        </button>
+
+        <div className="flex items-start justify-between gap-4 border-b border-border/20 pb-6">
+          <div className="flex items-start gap-4">
+            <div className="flex h-14 w-14 shrink-0 select-none items-center justify-center rounded-2xl border border-primary/20 bg-primary/5 text-3xl">
+              {collection.icon}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold tracking-tight">{collection.name}</h2>
+              {collection.description && <p className="mt-1 max-w-md text-xs leading-relaxed text-muted-foreground">{collection.description}</p>}
+              <span className="mt-2 block font-mono text-[10px] font-semibold text-muted-foreground">{collection.memoryCount} saved memories</span>
+            </div>
+          </div>
+          <CollectionActionsMenu collection={collection} redirectTo="/app/vault" />
+        </div>
+
+        {isLoading ? (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <Skeleton key={i} className="h-32 w-full rounded-xl" />
+            ))}
+          </div>
+        ) : memories.length === 0 ? (
+          <p className="rounded-xl border border-dashed border-border px-4 py-16 text-center text-xs text-muted-foreground">
+            No memories in this collection.
+          </p>
+        ) : (
+          <div className="grid grid-cols-[repeat(auto-fill,minmax(160px,1fr))] gap-3 md:grid-cols-[repeat(auto-fill,minmax(200px,1fr))]">
+            {memories.map((item) => (
+              <MemoryGridCardLink key={item.id} item={item} />
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** A vaulted memory's single-item GET is unguarded (same as a trashed item —
+ * a direct link still resolves), so opening one just navigates to the real
+ * memory detail page rather than needing an in-vault preview. */
+function MemoryGridCardLink({ item }: { item: Memory }) {
+  const router = useRouter();
+  return <MemoryGridCard item={item} onClick={() => router.push(`/app/memories/${item.id}`)} />;
+}
+
 function PageSkeleton() {
   return (
-    <div className="mx-auto max-w-3xl space-y-6 px-6 py-8">
+    <div className="mx-auto max-w-4xl space-y-6 px-6 py-10">
       <Skeleton className="h-8 w-32" />
-      <Skeleton className="h-40 w-full rounded-xl" />
+      <Skeleton className="h-44 w-full rounded-xl" />
     </div>
   );
 }

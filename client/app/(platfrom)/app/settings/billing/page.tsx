@@ -1,9 +1,12 @@
 "use client";
 
 import React from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
-import { getMyPlan, formatLimitValue, formatPriceMinor, PLAN_LIMIT_LABEL, type PlanLimitType } from "@/lib/plans";
+import { getMyPlan, listPublicPlans, formatLimitValue, formatPriceMinor, PLAN_LIMIT_LABEL, type PlanLimitType } from "@/lib/plans";
+import { createCheckoutSession } from "@/lib/billing";
+import { toast } from "@/components/ui/toast";
+import { ApiError } from "@/lib/auth";
 import { QueryErrorState } from "@/components/query-error-state";
 
 const LIMIT_ORDER: PlanLimitType[] = [
@@ -20,6 +23,24 @@ export default function BillingSettingsPage() {
     queryKey: ["plans", "me"],
     queryFn: getMyPlan,
   });
+
+  const { data: allPlans } = useQuery({
+    queryKey: ["plans", "public"],
+    queryFn: listPublicPlans,
+  });
+
+  const checkoutMutation = useMutation({
+    mutationFn: (planKey: string) => createCheckoutSession(planKey),
+    onSuccess: ({ url }) => {
+      window.location.href = url;
+    },
+    onError: (err) => {
+      const message = err instanceof ApiError && err.status === 503 ? "Billing isn't set up yet" : "Couldn't start checkout";
+      toast.add({ title: message, type: "error" });
+    },
+  });
+
+  const upgradeTargets = (allPlans ?? []).filter((p) => p.key !== data?.plan.key && !p.isDefault);
 
   return (
     <div className="space-y-6 max-w-md text-xs font-semibold">
@@ -80,9 +101,20 @@ export default function BillingSettingsPage() {
               </p>
             ) : null}
 
-            <Button disabled title="Coming soon" className="w-full h-9 rounded-full bg-primary text-white font-bold text-[10px] opacity-60 cursor-not-allowed">
-              Upgrade — Coming soon
-            </Button>
+            {upgradeTargets.length > 0 ? (
+              <div className="space-y-2">
+                {upgradeTargets.map((plan) => (
+                  <Button
+                    key={plan.id}
+                    disabled={checkoutMutation.isPending}
+                    onClick={() => checkoutMutation.mutate(plan.key)}
+                    className="w-full h-9 rounded-full bg-primary text-white font-bold text-[10px]"
+                  >
+                    {checkoutMutation.isPending ? "Redirecting…" : `Upgrade to ${plan.name} — ${formatPriceMinor(plan.priceMinor, plan.currency)}/${plan.billingInterval}`}
+                  </Button>
+                ))}
+              </div>
+            ) : null}
           </div>
 
           <div className="p-4 border border-border/60 bg-muted/15 rounded-xl space-y-2 text-[10px] text-muted-foreground font-semibold">

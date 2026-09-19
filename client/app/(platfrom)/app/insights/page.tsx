@@ -136,8 +136,6 @@ export default function InsightsPage() {
         style={{ width: "100%" }}
         noun="memories saved"
         contributions={toContributions(data.activity, ACTIVITY_WEEKS)}
-        repos={data.topCollections.map((collection) => ({ name: collection.label, count: collection.count }))}
-        label="Biggest collections:"
         accent="var(--primary)"
         months={12}
         cellSize={14}
