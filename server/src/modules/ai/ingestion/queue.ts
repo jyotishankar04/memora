@@ -11,8 +11,8 @@ export const ingestionQueue = new Queue<IngestionJobData>("ingestion", { connect
 // BullMQ: lower number = processed first. Free users fall back to the
 // default (lowest priority) via the `?? DEFAULT_QUEUE_PRIORITY` below,
 // so an unrecognized/future plan key never accidentally jumps the queue.
-const PLAN_QUEUE_PRIORITY: Record<string, number> = { pro: 1, plus: 5, free: 10 };
-const DEFAULT_QUEUE_PRIORITY = 10;
+export const PLAN_QUEUE_PRIORITY: Record<string, number> = { pro: 1, plus: 5, free: 10 };
+export const DEFAULT_QUEUE_PRIORITY = 10;
 
 /** Fire-and-forget from memory.service.ts — never let a queue failure fail the create/delete request. */
 export async function enqueueIngestion(memoryId: string, userId: string): Promise<void> {

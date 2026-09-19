@@ -1,8 +1,9 @@
 import { and, eq, ilike } from "drizzle-orm";
 import { db } from "../../../../db";
-import { collectionMemories, collections, memories, memoryTags } from "../../../../db/schema";
+import { collectionMemories, collections, memories, memoryTags, users } from "../../../../db/schema";
 import { CollectionSource, MemoryStatus, MemoryType } from "../../../../db/enums";
 import { resolveTagIds, type Tx } from "../../../memory/memory.service";
+import { EVENT_DETECTION_CONFIDENCE_THRESHOLD, notifyEventDetected } from "../../../memory/memory.notify";
 import { canCreateSystemCollection } from "../../../plans/plans.service";
 import { getVectorStore } from "../../vector-store";
 import { isVideoUrl } from "../extract-url";
@@ -133,6 +134,8 @@ export async function upsertVectors(state: IngestionStateType): Promise<Ingestio
         resourceCategory: state.resourceCategory,
         inferredIntent: state.inferredIntent,
         intentConfidence: state.intentConfidence,
+        suggestedEventAt: state.detectedEventAt ? new Date(state.detectedEventAt) : undefined,
+        eventDetectionConfidence: state.eventDetectionConfidence ?? undefined,
         contentType: state.contentType,
         extractedFields: Object.keys(state.extractedFields).length > 0 ? state.extractedFields : undefined,
         type: correctedType,
@@ -177,6 +180,29 @@ export async function upsertVectors(state: IngestionStateType): Promise<Ingestio
       embedding: state.chunkEmbeddings[index] ?? [],
     })),
   });
+
+  if (state.detectedEventAt && (state.eventDetectionConfidence ?? 0) >= EVENT_DETECTION_CONFIDENCE_THRESHOLD) {
+    const [row] = await db
+      .select({ email: users.email, eventAt: memories.eventAt })
+      .from(memories)
+      .innerJoin(users, eq(users.id, memories.userId))
+      .where(eq(memories.id, state.memoryId))
+      .limit(1);
+    // A real eventAt already on the row means someone already confirmed a
+    // date for this memory — e.g. it was created directly with a date via
+    // the "create_calendar_event" agent tool or the calendar page's "New
+    // event" form. Asking "want to add this to your calendar?" again would
+    // be a redundant, confusing double-prompt for something already added.
+    if (row?.email && !row.eventAt) {
+      notifyEventDetected({
+        userId: state.userId,
+        email: row.email,
+        memoryId: state.memoryId,
+        memoryTitle: state.existingTitle !== "Untitled" ? state.existingTitle : (state.aiTitle ?? "your memory"),
+        suggestedEventAt: state.detectedEventAt,
+      });
+    }
+  }
 
   logNode(state.memoryId, "upsertVectors", {
     titleWritten: state.existingTitle === "Untitled" && !!state.aiTitle,
