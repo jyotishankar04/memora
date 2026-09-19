@@ -54,7 +54,10 @@ export type UpdateMemoryInput = Partial<
     inTrash: boolean;
     isVaulted: boolean;
   }
->;
+> & {
+  /** ISO datetime, or null to clear it. Omit to leave unchanged. */
+  eventAt?: string | null;
+};
 
 function toQueryString(params: ListMemoriesParams): string {
   const search = new URLSearchParams();

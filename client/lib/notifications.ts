@@ -5,7 +5,8 @@ export type NotificationType =
   | "share_access_requested"
   | "share_access_approved"
   | "share_access_denied"
-  | "share_revoked";
+  | "share_revoked"
+  | "event_detected";
 
 export interface AppNotification {
   id: string;
@@ -43,4 +44,11 @@ export function accessRequestRefs(n: AppNotification): { shareId: string; reques
   const requestId = n.metadata?.requestId;
   if (typeof shareId !== "string" || typeof requestId !== "string") return null;
   return { shareId, requestId };
+}
+
+export function eventDetectedRefs(n: AppNotification): { memoryId: string; suggestedEventAt: string } | null {
+  const memoryId = n.metadata?.memoryId;
+  const suggestedEventAt = n.metadata?.suggestedEventAt;
+  if (typeof memoryId !== "string" || typeof suggestedEventAt !== "string") return null;
+  return { memoryId, suggestedEventAt };
 }

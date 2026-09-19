@@ -1,5 +1,5 @@
 import { apiFetch } from "@/lib/auth";
-import type { Collection, MemoryType } from "@/types/memory";
+import type { Collection } from "@/types/memory";
 
 export interface CreateCollectionInput {
   name: string;
@@ -32,36 +32,4 @@ export async function updateCollection(id: string, patch: UpdateCollectionInput)
 
 export async function deleteCollection(id: string): Promise<void> {
   await apiFetch<void>(`/collections/${id}`, { method: "DELETE" });
-}
-
-export async function shareCollection(id: string): Promise<Collection> {
-  return apiFetch<Collection>(`/collections/${id}/share`, { method: "PATCH" });
-}
-
-export async function unshareCollection(id: string): Promise<Collection> {
-  return apiFetch<Collection>(`/collections/${id}/unshare`, { method: "PATCH" });
-}
-
-export interface PublicMemoryItem {
-  id: string;
-  type: MemoryType;
-  title: string;
-  url: string | null;
-  description: string | null;
-  content: string | null;
-  faviconUrl: string | null;
-  previewImageUrl: string | null;
-  createdAt: string;
-}
-
-export interface PublicCollection {
-  name: string;
-  icon: string;
-  description: string | null;
-  memories: PublicMemoryItem[];
-}
-
-/** Unauthenticated — safe to call from a public, cookie-less page. */
-export async function getPublicCollection(slug: string): Promise<PublicCollection> {
-  return apiFetch<PublicCollection>(`/collections/public/${slug}`);
 }
