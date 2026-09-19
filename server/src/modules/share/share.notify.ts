@@ -1,6 +1,13 @@
 import { logger } from "../../shared/utils/logger";
-import { NotificationType, ShareResourceType } from "../../db/enums";
+import { env } from "../../config/env";
+import { EmailCategory, EmailTemplateKey, NotificationType, ShareResourceType } from "../../db/enums";
 import { createNotification } from "../notification/notification.service";
+import { sendEmail } from "../email";
+import {
+  shareAccessDecisionEmailTemplate,
+  shareAccessRequestedEmailTemplate,
+  shareInviteEmailTemplate,
+} from "../../shared/mailer/templates";
 import type { ShareRow } from "./share.access";
 
 /**
@@ -30,24 +37,42 @@ export interface ShareInviteNotice {
 }
 
 export function notifyShareInvite(notice: ShareInviteNotice): void {
-  // No account yet — nothing to notify in-app. The invite is already
-  // stored as a pending grant and activates at signup; email (phase 6)
-  // is what reaches this person.
-  if (!notice.granteeUserId) return;
+  // In-app notification only makes sense once there's an account to show it
+  // in. The invite is already stored as a pending grant and activates at
+  // signup — but the email below fires regardless, since it's addressed to
+  // notice.email, not a userId.
+  if (notice.granteeUserId) {
+    emit("share invite", () =>
+      createNotification({
+        userId: notice.granteeUserId!,
+        type: NotificationType.SHARE_INVITE_RECEIVED,
+        title: `${notice.ownerName ?? "Someone"} shared a ${noun(notice.share)} with you`,
+        actionUrl: `/s/${notice.share.slug}`,
+        metadata: { shareId: notice.share.id, slug: notice.share.slug },
+      })
+    );
+  }
 
-  emit("share invite", () =>
-    createNotification({
-      userId: notice.granteeUserId!,
-      type: NotificationType.SHARE_INVITE_RECEIVED,
-      title: `${notice.ownerName ?? "Someone"} shared a ${noun(notice.share)} with you`,
-      actionUrl: `/s/${notice.share.slug}`,
-      metadata: { shareId: notice.share.id, slug: notice.share.slug },
-    })
-  );
+  emit("share invite email", () => {
+    const { subject, html } = shareInviteEmailTemplate({
+      ownerName: notice.ownerName,
+      resourceNoun: noun(notice.share),
+      url: `${env.FRONTEND_URL}/s/${notice.share.slug}`,
+    });
+    return sendEmail({
+      to: notice.email,
+      recipientUserId: notice.granteeUserId,
+      category: EmailCategory.TRANSACTIONAL,
+      templateKey: EmailTemplateKey.SHARE_INVITE,
+      subject,
+      html,
+    });
+  });
 }
 
 export interface AccessRequestedNotice {
   ownerId: string;
+  ownerEmail: string;
   requesterName: string | null;
   share: ShareRow;
   requestId: string;
@@ -70,10 +95,27 @@ export function notifyAccessRequested(notice: AccessRequestedNotice): void {
       },
     })
   );
+
+  emit("access requested email", () => {
+    const { subject, html } = shareAccessRequestedEmailTemplate({
+      requesterName: notice.requesterName,
+      resourceNoun: noun(notice.share),
+      url: `${env.FRONTEND_URL}/app/shared`,
+    });
+    return sendEmail({
+      to: notice.ownerEmail,
+      recipientUserId: notice.ownerId,
+      category: EmailCategory.TRANSACTIONAL,
+      templateKey: EmailTemplateKey.SHARE_ACCESS_REQUESTED,
+      subject,
+      html,
+    });
+  });
 }
 
 export interface AccessDecisionNotice {
   requesterUserId: string;
+  requesterEmail: string;
   approved: boolean;
   share: ShareRow;
 }
@@ -91,4 +133,20 @@ export function notifyAccessDecision(notice: AccessDecisionNotice): void {
       metadata: { shareId: notice.share.id, slug: notice.share.slug },
     })
   );
+
+  emit("access decision email", () => {
+    const { subject, html } = shareAccessDecisionEmailTemplate({
+      approved: notice.approved,
+      resourceNoun: noun(notice.share),
+      url: notice.approved ? `${env.FRONTEND_URL}/s/${notice.share.slug}` : null,
+    });
+    return sendEmail({
+      to: notice.requesterEmail,
+      recipientUserId: notice.requesterUserId,
+      category: EmailCategory.TRANSACTIONAL,
+      templateKey: notice.approved ? EmailTemplateKey.SHARE_ACCESS_APPROVED : EmailTemplateKey.SHARE_ACCESS_DENIED,
+      subject,
+      html,
+    });
+  });
 }

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../../shared/middlewares/authenticate";
 import { MemoryController } from "./memory.controller";
 import { requireUnlockToUnvault, requireVaultUnlockedForQuery } from "../vault";
+import { CalendarController, validatePushEvent, validateUpdateEvent } from "../integrations/calendar";
 import {
   validateBrowserCapture,
   validateCreateMemory,
@@ -23,5 +24,8 @@ router.delete("/:id", authenticate, MemoryController.remove);
 router.post("/:id/browser-capture", authenticate, validateBrowserCapture, MemoryController.browserCapture);
 router.post("/:id/refresh-preview", authenticate, MemoryController.refreshPreview);
 router.get("/:id/processing-status", authenticate, MemoryController.processingStatus);
+router.post("/:id/calendar-events", authenticate, validatePushEvent, CalendarController.pushEvent);
+router.patch("/:id/calendar-event", authenticate, validateUpdateEvent, CalendarController.updateMemoryEvent);
+router.delete("/:id/calendar-event", authenticate, CalendarController.deleteMemoryEvent);
 
 export default router;

@@ -8,6 +8,7 @@ import { buildDeviceFingerprint, parseUserAgent } from "../../shared/utils/devic
 import { parseDurationMs } from "../../shared/utils/duration";
 import { generateRefreshToken, hashToken, signAccessToken } from "../../shared/utils/jwt";
 import { isSignupsEnabled } from "../feature-flags/feature-flags.service";
+import { ACCOUNT_DELETION_GRACE_DAYS } from "../account/account.service";
 
 export interface OAuthProfile {
   provider: Provider;
@@ -181,6 +182,25 @@ async function syncAvatar(userId: string, currentAvatarUrl: string | null, provi
   await db.update(users).set({ avatarUrl: providerAvatarUrl }).where(eq(users.id, userId));
 }
 
+/**
+ * Cancellation mechanism for a pending soft account deletion — logging back
+ * in during the grace period IS the undo, no separate cancel button needed.
+ * Returns null (do NOT reactivate) once the grace period has elapsed, even
+ * if the sweep job hasn't purged the row yet — the caller must treat that
+ * as "this account is on its way out", not silently let login succeed.
+ */
+async function reactivateIfWithinGracePeriod(user: UserRecord & { deletedAt?: Date | null }): Promise<UserRecord | null> {
+  if (user.status !== UserStatus.DELETED) return null;
+  const cutoff = new Date(Date.now() - ACCOUNT_DELETION_GRACE_DAYS * 24 * 60 * 60 * 1000);
+  if (!user.deletedAt || user.deletedAt < cutoff) return null;
+  const [reactivated] = await db
+    .update(users)
+    .set({ status: UserStatus.ACTIVE, deletedAt: null })
+    .where(eq(users.id, user.id))
+    .returning();
+  return reactivated;
+}
+
 export async function findOrCreateUser(profile: OAuthProfile): Promise<{ user: UserRecord; isNewUser: boolean }> {
   const [existingIdentity] = await db
     .select()
@@ -194,6 +214,11 @@ export async function findOrCreateUser(profile: OAuthProfile): Promise<{ user: U
       throw new AppError("User account not found for linked identity", 404, "NOT_FOUND");
     }
 
+    const reactivated = await reactivateIfWithinGracePeriod(user);
+    if (user.status === UserStatus.DELETED && !reactivated) {
+      throw new AppError("This account is being deleted", 403, "ACCOUNT_DELETION_IN_PROGRESS");
+    }
+
     await db
       .update(authIdentities)
       .set({ providerData: profile.providerData })
@@ -201,12 +226,17 @@ export async function findOrCreateUser(profile: OAuthProfile): Promise<{ user: U
 
     await syncAvatar(user.id, user.avatarUrl, profile.avatarUrl);
 
-    return { user, isNewUser: false };
+    return { user: reactivated ?? user, isNewUser: false };
   }
 
   const [userByEmail] = await db.select().from(users).where(eq(users.email, profile.email)).limit(1);
 
   if (userByEmail) {
+    const reactivated = await reactivateIfWithinGracePeriod(userByEmail);
+    if (userByEmail.status === UserStatus.DELETED && !reactivated) {
+      throw new AppError("This account is being deleted", 403, "ACCOUNT_DELETION_IN_PROGRESS");
+    }
+
     await db.insert(authIdentities).values({
       userId: userByEmail.id,
       provider: profile.provider,
@@ -216,7 +246,7 @@ export async function findOrCreateUser(profile: OAuthProfile): Promise<{ user: U
 
     await syncAvatar(userByEmail.id, userByEmail.avatarUrl, profile.avatarUrl);
 
-    return { user: userByEmail, isNewUser: false };
+    return { user: reactivated ?? userByEmail, isNewUser: false };
   }
 
   if (!(await isSignupsEnabled())) {

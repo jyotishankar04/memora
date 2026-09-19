@@ -21,6 +21,9 @@ import {
 } from "../../shared/utils/cookies";
 import { recordReferralSignup } from "../referrals/referrals.service";
 import { claimPendingGrantsForEmail } from "../share/share.service";
+import { sendEmail } from "../email";
+import { EmailCategory, EmailTemplateKey } from "../../db/enums";
+import { welcomeEmailTemplate } from "../../shared/mailer/templates";
 import {
   assignDefaultRole,
   buildGithubAuthUrl,
@@ -82,6 +85,17 @@ async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (c
 
     if (isNewUser) {
       await assignDefaultRole(user.id);
+      // Never blocks/fails the signup itself — same fire-and-forget shape
+      // as recordReferralSignup right below.
+      const { subject, html } = welcomeEmailTemplate({ name: user.name });
+      sendEmail({
+        to: user.email,
+        recipientUserId: user.id,
+        category: EmailCategory.TRANSACTIONAL,
+        templateKey: EmailTemplateKey.WELCOME,
+        subject,
+        html,
+      }).catch(() => {});
       // Never blocks/fails the signup itself — an unknown, expired, or
       // missing code just means no attribution, same "attach if present"
       // shape as everything else in this callback.

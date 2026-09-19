@@ -1,5 +1,5 @@
 import crypto from "node:crypto";
-import { and, desc, eq, gt, inArray, isNull, sql } from "drizzle-orm";
+import { and, desc, eq, gt, isNull, sql } from "drizzle-orm";
 import { db, type DbOrTx } from "../../db";
 import {
   collectionMemories,
@@ -576,8 +576,10 @@ export async function requestAccess(userId: string, slug: string, message?: stri
 
   if (row) {
     const [requester] = await db.select({ name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
+    const [owner] = await db.select({ email: users.email }).from(users).where(eq(users.id, share.ownerId)).limit(1);
     notifyAccessRequested({
       ownerId: share.ownerId,
+      ownerEmail: owner?.email ?? "",
       requesterName: requester?.name ?? null,
       share,
       requestId: row.id,
@@ -665,7 +667,12 @@ async function decideRequest(
       });
   });
 
-  notifyAccessDecision({ requesterUserId: row.request.requesterUserId, approved, share: row.share });
+  notifyAccessDecision({
+    requesterUserId: row.request.requesterUserId,
+    requesterEmail: row.requesterEmail,
+    approved,
+    share: row.share,
+  });
 }
 
 export const approveAccessRequest = (userId: string, shareId: string, requestId: string) =>
@@ -673,65 +680,6 @@ export const approveAccessRequest = (userId: string, shareId: string, requestId:
 
 export const denyAccessRequest = (userId: string, shareId: string, requestId: string) =>
   decideRequest(userId, shareId, requestId, false);
-
-// -----------------------------------------------------------------------------
-// Compatibility shims for the existing collection endpoints
-//
-// These let collection.service.ts keep its public API while the data moves
-// to `shares`, so the current client keeps working until the new share UI
-// lands (and collections.is_public / public_slug can be dropped).
-// -----------------------------------------------------------------------------
-
-export async function getCollectionShareState(
-  collectionId: string
-): Promise<{ isPublic: boolean; publicSlug: string | null }> {
-  const [row] = await db
-    .select({ linkAccess: shares.linkAccess, slug: shares.slug })
-    .from(shares)
-    .where(eq(shares.collectionId, collectionId))
-    .limit(1);
-
-  if (!row) return { isPublic: false, publicSlug: null };
-  return { isPublic: row.linkAccess === ShareLinkAccess.PUBLIC, publicSlug: row.slug };
-}
-
-export async function getCollectionShareStates(
-  collectionIds: string[]
-): Promise<Map<string, { isPublic: boolean; publicSlug: string | null }>> {
-  const result = new Map<string, { isPublic: boolean; publicSlug: string | null }>();
-  if (collectionIds.length === 0) return result;
-
-  const rows = await db
-    .select({ collectionId: shares.collectionId, linkAccess: shares.linkAccess, slug: shares.slug })
-    .from(shares)
-    .where(inArray(shares.collectionId, collectionIds));
-
-  for (const row of rows) {
-    if (!row.collectionId) continue;
-    result.set(row.collectionId, {
-      isPublic: row.linkAccess === ShareLinkAccess.PUBLIC,
-      publicSlug: row.slug,
-    });
-  }
-
-  return result;
-}
-
-/** Backs the legacy PATCH /collections/:id/share. */
-export async function publishCollection(userId: string, collectionId: string): Promise<void> {
-  const share = await getOrCreateShare(userId, {
-    resourceType: ShareResourceType.COLLECTION,
-    resourceId: collectionId,
-  });
-  await updateShare(userId, share.id, { linkAccess: ShareLinkAccess.PUBLIC });
-}
-
-/** Backs the legacy PATCH /collections/:id/unshare — keeps the slug, as before. */
-export async function unpublishCollection(userId: string, collectionId: string): Promise<void> {
-  const share = await getShareForResource(userId, ShareResourceType.COLLECTION, collectionId);
-  if (!share) return;
-  await updateShare(userId, share.id, { linkAccess: ShareLinkAccess.DISABLED });
-}
 
 export { generateShareSlug };
 

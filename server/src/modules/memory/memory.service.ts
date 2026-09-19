@@ -31,6 +31,7 @@ export interface MemoryListItem {
   inTrash: boolean;
   trashedAt: Date | null;
   isVaulted: boolean;
+  eventAt: Date | null;
   tags: string[];
   createdAt: Date;
   updatedAt: Date;
@@ -142,6 +143,7 @@ function toListItem(
     inTrash: row.inTrash,
     trashedAt: row.trashedAt,
     isVaulted: row.isVaulted,
+    eventAt: row.eventAt,
     tags: memoryTagsList,
     createdAt: row.createdAt,
     updatedAt: row.updatedAt,
@@ -735,6 +737,7 @@ export async function updateMemory(
     // this ever runs. Vaulting (true) needs no such check: hiding something
     // is always safe to do.
     if (input.isVaulted !== undefined) columns.isVaulted = input.isVaulted;
+    if (input.eventAt !== undefined) columns.eventAt = input.eventAt ? new Date(input.eventAt) : null;
 
     const [updated] = await tx
       .update(memories)

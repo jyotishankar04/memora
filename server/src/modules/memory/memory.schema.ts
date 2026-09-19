@@ -38,7 +38,7 @@ export const createMemorySchema = z.object({
   attachments: z.array(attachmentInputSchema).max(10).optional(),
   // How this memory was originally captured — defaults to "manual" (web
   // dashboard) in the service layer when omitted.
-  captureMethod: z.enum(["server", "extension", "manual"]).optional(),
+  captureMethod: z.enum(["server", "extension", "manual", "import"]).optional(),
 });
 
 export const updateMemorySchema = z.object({
@@ -49,6 +49,10 @@ export const updateMemorySchema = z.object({
   isArchived: z.boolean().optional(),
   inTrash: z.boolean().optional(),
   isVaulted: z.boolean().optional(),
+  // Null explicitly clears it (removing the event); undefined leaves it
+  // untouched, same "omit vs. null" convention as every other optional
+  // field here.
+  eventAt: z.string().datetime().nullable().optional(),
   collectionIds: z.array(z.string().uuid()).max(50).optional(),
   tags: z.array(z.string().min(1).max(50)).max(30).optional(),
   attachments: z.array(attachmentInputSchema).max(10).optional(),
