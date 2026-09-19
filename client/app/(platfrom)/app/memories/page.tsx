@@ -3,16 +3,17 @@
 import React, { useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SparklesIcon as Sparkles, PlusIcon as Plus, Search01Icon as Search, XIcon as X, Delete02Icon as Trash2, MoreHorizontalIcon as MoreHorizontal, StarIcon as Star, GridIcon as Grid, ListIcon as List, Copy01Icon as Copy } from "@hugeicons/core-free-icons";
+import { SparklesIcon as Sparkles, PlusIcon as Plus, Search01Icon as Search, XIcon as X, StarIcon as Star, GridIcon as Grid, ListIcon as List, MoreHorizontalIcon as MoreHorizontal } from "@hugeicons/core-free-icons";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "@/components/ui/toast";
 import { cn } from "@/lib/utils";
-import { copyToClipboard } from "@/lib/clipboard";
+import { MemoryActionsMenu } from "@/components/memory/memory-actions-menu";
+import { MemoryGridCard } from "@/components/memory/memory-grid-card";
 import type { Memory, MemoryType } from "@/types/memory";
-import { useMemoriesQuery, useToggleFavoriteMutation, useMoveToTrashMutation } from "@/context/MemoryContext";
+import { useMemoriesQuery, useToggleFavoriteMutation } from "@/context/MemoryContext";
 import { timeAgo, timelineGroup } from "@/lib/time";
 import { isMemoryProcessing } from "@/lib/memory-processing";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
@@ -36,7 +37,6 @@ export default function MemoriesPage() {
   const [currentFilter, setCurrentFilter] = useState("all");
   const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
   const [selectedMemoryId, setSelectedMemoryId] = useState<string | null>(null);
-  const [activeCardMenu, setActiveCardMenu] = useState<string | null>(null);
 
   const { data, isLoading, isError, refetch } = useMemoriesQuery({
     type: FILTER_TYPE[currentFilter],
@@ -51,19 +51,6 @@ export default function MemoriesPage() {
   const selectedMemory = memories.find((m) => m.id === selectedMemoryId) ?? null;
 
   const toggleFavoriteMutation = useToggleFavoriteMutation();
-  // Soft delete, matching the memory detail page's "Move to trash" action —
-  // this used to call the hard-delete mutation directly, which skipped
-  // trash (and its 15-day safety window) entirely for anything deleted
-  // from this list.
-  const moveToTrashMutation = useMoveToTrashMutation();
-
-  const handleDelete = (id: string, title: string) => {
-    moveToTrashMutation.mutate(id, {
-      onSuccess: () => toast.add({ title: "Moved to trash", description: title, type: "success" }),
-      onError: (err) => toast.add({ title: "Couldn't move that memory to trash", description: err instanceof Error ? err.message : undefined, type: "error" }),
-    });
-    if (selectedMemoryId === id) setSelectedMemoryId(null);
-  };
 
   const toggleStar = (item: Memory, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -238,119 +225,52 @@ export default function MemoriesPage() {
                     : " w-full md:max-w-10/12 grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3 md:grid-cols-[repeat(auto-fill,minmax(400px,1fr))] flex-col"
                 )}>
                   {groupItems.map((item) => {
-                    const TypeIcon = MEMORY_TYPE_ICONS[item.type];
+                    if (viewMode === "grid") {
+                      return <MemoryGridCard key={item.id} item={item} onClick={() => setSelectedMemoryId(item.id)} />;
+                    }
 
+                    const TypeIcon = MEMORY_TYPE_ICONS[item.type];
                     return (
                       <div
                         key={item.id}
                         onClick={() => setSelectedMemoryId(item.id)}
-                        className={cn(
-                          "rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs hover:border-primary/20 transition-all duration-300 relative group cursor-pointer"
-                        )}
+                        className="rounded-xl border border-border/45 bg-muted/75 p-1 shadow-xs hover:border-primary/20 transition-all duration-300 relative group cursor-pointer"
                       >
-                        <div className={cn(
-                          "rounded-lg border border-border/75 bg-card flex flex-col justify-between h-full transition-colors",
-                          viewMode === "grid" ? "p-2.5 min-h-32 space-y-2" : "p-3.5 flex-row items-center gap-4"
-                        )}>
-
-                          {viewMode === "grid" && (
-                            <>
-                              <div className="flex items-center justify-between text-[7px] font-mono text-muted-foreground relative">
-                                <span className="bg-primary/5 border border-primary/15 px-1.5 py-0.5 rounded text-primary uppercase font-bold flex items-center gap-1">
-                                  <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className="h-2 w-2" /> {item.type}
-                                </span>
-
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={(e) => toggleStar(item, e)}
-                                    className="text-muted-foreground hover:text-amber-500 transition-colors"
-                                  >
-                                    <HugeiconsIcon icon={Star} strokeWidth={2.25} className={cn("h-3 w-3", item.isFavorite ? "fill-amber-500 text-amber-500" : "")} />
-                                  </button>
-
-                                  <button
-                                    onClick={(e) => { e.stopPropagation(); setActiveCardMenu(activeCardMenu === item.id ? null : item.id); }}
-                                    className="text-muted-foreground hover:text-foreground h-5 w-5 rounded-full flex items-center justify-center hover:bg-muted"
-                                  >
-                                    <HugeiconsIcon icon={MoreHorizontal} strokeWidth={2.25} className="h-3 w-3" />
-                                  </button>
-                                </div>
-
-                                {activeCardMenu === item.id && (
-                                  <div className="absolute right-0 top-6 w-32 bg-card border border-border rounded-lg shadow-lg py-1 z-30 text-[10px] font-bold text-foreground">
-                                    {[
-                                      { label: "Copy link", icon: Copy, action: () => void copyToClipboard(item.url ?? item.source ?? "", "Source link copied") },
-                                      { label: "Move to trash", icon: Trash2, action: () => handleDelete(item.id, item.title) }
-                                    ].map((m) => (
-                                      <button
-                                        key={m.label}
-                                        onClick={(e) => { e.stopPropagation(); m.action(); setActiveCardMenu(null); }}
-                                        className="w-full px-3 py-1.5 hover:bg-muted text-left flex items-center gap-2"
-                                      >
-                                        <HugeiconsIcon icon={m.icon} strokeWidth={2.25} className="h-3 w-3 opacity-60" />
-                                        <span>{m.label}</span>
-                                      </button>
-                                    ))}
-                                  </div>
-                                )}
+                        <div className="rounded-lg border border-border/75 bg-card flex h-full flex-row items-center gap-4 p-3.5 transition-colors">
+                          <div className="flex-1 flex items-center justify-between gap-4">
+                            <div className="flex items-center gap-3 min-w-0">
+                              <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                                <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className="h-4 w-4" />
                               </div>
-
-                              {item.type !== "note" && <MemoryThumbnail item={item} />}
-
-                              {item.type === "note" && (
-                                <div className="p-2 border border-border/60 bg-muted/20 rounded-md text-[9px] text-muted-foreground leading-relaxed font-mono line-clamp-3">
-                                  {item.description}
-                                </div>
-                              )}
-
-                              <div className="space-y-0.5">
-                                <h4 className="text-[11px] font-bold text-foreground leading-snug group-hover:text-primary transition-colors line-clamp-1">
+                              <div className="min-w-0">
+                                <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
                                   {item.title}
                                 </h4>
-                                <span className="text-[8px] text-muted-foreground truncate block font-mono">
-                                  {item.source}
-                                </span>
-                              </div>
-
-                              <div className="flex items-center justify-between pt-1.5 border-t border-border/20">
-                                <div className="flex flex-wrap gap-1 min-w-0">
-                                  {item.tags.slice(0, 2).map(t => (
-                                    <span key={t} className="text-[6.5px] font-bold uppercase tracking-wider bg-muted text-muted-foreground px-1 py-0.5 rounded truncate max-w-13">
-                                      {t}
-                                    </span>
-                                  ))}
-                                </div>
-                                <span className="text-[7.5px] text-muted-foreground font-mono shrink-0 ml-1">{timeAgo(item.createdAt)}</span>
-                              </div>
-                            </>
-                          )}
-
-                          {viewMode === "list" && (
-                            <div className="flex-1 flex items-center justify-between gap-4">
-                              <div className="flex items-center gap-3 min-w-0">
-                                <div className="h-8 w-8 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                                  <HugeiconsIcon icon={TypeIcon} strokeWidth={2.25} className="h-4 w-4" />
-                                </div>
-                                <div className="min-w-0">
-                                  <h4 className="text-xs font-bold text-foreground group-hover:text-primary transition-colors truncate">
-                                    {item.title}
-                                  </h4>
-                                  <p className="text-[10px] text-muted-foreground truncate font-mono mt-0.5">{item.source}</p>
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-4 shrink-0 font-mono text-[9px] text-muted-foreground">
-                                <span className="hidden sm:inline">{timeAgo(item.createdAt)}</span>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleDelete(item.id, item.title); }}
-                                  title="Move to trash"
-                                  className="h-8 w-8 rounded-full hover:bg-red-500/10 text-muted-foreground hover:text-red-500 flex items-center justify-center transition-colors"
-                                >
-                                  <HugeiconsIcon icon={Trash2} strokeWidth={2.25} className="h-3.5 w-3.5" />
-                                </button>
+                                <p className="text-[10px] text-muted-foreground truncate font-mono mt-0.5">{item.source}</p>
                               </div>
                             </div>
-                          )}
-
+                            <div className="flex items-center gap-1 shrink-0 font-mono text-[9px] text-muted-foreground">
+                              <span className="hidden sm:inline mr-3">{timeAgo(item.createdAt)}</span>
+                              <button
+                                onClick={(e) => toggleStar(item, e)}
+                                className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground hover:text-amber-500 flex items-center justify-center transition-colors"
+                              >
+                                <HugeiconsIcon icon={Star} strokeWidth={2.25} className={cn("h-3.5 w-3.5", item.isFavorite ? "fill-amber-500 text-amber-500" : "")} />
+                              </button>
+                              <MemoryActionsMenu
+                                memory={item}
+                                trigger={
+                                  <button
+                                    type="button"
+                                    onClick={(e) => e.stopPropagation()}
+                                    className="h-8 w-8 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground flex items-center justify-center transition-colors"
+                                  >
+                                    <HugeiconsIcon icon={MoreHorizontal} strokeWidth={2.25} className="h-3.5 w-3.5" />
+                                  </button>
+                                }
+                              />
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );

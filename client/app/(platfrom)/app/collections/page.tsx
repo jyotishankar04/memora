@@ -2,7 +2,8 @@
 
 import React, { useState } from "react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { PlusIcon as Plus, EyeIcon as Eye, EyeOffIcon as EyeOff } from "@hugeicons/core-free-icons";
+import { PlusIcon as Plus, EyeIcon as Eye, EyeOffIcon as EyeOff, MoreHorizontalIcon as MoreHorizontal } from "@hugeicons/core-free-icons";
+import { CollectionActionsMenu } from "@/components/collection/collection-actions-menu";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { FolderCard } from "@/components/ui/folder-card";
@@ -167,14 +168,30 @@ export default function CollectionsPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-[repeat(auto-fit,minmax(250px,1fr))] gap-8">
           {collections.map((col) => (
-            <FolderCard
-              key={col.id}
-              href={`/app/collections/${col.id}`}
-              count={col.memoryCount}
-              label={col.name}
-              badge={col.icon}
-              badgeClassName={colorFor(col.id)}
-            />
+            <div key={col.id} className="relative">
+              <FolderCard
+                href={`/app/collections/${col.id}`}
+                count={col.memoryCount}
+                label={col.name}
+                badge={col.icon}
+                badgeClassName={colorFor(col.id)}
+              />
+              {/* Sibling of the FolderCard's own <Link>, not a child of it —
+                  so opening the menu never triggers navigation. */}
+              <div className="absolute right-3 top-3 z-10">
+                <CollectionActionsMenu
+                  collection={col}
+                  trigger={
+                    <button
+                      type="button"
+                      className="flex h-7 w-7 items-center justify-center rounded-full border border-border/60 bg-card/90 text-muted-foreground shadow-sm backdrop-blur-sm hover:text-foreground"
+                    >
+                      <HugeiconsIcon icon={MoreHorizontal} strokeWidth={2.25} className="h-3.5 w-3.5" />
+                    </button>
+                  }
+                />
+              </div>
+            </div>
           ))}
         </div>
       )}

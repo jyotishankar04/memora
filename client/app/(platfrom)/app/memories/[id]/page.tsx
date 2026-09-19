@@ -4,30 +4,12 @@ import React, { useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SparklesIcon as Sparkles, GlobeIcon as Globe, Video01Icon as Video, FileTextIcon as FileText, StickyNote01Icon as StickyNote, Image01Icon as ImageIcon, Delete02Icon as Trash2, FolderOpenIcon as FolderOpen, MoreHorizontalIcon as MoreHorizontal, StarIcon as Star, Archive01Icon as Archive, ExternalLinkIcon as ExternalLink, ArrowLeft01Icon as ArrowLeft, LockPasswordIcon as Lock } from "@hugeicons/core-free-icons";
+import { SparklesIcon as Sparkles, GlobeIcon as Globe, Video01Icon as Video, FileTextIcon as FileText, StickyNote01Icon as StickyNote, Image01Icon as ImageIcon, StarIcon as Star, ExternalLinkIcon as ExternalLink, ArrowLeft01Icon as ArrowLeft } from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
-import { toast } from "@/components/ui/toast";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { MemoryActionsMenu } from "@/components/memory/memory-actions-menu";
 import {
   useMemoryQuery,
-  useMoveToTrashMutation,
   useToggleFavoriteMutation,
   useUpdateMemoryMutation,
 } from "@/context/MemoryContext";
@@ -63,7 +45,6 @@ export default function MemoryDetailPage() {
 
   const { data: memory, isLoading, isError } = useMemoryQuery(id);
   const toggleFavoriteMutation = useToggleFavoriteMutation();
-  const moveToTrashMutation = useMoveToTrashMutation();
   const updateMutation = useUpdateMemoryMutation();
 
   // For a "note" memory, `content` IS the memory body and already renders in
@@ -74,7 +55,6 @@ export default function MemoryDetailPage() {
   // rather than mirroring memory.content into state on every load.
   const [draftNote, setDraftNote] = useState("");
   const [isEditing, setIsEditing] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   if (isLoading) {
     return (
@@ -143,66 +123,9 @@ export default function MemoryDetailPage() {
             <HugeiconsIcon icon={Star} strokeWidth={2.25} className={cn("h-4 w-4", memory.isFavorite ? "fill-amber-500 text-amber-500" : "")} />
           </button>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <button className="h-9 w-9 rounded-full border border-border/60 hover:bg-muted flex items-center justify-center text-muted-foreground hover:text-foreground">
-                  <HugeiconsIcon icon={MoreHorizontal} strokeWidth={2.25} className="h-4 w-4" />
-                </button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => router.push("/app/collections")}>
-                <HugeiconsIcon icon={FolderOpen} strokeWidth={2.25} className="h-3.5 w-3.5" /> Move to collection
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => {
-                updateMutation.mutate({ id: memory.id, patch: { isArchived: true } });
-                toast.add({ title: "Moved to archive", description: memory.title, type: "success" });
-                router.push("/app/memories");
-              }}>
-                <HugeiconsIcon icon={Archive} strokeWidth={2.25} className="h-3.5 w-3.5" /> Archive
-              </DropdownMenuItem>
-              {/* Vaulting needs no unlock — hiding something is always safe.
-                  Un-vaulting (from the Vault page) is what requires the PIN. */}
-              <DropdownMenuItem onClick={() => {
-                updateMutation.mutate({ id: memory.id, patch: { isVaulted: true } });
-                toast.add({ title: "Moved to vault", description: memory.title, type: "success" });
-                router.push("/app/memories");
-              }}>
-                <HugeiconsIcon icon={Lock} strokeWidth={2.25} className="h-3.5 w-3.5" /> Move to vault
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
-              <DropdownMenuItem variant="destructive" onClick={() => setDeleteDialogOpen(true)}>
-                <HugeiconsIcon icon={Trash2} strokeWidth={2.25} className="h-3.5 w-3.5" /> Move to trash
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+          <MemoryActionsMenu memory={memory} redirectTo="/app/memories" />
         </div>
       </div>
-
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Move &quot;{memory.title}&quot; to trash?</AlertDialogTitle>
-            <AlertDialogDescription>
-              You can restore it from Trash within 15 days.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600 text-white"
-              onClick={() => {
-                moveToTrashMutation.mutate(memory.id);
-                toast.add({ title: "Moved to trash", description: memory.title, type: "success" });
-                router.push("/app/memories");
-              }}
-            >
-              Move to trash
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       {/* Main Split grid */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
