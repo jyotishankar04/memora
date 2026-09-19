@@ -11,6 +11,14 @@ export enum Provider {
   GITHUB = "github",
 }
 
+// Which calendar API a calendar_connections row authenticates against —
+// distinct from Provider above, which is login identity, not calendar
+// write access. See calendar_connections' own doc comment in schema.ts.
+export enum CalendarProvider {
+  GOOGLE = "google",
+  MICROSOFT = "microsoft",
+}
+
 export enum OrganizeMode {
   AUTO = "auto",
   MANUAL = "manual",
@@ -114,6 +122,7 @@ export enum NotificationType {
   SHARE_ACCESS_APPROVED = "share_access_approved",
   SHARE_ACCESS_DENIED = "share_access_denied",
   SHARE_REVOKED = "share_revoked",
+  EVENT_DETECTED = "event_detected",
 }
 
 export enum PlanLimitType {
@@ -202,4 +211,47 @@ export enum CreditLedgerReason {
   ADMIN_ADJUSTMENT = "admin_adjustment",
   PROMOTION = "promotion",
   EXPIRATION = "expiration",
+}
+
+// TRANSACTIONAL = system-triggered (welcome, status-changed, share events),
+// never sent via the bulk composer. The other four are what the admin
+// composer's category select offers.
+export enum EmailCategory {
+  TRANSACTIONAL = "transactional",
+  MARKETING = "marketing",
+  ALERT = "alert",
+  ANNOUNCEMENT = "announcement",
+  CUSTOM = "custom",
+}
+
+// Which HTML builder rendered the message — kept separate from `category`
+// (why it was sent) so a marketing and an announcement bulk send, both
+// rendered by the same generic template, stay distinguishable in history.
+export enum EmailTemplateKey {
+  WELCOME = "welcome",
+  USER_STATUS_CHANGED = "user_status_changed",
+  SHARE_INVITE = "share_invite",
+  SHARE_ACCESS_REQUESTED = "share_access_requested",
+  SHARE_ACCESS_APPROVED = "share_access_approved",
+  SHARE_ACCESS_DENIED = "share_access_denied",
+  ADMIN_CUSTOM = "admin_custom",
+  EVENT_DETECTED = "event_detected",
+}
+
+export enum EmailStatus {
+  QUEUED = "queued",
+  SENDING = "sending",
+  SENT = "sent",
+  FAILED = "failed",
+}
+
+export enum ImportSourceType {
+  BOOKMARKS_HTML = "bookmarks_html",
+  URL_LIST = "url_list",
+}
+
+export enum ImportItemStatus {
+  CREATED = "created",
+  SKIPPED_DUPLICATE = "skipped_duplicate",
+  FAILED = "failed",
 }

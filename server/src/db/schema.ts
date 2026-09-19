@@ -20,10 +20,16 @@ import {
   AccentColor,
   AnnouncementDisplayMode,
   AnnouncementType,
+  CalendarProvider,
   CollectionSource,
   CouponDiscountType,
   CouponRedemptionStatus,
   CreditLedgerReason,
+  EmailCategory,
+  EmailStatus,
+  EmailTemplateKey,
+  ImportItemStatus,
+  ImportSourceType,
   MemoryStatus,
   MemoryType,
   NotificationType,
@@ -160,6 +166,7 @@ export const notificationTypeEnum = pgEnum("notification_type", [
   NotificationType.SHARE_ACCESS_APPROVED,
   NotificationType.SHARE_ACCESS_DENIED,
   NotificationType.SHARE_REVOKED,
+  NotificationType.EVENT_DETECTED,
 ]);
 
 export const planAssignmentStatusEnum = pgEnum("plan_assignment_status", [
@@ -223,30 +230,78 @@ export const creditLedgerReasonEnum = pgEnum("credit_ledger_reason", [
   CreditLedgerReason.EXPIRATION,
 ]);
 
+export const emailCategoryEnum = pgEnum("email_category", [
+  EmailCategory.TRANSACTIONAL,
+  EmailCategory.MARKETING,
+  EmailCategory.ALERT,
+  EmailCategory.ANNOUNCEMENT,
+  EmailCategory.CUSTOM,
+]);
+
+export const emailTemplateKeyEnum = pgEnum("email_template_key", [
+  EmailTemplateKey.WELCOME,
+  EmailTemplateKey.USER_STATUS_CHANGED,
+  EmailTemplateKey.SHARE_INVITE,
+  EmailTemplateKey.SHARE_ACCESS_REQUESTED,
+  EmailTemplateKey.SHARE_ACCESS_APPROVED,
+  EmailTemplateKey.SHARE_ACCESS_DENIED,
+  EmailTemplateKey.ADMIN_CUSTOM,
+  EmailTemplateKey.EVENT_DETECTED,
+]);
+
+export const emailStatusEnum = pgEnum("email_status", [
+  EmailStatus.QUEUED,
+  EmailStatus.SENDING,
+  EmailStatus.SENT,
+  EmailStatus.FAILED,
+]);
+
+export const importSourceTypeEnum = pgEnum("import_source_type", [
+  ImportSourceType.BOOKMARKS_HTML,
+  ImportSourceType.URL_LIST,
+]);
+
+export const importItemStatusEnum = pgEnum("import_item_status", [
+  ImportItemStatus.CREATED,
+  ImportItemStatus.SKIPPED_DUPLICATE,
+  ImportItemStatus.FAILED,
+]);
+
 // -----------------------------------------------------------------------------
 // 1. Users Table
 // -----------------------------------------------------------------------------
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  name: varchar("name", { length: 255 }),
-  avatarUrl: text("avatar_url"),
-  status: userStatusEnum("status").notNull().default(UserStatus.ACTIVE),
-  emailVerified: boolean("email_verified").notNull().default(false),
-  emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
-  // The vault PIN, scrypt-hashed (shared/crypto/scrypt-password.ts) — same
-  // KDF as share-link passwords. Null until the user sets one up. Embedded
-  // as the `pv` claim in the vault-unlock token, so changing the PIN
-  // invalidates every unlock proof already issued, the same trick used for
-  // share-link passwords.
-  vaultPinHash: text("vault_pin_hash"),
-  vaultPinUpdatedAt: timestamp("vault_pin_updated_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
+export const users = pgTable(
+  "users",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    email: varchar("email", { length: 255 }).notNull().unique(),
+    name: varchar("name", { length: 255 }),
+    avatarUrl: text("avatar_url"),
+    status: userStatusEnum("status").notNull().default(UserStatus.ACTIVE),
+    emailVerified: boolean("email_verified").notNull().default(false),
+    emailVerifiedAt: timestamp("email_verified_at", { withTimezone: true }),
+    // The vault PIN, scrypt-hashed (shared/crypto/scrypt-password.ts) — same
+    // KDF as share-link passwords. Null until the user sets one up. Embedded
+    // as the `pv` claim in the vault-unlock token, so changing the PIN
+    // invalidates every unlock proof already issued, the same trick used for
+    // share-link passwords.
+    vaultPinHash: text("vault_pin_hash"),
+    vaultPinUpdatedAt: timestamp("vault_pin_updated_at", { withTimezone: true }),
+    // When a soft account-deletion was requested (status flips to DELETED at
+    // the same time). Null while status !== DELETED. Drives the grace-period
+    // window before account-deletion.job.ts hard-deletes the row — see
+    // modules/account/. Logging back in before the cutoff (auth.service.ts's
+    // findOrCreateUser) clears this and flips status back to ACTIVE,
+    // cancelling the pending wipe.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index("idx_users_deleted_at").on(table.deletedAt).where(sql`${table.status} = 'deleted'`)]
+);
 
 // -----------------------------------------------------------------------------
 // 2. OAuth Auth Identities Table
@@ -276,6 +331,70 @@ export const authIdentities = pgTable(
       table.providerId
     ),
     index("idx_auth_identities_user_id").on(table.userId),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 2b. Calendar Connections Table
+// -----------------------------------------------------------------------------
+export const calendarProviderEnum = pgEnum("calendar_provider", [
+  CalendarProvider.GOOGLE,
+  CalendarProvider.MICROSOFT,
+]);
+
+// Calendar write-access tokens, distinct from authIdentities (login).
+// One live connection per (user, provider) — reconnecting overwrites rather
+// than accumulating rows. Tokens are AES-256-GCM ciphertext (see
+// shared/crypto/token-cipher.ts), never plaintext at rest.
+export const calendarConnections = pgTable(
+  "calendar_connections",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: calendarProviderEnum("provider").notNull(),
+    encryptedAccessToken: text("encrypted_access_token").notNull(),
+    encryptedRefreshToken: text("encrypted_refresh_token"), // null if the provider didn't return one
+    accessTokenExpiresAt: timestamp("access_token_expires_at", { withTimezone: true }).notNull(),
+    scope: text("scope").notNull(),
+    // The connected account's own email, for "Connected as jane@gmail.com"
+    // UI copy without ever having to decrypt a token just to display it.
+    providerAccountEmail: text("provider_account_email"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("uq_calendar_connections_user_provider").on(table.userId, table.provider),
+    index("idx_calendar_connections_user_id").on(table.userId),
+  ]
+);
+
+// One row per memory×provider event actually created via the API — keeps a
+// memory from being double-pushed to the same calendar, and lets a future
+// "remove event" action find the remote id. Distinct from
+// calendarConnections (auth) and memories.eventAt (the date itself).
+export const calendarEventLinks = pgTable(
+  "calendar_event_links",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    memoryId: uuid("memory_id")
+      .notNull()
+      .references(() => memories.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: calendarProviderEnum("provider").notNull(),
+    externalEventId: text("external_event_id").notNull(),
+    externalHtmlLink: text("external_html_link"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("uq_calendar_event_links_memory_provider").on(table.memoryId, table.provider),
+    index("idx_calendar_event_links_user_id").on(table.userId),
   ]
 );
 
@@ -517,13 +636,6 @@ export const collections = pgTable(
     // boolean to drift out of sync.
     source: collectionSourceEnum("source").notNull().default(CollectionSource.USER),
     convertedFromSystemAt: timestamp("converted_from_system_at", { withTimezone: true }),
-    // Pro-only "shareable collection" perk (plans.features.publicCollections
-    // gates who can set this). publicSlug is generated once on first share
-    // and never regenerated — toggling isPublic off/on again reuses the
-    // same link rather than rotating it, so a link a user already shared
-    // doesn't silently break just because they paused sharing.
-    isPublic: boolean("is_public").notNull().default(false),
-    publicSlug: varchar("public_slug", { length: 32 }).unique(),
     // Hides the whole collection (and cascades isVaulted onto every memory
     // in it — see vault.service.ts) from every normal read path until the
     // vault PIN is unlocked.
@@ -594,6 +706,24 @@ export const memories = pgTable(
     // vault.service.ts's cascade), so hiding a whole collection doesn't
     // require every read path to also join collection_memories.
     isVaulted: boolean("is_vaulted").notNull().default(false),
+    // User-set, not AI-inferred — when this memory relates to something on a
+    // specific date/time (a saved event page, a deadline mentioned in a
+    // note). Null means "no event attached." Powers the "Add to calendar"
+    // action, which builds a Google/Outlook link or .ics file client-side —
+    // no calendar OAuth involved.
+    eventAt: timestamp("event_at", { withTimezone: true }),
+    // AI-inferred, never user-set — the ingestion pipeline's DetectEvent
+    // node's guess at a date/time this memory is "about," if any. Distinct
+    // from eventAt above (user-owned/confirmed, drives the real calendar
+    // actions) — a suggestion becomes eventAt only when the user explicitly
+    // confirms via the detection prompt, through the normal updateMemory
+    // path. Never written there automatically.
+    suggestedEventAt: timestamp("suggested_event_at", { withTimezone: true }),
+    // 0.0-1.0 confidence from DetectEvent. Null when no event was detected.
+    // Only clearing EVENT_DETECTION_CONFIDENCE_THRESHOLD (memory.notify.ts)
+    // triggers the notification/email/popup fan-out — a lower-confidence
+    // guess is still stored here, but stays silent.
+    eventDetectionConfidence: real("event_detection_confidence"),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
       .notNull()
@@ -1366,7 +1496,103 @@ export const userCreditBalances = pgTable("user_credit_balances", {
 });
 
 // -----------------------------------------------------------------------------
-// 34. Relations
+// 34. Email Campaigns Table (one row per admin bulk-compose action — the
+//     subject/body were composed once and fanned out to N recipients, each
+//     tracked as its own email_messages row below. Every automatic/system
+//     email (welcome, ban notice, share events) has no campaign at all.)
+// -----------------------------------------------------------------------------
+export const emailCampaigns = pgTable(
+  "email_campaigns",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    category: emailCategoryEnum("category").notNull(),
+    subject: varchar("subject", { length: 255 }).notNull(),
+    bodyText: text("body_text").notNull(),
+    // Recorded so the history view can show "sent to all users" vs. a named
+    // list without re-deriving it from the individual message rows.
+    recipientFilter: jsonb("recipient_filter").$type<{ all: true } | { userIds: string[] }>().notNull(),
+    recipientCount: integer("recipient_count").notNull(),
+    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("idx_email_campaigns_created").on(table.createdAt)]
+);
+
+// -----------------------------------------------------------------------------
+// 35. Email Messages Table (one row per individual send attempt — system-
+//     triggered or part of a campaign — this is what the BullMQ email
+//     worker loads by id and updates as it sends. The single source of
+//     truth for delivery status; Mailhog/SMTP holds no state of its own.)
+// -----------------------------------------------------------------------------
+export const emailMessages = pgTable(
+  "email_messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    // Null for every system/automatic send — only the admin bulk composer
+    // groups messages under a campaign.
+    campaignId: uuid("campaign_id").references(() => emailCampaigns.id, { onDelete: "cascade" }),
+    // Null when the recipient has no account yet (e.g. a share invite sent
+    // to an email address that hasn't signed up) — recipientEmail is the
+    // one field every row is guaranteed to have.
+    recipientUserId: uuid("recipient_user_id").references(() => users.id, { onDelete: "set null" }),
+    recipientEmail: varchar("recipient_email", { length: 255 }).notNull(),
+    category: emailCategoryEnum("category").notNull(),
+    templateKey: emailTemplateKeyEnum("template_key").notNull(),
+    subject: varchar("subject", { length: 255 }).notNull(),
+    // The rendered HTML actually handed to nodemailer — kept for delivery
+    // debugging/audit even though Mailhog also stores its own copy.
+    bodyHtml: text("body_html").notNull(),
+    status: emailStatusEnum("status").notNull().default(EmailStatus.QUEUED),
+    error: text("error"),
+    attempts: integer("attempts").notNull().default(0),
+    sentAt: timestamp("sent_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [
+    index("idx_email_messages_campaign").on(table.campaignId),
+    index("idx_email_messages_recipient_user").on(table.recipientUserId),
+    index("idx_email_messages_status_created").on(table.status, table.createdAt),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 36. Import Batches Table (one row per bookmarks-file or URL-list import —
+//     mirrors email_campaigns' shape: one parent summary row, N child rows.)
+// -----------------------------------------------------------------------------
+export const importBatches = pgTable(
+  "import_batches",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+    sourceType: importSourceTypeEnum("source_type").notNull(),
+    totalCount: integer("total_count").notNull(),
+    createdCount: integer("created_count").notNull().default(0),
+    skippedCount: integer("skipped_count").notNull().default(0),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("idx_import_batches_user_created").on(table.userId, table.createdAt)]
+);
+
+// -----------------------------------------------------------------------------
+// 37. Import Items Table (one row per URL in a batch — memoryId is set null,
+//     not cascade, so this history survives even if the memory it created
+//     is later deleted.)
+// -----------------------------------------------------------------------------
+export const importItems = pgTable(
+  "import_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    batchId: uuid("batch_id").notNull().references(() => importBatches.id, { onDelete: "cascade" }),
+    url: text("url").notNull(),
+    status: importItemStatusEnum("status").notNull(),
+    memoryId: uuid("memory_id").references(() => memories.id, { onDelete: "set null" }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  },
+  (table) => [index("idx_import_items_batch_status").on(table.batchId, table.status)]
+);
+
+// -----------------------------------------------------------------------------
+// 38. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {
@@ -1385,6 +1611,11 @@ export const  relations = defineRelations({
     shares: { relation: "hasMany", foreignKey: "ownerId" },
     shareGrants: { relation: "hasMany", foreignKey: "userId" },
     notifications: { relation: "hasMany", foreignKey: "userId" },
+    emailCampaigns: { relation: "hasMany", foreignKey: "createdBy" },
+    emailMessages: { relation: "hasMany", foreignKey: "recipientUserId" },
+    importBatches: { relation: "hasMany", foreignKey: "userId" },
+    calendarConnections: { relation: "hasMany", foreignKey: "userId" },
+    calendarEventLinks: { relation: "hasMany", foreignKey: "userId" },
   },
   collections: {
     user: { relation: "belongsTo", foreignKey: "userId" },
@@ -1470,6 +1701,22 @@ export const  relations = defineRelations({
   adminAuditLogs: {
     adminUser: { relation: "belongsTo", foreignKey: "adminUserId" },
   },
+  emailCampaigns: {
+    createdByUser: { relation: "belongsTo", foreignKey: "createdBy" },
+    messages: { relation: "hasMany", foreignKey: "campaignId" },
+  },
+  emailMessages: {
+    campaign: { relation: "belongsTo", foreignKey: "campaignId" },
+    recipient: { relation: "belongsTo", foreignKey: "recipientUserId" },
+  },
+  importBatches: {
+    user: { relation: "belongsTo", foreignKey: "userId" },
+    items: { relation: "hasMany", foreignKey: "batchId" },
+  },
+  importItems: {
+    batch: { relation: "belongsTo", foreignKey: "batchId" },
+    memory: { relation: "belongsTo", foreignKey: "memoryId" },
+  },
   roles: {
     userRoles: { relation: "hasMany", foreignKey: "roleId" },
     rolePermissions: { relation: "hasMany", foreignKey: "roleId" },
@@ -1479,6 +1726,13 @@ export const  relations = defineRelations({
   },
   authIdentities: {
     user: { relation: "belongsTo", foreignKey: "userId" },
+  },
+  calendarConnections: {
+    user: { relation: "belongsTo", foreignKey: "userId" },
+  },
+  calendarEventLinks: {
+    user: { relation: "belongsTo", foreignKey: "userId" },
+    memory: { relation: "belongsTo", foreignKey: "memoryId" },
   },
   refreshTokens:
   {
