@@ -181,6 +181,7 @@ function AnnouncementsSection() {
   const [title, setTitle] = useState("");
   const [message, setMessage] = useState("");
   const [targetDate, setTargetDate] = useState("");
+  const [notifyByEmail, setNotifyByEmail] = useState(false);
 
   const { data: announcements, isLoading, isError } = useQuery({
     queryKey: ["admin", "announcements"],
@@ -195,6 +196,7 @@ function AnnouncementsSection() {
     setTitle("");
     setMessage("");
     setTargetDate("");
+    setNotifyByEmail(false);
   };
 
   const handleCreate = async () => {
@@ -207,10 +209,15 @@ function AnnouncementsSection() {
         title: title.trim(),
         message: message.trim(),
         targetDate: type === "countdown" && targetDate ? new Date(targetDate).toISOString() : undefined,
+        notifyByEmail,
       });
       invalidate();
       resetForm();
-      toast.add({ title: "Announcement created.", type: "success" });
+      toast.add({
+        title: "Announcement created.",
+        description: notifyByEmail ? "Emailing all active users now." : undefined,
+        type: "success",
+      });
     } catch {
       toast.add({ title: "Failed to create announcement.", type: "error" });
     } finally {
@@ -356,6 +363,16 @@ function AnnouncementsSection() {
 
         <Input placeholder="Title" value={title} onChange={(e) => setTitle(e.target.value)} />
         <Textarea placeholder="Message shown to visitors" value={message} onChange={(e) => setMessage(e.target.value)} rows={2} className="text-xs" />
+
+        <label className="flex items-center gap-2.5 cursor-pointer">
+          <Switch checked={notifyByEmail} onCheckedChange={setNotifyByEmail} />
+          <span className="text-xs text-foreground">
+            Also email all active users
+            <span className="block text-[10px] text-muted-foreground font-normal">
+              Sends the title and message above as an email to everyone, queued through /admin/emails. Only applies to this creation — editing later never re-sends.
+            </span>
+          </span>
+        </label>
 
         <button
           type="button"

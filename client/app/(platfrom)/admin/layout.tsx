@@ -20,6 +20,7 @@ import {
   Layers01Icon as Layers,
   CreditCardIcon as CreditCard,
   Megaphone01Icon as Megaphone,
+  Mail01Icon as Mail,
 } from "@hugeicons/core-free-icons";
 import type { IconSvgElement } from "@hugeicons/react";
 import { cn } from "@/lib/utils";
@@ -57,6 +58,7 @@ const NAV_ENTRIES: NavEntry[] = [
   { label: "Overview", href: "/admin", icon: DashboardSquare },
   { label: "Users", href: "/admin/users", icon: UserGroup },
   { label: "Analytics", href: "/admin/analytics", icon: BarChart },
+  { label: "Emails", href: "/admin/emails", icon: Mail },
   { label: "AI Usage", href: "/admin/ai-usage", icon: Cpu },
   { label: "Configuration", href: "/admin/configuration", icon: Settings },
   { label: "Plans & Limits", href: "/admin/plans-limits", icon: Layers },
