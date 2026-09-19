@@ -42,3 +42,17 @@ function useNotificationMutation<T>(fn: (arg: T) => Promise<unknown>) {
 export const useMarkReadMutation = () => useNotificationMutation(markNotificationRead);
 export const useMarkAllReadMutation = () => useNotificationMutation(() => markAllNotificationsRead());
 export const useDeleteNotificationMutation = () => useNotificationMutation(deleteNotification);
+
+/**
+ * Feeds AppShell's live "want to add this to your calendar?" popup. Same
+ * polling cadence and rationale as useUnreadCountQuery above — there's no
+ * websocket, so a detected event surfaces here within one 60s tick of
+ * ingestion finishing while the user happens to be on the site at all.
+ */
+export const useRecentEventNotificationsQuery = () =>
+  useQuery({
+    queryKey: notificationKeys.list("unread"),
+    queryFn: () => listNotifications("unread"),
+    refetchInterval: 60_000,
+    staleTime: 30_000,
+  });

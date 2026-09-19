@@ -7,8 +7,6 @@ import {
   createCollection,
   deleteCollection,
   listCollections,
-  shareCollection,
-  unshareCollection,
   updateCollection,
   type CreateCollectionInput,
   type UpdateCollectionInput,
@@ -99,26 +97,6 @@ export function useUpdateCollectionMutation() {
       // members), so both caches need a refetch, not just collections.
       queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
       queryClient.invalidateQueries({ queryKey: ["memories"] });
-    },
-  });
-}
-
-export function useShareCollectionMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => shareCollection(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
-    },
-  });
-}
-
-export function useUnshareCollectionMutation() {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: (id: string) => unshareCollection(id),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: collectionsQueryKey() });
     },
   });
 }
