@@ -1,54 +1,182 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckIcon as Check, ArrowRight01Icon as ArrowRight } from "@hugeicons/core-free-icons";
 import { buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
-const plans = [
+type BillingInterval = "monthly" | "semi_annual" | "yearly";
+
+interface Plan {
+  name: string;
+  price: string;
+  billing?: string;
+  description: string;
+  features: string[];
+  cta: string;
+  href: string;
+  popular: boolean;
+  interval: BillingInterval;
+  discount?: string;
+}
+
+const BILLING_INTERVAL_CONFIG: Record<BillingInterval, { label: string; discount?: string }> = {
+  monthly: { label: "Monthly" },
+  semi_annual: { label: "Semi-Annual", discount: "15% Off" },
+  yearly: { label: "Annual", discount: "20% Off" },
+};
+
+const plans: Plan[] = [
+  // Monthly plans
   {
+    interval: "monthly",
     name: "Free",
     price: "$0",
     description: "Perfect for casual saving and organization.",
     features: [
-      "Save up to 150 items / month",
+      "Save up to 100 items / month",
       "Web interface access",
       "Standard text keyword search",
       "Clean reader view for articles",
       "Sync across 2 devices",
     ],
     cta: "Start for free",
-    href: "/auth/signup",
+    href: "/auth/signup?plan=free",
     popular: false,
   },
   {
-    name: "Pro",
-    price: "$8",
+    interval: "monthly",
+    name: "Plus",
+    price: "$6",
     billing: "/ month",
-    description: "For creators, developers, and researchers seeking a real second brain.",
+    description: "For people who save more than they can keep track of.",
     features: [
       "Unlimited items & storage",
       "Chrome/Firefox Extension & Mobile Apps",
       "AI Auto-Summarization & Auto-Tagging",
       "Image OCR & PDF search indexing",
       "Video audio transcriptions",
-      "Ask SaveForLatter (Natural Language AI Querying)",
+      "Ask Memora (Natural Language AI Querying)",
+      "Priority customer support",
+    ],
+    cta: "Upgrade to Plus",
+    href: "/auth/signup?plan=plus-monthly",
+    popular: false,
+  },
+  {
+    interval: "monthly",
+    name: "Pro",
+    price: "$12",
+    billing: "/ month",
+    description: "For creators, developers, and researchers seeking a real second brain.",
+    features: [
+      "Everything in Plus, plus:",
+      "2,000 AI queries / month",
+      "Vision AI for image analysis",
+      "Custom memory limits",
+      "Unlimited collections",
+      "Advanced data export",
       "Priority customer support",
     ],
     cta: "Upgrade to Pro",
-    href: "/auth/signup?plan=pro",
+    href: "/auth/signup?plan=pro-monthly",
     popular: true,
+  },
+  // Semi-annual plans
+  {
+    interval: "semi_annual",
+    name: "Plus",
+    price: "$30.60",
+    billing: "/ 6 months",
+    description: "For people who save more than they can keep track of.",
+    features: [
+      "Unlimited items & storage",
+      "Chrome/Firefox Extension & Mobile Apps",
+      "AI Auto-Summarization & Auto-Tagging",
+      "Image OCR & PDF search indexing",
+      "Video audio transcriptions",
+      "Ask Memora (Natural Language AI Querying)",
+      "Priority customer support",
+    ],
+    cta: "Upgrade to Plus",
+    href: "/auth/signup?plan=plus-semi-annual",
+    popular: false,
+    discount: "15% Off",
+  },
+  {
+    interval: "semi_annual",
+    name: "Pro",
+    price: "$61.20",
+    billing: "/ 6 months",
+    description: "For creators, developers, and researchers seeking a real second brain.",
+    features: [
+      "Everything in Plus, plus:",
+      "2,000 AI queries / month",
+      "Vision AI for image analysis",
+      "Custom memory limits",
+      "Unlimited collections",
+      "Advanced data export",
+      "Priority customer support",
+    ],
+    cta: "Upgrade to Pro",
+    href: "/auth/signup?plan=pro-semi-annual",
+    popular: true,
+    discount: "15% Off",
+  },
+  // Annual plans
+  {
+    interval: "yearly",
+    name: "Plus",
+    price: "$57.60",
+    billing: "/ year",
+    description: "For people who save more than they can keep track of.",
+    features: [
+      "Unlimited items & storage",
+      "Chrome/Firefox Extension & Mobile Apps",
+      "AI Auto-Summarization & Auto-Tagging",
+      "Image OCR & PDF search indexing",
+      "Video audio transcriptions",
+      "Ask Memora (Natural Language AI Querying)",
+      "Priority customer support",
+    ],
+    cta: "Upgrade to Plus",
+    href: "/auth/signup?plan=plus-annual",
+    popular: false,
+    discount: "20% Off",
+  },
+  {
+    interval: "yearly",
+    name: "Pro",
+    price: "$115.20",
+    billing: "/ year",
+    description: "For creators, developers, and researchers seeking a real second brain.",
+    features: [
+      "Everything in Plus, plus:",
+      "2,000 AI queries / month",
+      "Vision AI for image analysis",
+      "Custom memory limits",
+      "Unlimited collections",
+      "Advanced data export",
+      "Priority customer support",
+    ],
+    cta: "Upgrade to Pro",
+    href: "/auth/signup?plan=pro-annual",
+    popular: true,
+    discount: "20% Off",
   },
 ];
 
 export default function PricingSection() {
+  const [selectedInterval, setSelectedInterval] = useState<BillingInterval>("monthly");
+  const filteredPlans = plans.filter(p => p.interval === selectedInterval);
+
   return (
     <section id="pricing" className="relative w-full py-20 md:py-28 bg-background border-t border-border/20">
-      
+
       {/* Glow backgrounds */}
-      <div 
+      <div
         className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full pointer-events-none opacity-40 blur-[130px]"
         style={{
           backgroundImage: "radial-gradient(circle, rgba(20,71,230,0.06) 0%, rgba(20,71,230,0) 70%)"
@@ -56,7 +184,7 @@ export default function PricingSection() {
       />
 
       <div className="mx-auto max-w-6xl px-6 relative">
-        
+
         {/* Section Header */}
         <div className="text-center max-w-2xl mx-auto mb-16">
           <span className="text-xs font-semibold uppercase tracking-wider text-primary bg-primary/10 px-3 py-1 rounded-full">
@@ -70,15 +198,47 @@ export default function PricingSection() {
           </p>
         </div>
 
+        {/* Billing Interval Tabs with Discount Badges */}
+        <div className="flex justify-center mb-12">
+          <div className="flex gap-2 bg-muted/30 p-1 rounded-lg w-fit">
+            {(["monthly", "semi_annual", "yearly"] as const).map((interval) => {
+              const config = BILLING_INTERVAL_CONFIG[interval];
+              const isActive = selectedInterval === interval;
+              return (
+                <button
+                  key={interval}
+                  onClick={() => setSelectedInterval(interval)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all font-semibold text-sm ${
+                    isActive
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>{config.label}</span>
+                  {config.discount && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      isActive
+                        ? "bg-green-500/20 text-green-600"
+                        : "bg-green-500/10 text-green-600"
+                    }`}>
+                      {config.discount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Pricing Cards */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
-          {plans.map((plan) => (
+          {filteredPlans.map((plan) => (
             <div
-              key={plan.name}
+              key={plan.name + plan.interval}
               className={cn(
                 "rounded-[2rem] p-8 bg-card border flex flex-col justify-between transition-all duration-300 relative shadow-sm hover:shadow-md",
-                plan.popular 
-                  ? "border-primary/45 bg-radial from-primary/5 via-card to-card shadow-[0_20px_50px_rgba(20,71,230,0.08)]" 
+                plan.popular
+                  ? "border-primary/45 bg-radial from-primary/5 via-card to-card shadow-[0_20px_50px_rgba(20,71,230,0.08)]"
                   : "border-border/60"
               )}
             >
@@ -91,11 +251,15 @@ export default function PricingSection() {
               <div>
                 <h3 className="text-xl font-semibold text-foreground">{plan.name}</h3>
                 <p className="text-xs text-muted-foreground mt-2">{plan.description}</p>
-                
+
                 <div className="mt-6 flex items-baseline gap-1">
                   <span className="text-4xl md:text-5xl font-semibold tracking-tight text-foreground">{plan.price}</span>
                   {plan.billing && <span className="text-sm text-muted-foreground">{plan.billing}</span>}
                 </div>
+
+                {plan.discount && (
+                  <p className="text-xs text-green-600 font-semibold mt-2">💰 Save {plan.discount} compared to monthly</p>
+                )}
 
                 <div className="h-px bg-border/40 my-6" />
 
@@ -120,8 +284,8 @@ export default function PricingSection() {
                   className={cn(
                     buttonVariants({ variant: plan.popular ? "default" : "outline", size: "default" }),
                     "w-full h-11 rounded-full flex items-center justify-center font-medium gap-1 text-sm transition-all duration-200",
-                    plan.popular 
-                      ? "bg-primary text-primary-foreground hover:bg-primary/95 shadow-sm" 
+                    plan.popular
+                      ? "bg-primary text-primary-foreground hover:bg-primary/95 shadow-sm"
                       : "hover:bg-muted"
                   )}
                 >

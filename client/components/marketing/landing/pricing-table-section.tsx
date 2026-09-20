@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState } from "react";
 import Link from "next/link";
 import { useQuery } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
@@ -20,6 +20,7 @@ import { BETA_MODE } from "@/lib/beta";
 const PLAN_ICON: Record<string, IconSvgElement> = {
   free: Box,
   plus: Gem,
+  pro: Crown,
 };
 
 // Tailwind needs static class strings, so the column count an admin's
@@ -34,18 +35,30 @@ const GRID_COLS: Record<number, string> = {
   4: "sm:grid-cols-2 md:grid-cols-4",
 };
 
+type BillingInterval = "monthly" | "semi_annual" | "yearly";
+
+const BILLING_INTERVAL_CONFIG: Record<BillingInterval, { label: string; discount?: string }> = {
+  monthly: { label: "Monthly" },
+  semi_annual: { label: "Semi-Annual", discount: "15% Off" },
+  yearly: { label: "Annual", discount: "20% Off" },
+};
+
 export default function PricingTableSection() {
+  const [selectedInterval, setSelectedInterval] = useState<BillingInterval>("monthly");
+
   // Polled like the maintenance-mode/announcement gates elsewhere in
   // marketing — a visitor sitting on the landing page should see a plan an
   // admin just disabled disappear without needing to refresh or refocus.
   // Skipped entirely in beta mode, since the placeholder below never needs
   // real plan data.
-  const { data: plans, isLoading, isError } = useQuery({
+  const { data: allPlans, isLoading, isError } = useQuery({
     queryKey: ["plans", "public"],
     queryFn: listPublicPlans,
     refetchInterval: 15 * 1000,
     enabled: !BETA_MODE,
   });
+
+  const plans = allPlans?.filter(p => p.billingInterval === selectedInterval) || [];
 
   // The middle tier of 3+ gets the "Most Popular" badge — the classic
   // pricing-psychology nudge away from both Free and the top tier. Fewer
@@ -68,6 +81,40 @@ export default function PricingTableSection() {
       <p className="mt-2 text-balance text-center text-lg text-muted-foreground tracking-[-0.01em] sm:mt-4 sm:text-2xl">
         Flexible pricing designed to grow with you
       </p>
+
+      {/* Billing Interval Tabs with Discount Badges */}
+      {!isLoading && allPlans && allPlans.length > 0 && (
+        <div className="mt-8 flex justify-center">
+          <div className="flex gap-2 bg-muted/30 p-1 rounded-lg w-fit">
+            {(["monthly", "semi_annual", "yearly"] as const).map((interval) => {
+              const config = BILLING_INTERVAL_CONFIG[interval];
+              const isActive = selectedInterval === interval;
+              return (
+                <button
+                  key={interval}
+                  onClick={() => setSelectedInterval(interval)}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-md transition-all font-semibold text-sm ${
+                    isActive
+                      ? "bg-foreground text-background"
+                      : "text-muted-foreground hover:text-foreground"
+                  }`}
+                >
+                  <span>{config.label}</span>
+                  {config.discount && (
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                      isActive
+                        ? "bg-green-500/20 text-green-600"
+                        : "bg-green-500/10 text-green-600"
+                    }`}>
+                      {config.discount}
+                    </span>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {isError && (
         <p className="mt-12 text-center text-sm text-destructive">Couldn&apos;t load pricing right now — please try again shortly.</p>
@@ -123,9 +170,9 @@ function PricingBetaPlaceholder() {
 }
 
 const PlanCard = ({ plan, isRecommended }: { plan: PublicPlan; isRecommended: boolean }) => {
-  const icon = PLAN_ICON[plan.key] ?? Crown;
+  const icon = PLAN_ICON[plan.key.split("-")[0]] ?? Crown;
   const isFree = plan.priceMinor === 0;
-  const period = plan.billingInterval === "monthly" ? "/ month" : plan.billingInterval === "yearly" ? "/ year" : undefined;
+  const period = plan.billingInterval === "monthly" ? "/ month" : plan.billingInterval === "yearly" ? "/ year" : "/ 6 months";
   const bullets = planLimitBullets(plan.limits);
 
   return (
@@ -148,7 +195,7 @@ const PlanCard = ({ plan, isRecommended }: { plan: PublicPlan; isRecommended: bo
           {!isFree && period && <span className="text-muted-foreground text-sm font-medium">{period}</span>}
         </div>
         <p className="mt-1 text-muted-foreground text-xs tracking-normal">
-          {isFree ? "free forever" : period ? "billed monthly" : "one-time"}
+          {isFree ? "free forever" : `billed ${plan.billingInterval === "semi_annual" ? "every 6 months" : "annually"}`}
         </p>
         <Button
           render={<Link href={ctaHref(`/auth/signup?plan=${plan.key}`)} />}
