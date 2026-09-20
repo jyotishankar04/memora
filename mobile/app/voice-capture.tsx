@@ -78,7 +78,7 @@ export default function MobileVoiceCaptureScreen() {
               <Text style={styles.summaryTitleValue}>Indie SaaS Analytics Idea</Text>
 
               <Text style={styles.summaryTitleLabel}>Topics:</Text>
-              <Text style={styles.summaryTagsValue}>SaaS &middot; Analytics &middot; Startup</Text>
+              <Text style={styles.summaryTagsValue}>SaaS · Analytics · Startup</Text>
             </View>
 
             <TouchableOpacity style={styles.viewButton} onPress={() => router.replace("/memories-detail")}>

@@ -157,7 +157,7 @@ export default function MobileMemoryDetailPage() {
 
         {/* Open original button */}
         <TouchableOpacity style={styles.openButton} onPress={handleOpenOriginal}>
-          <Text style={styles.openText}>Open original &rarr;</Text>
+          <Text style={styles.openText}>Open original →</Text>
         </TouchableOpacity>
 
       </ScrollView>

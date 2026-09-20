@@ -83,7 +83,7 @@ export default function MobileHomeScreen() {
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recently saved</Text>
             <TouchableOpacity onPress={() => router.push("/(tabs)/memories")}>
-              <Text style={styles.viewAll}>See &rarr;</Text>
+              <Text style={styles.viewAll}>See →</Text>
             </TouchableOpacity>
           </View>
 
@@ -108,7 +108,7 @@ export default function MobileHomeScreen() {
                   <View style={styles.cardContent}>
                     <Text style={styles.cardTitle}>{item.title}</Text>
                     <Text style={styles.cardTags}>
-                      {item.tags.map(t => `✦ ${t}`).join("  ")} &middot; {item.source}
+                      {item.tags.map(t => `✦ ${t}`).join("  ")} · {item.source}
                     </Text>
                   </View>
                 </TouchableOpacity>
@@ -132,11 +132,11 @@ export default function MobileHomeScreen() {
                 {rediscoverCandidate.desc}
               </Text>
               
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.revisitButton}
                 onPress={() => router.push({ pathname: "/memories-detail", params: { id: rediscoverCandidate.id } })}
               >
-                <Text style={styles.revisitText}>Revisit &rarr;</Text>
+                <Text style={styles.revisitText}>Revisit →</Text>
               </TouchableOpacity>
             </View>
           </View>
