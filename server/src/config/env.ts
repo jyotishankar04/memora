@@ -81,6 +81,15 @@ const envSchema = z
     STRIPE_WEBHOOK_SECRET: z.string().optional(),
     STRIPE_PUBLISHABLE_KEY: z.string().optional(),
 
+    // Polar.sh payment processing — handles Checkout and webhook for
+    // subscription management. MODE switches between "sandbox" (local dev,
+    // test cards) and "production" (live payments). Optional: if unset,
+    // billing routes degrade to "not configured" error.
+    POLAR_SECRET_KEY: z.string().optional(),
+    POLAR_PUBLISHABLE_KEY: z.string().optional(),
+    POLAR_MODE: z.enum(["sandbox", "production"]).default("sandbox"),
+    POLAR_WEBHOOK_SECRET: z.string().optional(),
+
     // Calendar OAuth connect (separate from the login-only Google scope
     // above). Google reuses GOOGLE_CLIENT_ID/SECRET via incremental
     // authorization — the human operator must enable the Calendar API and
