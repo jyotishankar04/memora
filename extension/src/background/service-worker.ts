@@ -164,7 +164,7 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
       });
     } else if (info.menuItemId === "save-link" && info.linkUrl && tab?.url) {
       // New: save link destination as a web memory
-      const linkTitle = info.linkText?.trim() || new URL(info.linkUrl).hostname || "Saved Link";
+      const linkTitle = new URL(info.linkUrl).hostname || "Saved Link";
       await createMemory({
         type: "web",
         url: info.linkUrl,

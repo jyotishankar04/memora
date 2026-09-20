@@ -14,7 +14,7 @@ let lastSavedUrl = "";
 let debounceTimer: number | null = null;
 
 export function initClipboardMonitor(): void {
-  if (!window.isContentScript) return; // Only run in content scripts
+  if (typeof chrome === "undefined" || !chrome.runtime) return; // Only run in content scripts
 
   // Detect paste events (MV3-compliant, no extra permissions needed)
   document.addEventListener(
