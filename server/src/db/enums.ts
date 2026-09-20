@@ -138,6 +138,7 @@ export enum PlanLimitType {
 
 export enum PlanBillingInterval {
   MONTHLY = "monthly",
+  SEMI_ANNUAL = "semi_annual",
   YEARLY = "yearly",
   ONE_TIME = "one_time",
 }
