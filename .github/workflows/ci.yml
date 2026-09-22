@@ -6,9 +6,9 @@ name: CI
 # for even a malicious workflow-file edit in a PR to exfiltrate.
 on:
   pull_request:
-    branches: [main, production]
+    branches: [main, prod/web, prod/server]
   push:
-    branches: [main, production]
+    branches: [main, prod/web, prod/server]
 
 jobs:
   server:

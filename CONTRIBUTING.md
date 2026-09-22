@@ -40,7 +40,7 @@ There's no automated test suite yet, so CI catches typecheck/lint/build failures
 
 ## Making a change
 
-1. Fork the repo and create a branch off `main` for your change — never `production`, which only ever receives a release PR from `main` (see [`docs/RELEASE_PROCESS.md`](./docs/RELEASE_PROCESS.md) if you're curious how releases work).
+1. Fork the repo and create a branch off `main` for your change — never `prod/web` or `prod/server`, which only ever receive a release PR from `main` (see [`docs/RELEASE_PROCESS.md`](./docs/RELEASE_PROCESS.md) if you're curious how releases work).
 2. Make your change, keeping it focused — a bug fix doesn't need an unrelated refactor riding along with it.
 3. Run the relevant typecheck/lint/build commands above.
 4. Commit with a clear message describing *why* the change was made, not just what changed.
