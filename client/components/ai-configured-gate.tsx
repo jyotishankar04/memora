@@ -44,7 +44,7 @@ export function AiConfiguredGate({ children, className }: { children: React.Reac
           <div>
             <h3 className="text-sm font-bold text-foreground">Connect an AI key to use Ask</h3>
             <p className="mt-1.5 text-xs text-muted-foreground leading-relaxed">
-              This is free and open source — you bring your own AI key (OpenAI, Anthropic, Groq, Google, or any OpenAI-compatible endpoint), and it's used only for your account.
+              This is free and open source — you bring your own AI key (OpenAI, Anthropic, Groq, Google, or any OpenAI-compatible endpoint), and it&apos;s used only for your account.
             </p>
           </div>
           <Button render={<Link href="/app/settings/ai" />} nativeButton={false} className="w-full rounded-full gap-1.5">

@@ -140,6 +140,9 @@ function ShareBody({
   const linkAccess: ShareLinkAccess = armingPassword ? "password" : saved;
 
   React.useEffect(() => {
+    // Resets local "arming" state once the server (an external system)
+    // confirms the password mode actually saved.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (saved === "password") setArmingPassword(false);
   }, [saved]);
 

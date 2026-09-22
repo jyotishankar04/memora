@@ -8,7 +8,7 @@ import { useQueries, useQueryClient } from "@tanstack/react-query";
 import { DefaultChatTransport, type UIMessage } from "ai";
 import { Streamdown } from "streamdown";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ArrowUp01Icon as ArrowUp, ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight, Copy01Icon as Copy, GlobeIcon as Globe, MessageSquareIcon as MessageSquare, MoreHorizontalIcon as MoreHorizontal, PlusIcon as Plus, Search01Icon as Search, SparklesIcon as Sparkles, Delete02Icon as Trash2 } from "@hugeicons/core-free-icons";
+import { ArrowUp01Icon as ArrowUp, ChevronDownIcon as ChevronDown, ChevronRightIcon as ChevronRight, GlobeIcon as Globe, MessageSquareIcon as MessageSquare, MoreHorizontalIcon as MoreHorizontal, PlusIcon as Plus, Search01Icon as Search, SparklesIcon as Sparkles, Delete02Icon as Trash2 } from "@hugeicons/core-free-icons";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";

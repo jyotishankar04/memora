@@ -682,7 +682,7 @@ function NewEventDialog({
         <DialogHeader className="border-b border-border/20 pb-3">
           <DialogTitle className="text-xs font-bold">New event</DialogTitle>
           <DialogDescription className="text-[11px]">
-            Saved to Memora and synced to any calendar you've connected.
+            Saved to Memora and synced to any calendar you&apos;ve connected.
           </DialogDescription>
         </DialogHeader>
 

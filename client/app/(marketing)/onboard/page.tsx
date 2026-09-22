@@ -4,7 +4,7 @@ import React, { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { SparklesIcon as Sparkles, CheckIcon as Check, ArrowRight01Icon as ArrowRight, GlobeIcon as Globe, LaptopIcon as Laptop, SmartPhone01Icon as Smartphone, Video01Icon as Video, CodeIcon as Code, Image01Icon as Image, FileTextIcon as FileText, StickyNote01Icon as StickyNote, SlidersHorizontalIcon as Sliders, PlusIcon as Plus } from "@hugeicons/core-free-icons";
+import { SparklesIcon as Sparkles, CheckIcon as Check, ArrowRight01Icon as ArrowRight, GlobeIcon as Globe, LaptopIcon as Laptop, SmartPhone01Icon as Smartphone, SlidersHorizontalIcon as Sliders, PlusIcon as Plus } from "@hugeicons/core-free-icons";
 import { useMutation } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -48,7 +48,7 @@ function OnboardingFlow() {
   const requestedNext = searchParams.get("next");
   const nextDestination = requestedNext && /^\/s\/[A-Za-z0-9_-]{1,32}$/.test(requestedNext) ? requestedNext : "/app";
   const [step, setStep] = useState(1);
-  const [progressWidth, setProgressWidth] = useState("14%");
+  const progressWidth = `${Math.min((step / 7) * 100, 100)}%`;
 
   // Form State
   const [name, setName] = useState("");
@@ -78,12 +78,6 @@ function OnboardingFlow() {
     onSuccess: setCurrentUser,
   });
   const createMemoryMutation = useCreateMemoryMutation();
-
-  // Update progress bar
-  useEffect(() => {
-    const pct = Math.min((step / 7) * 100, 100);
-    setProgressWidth(`${pct}%`);
-  }, [step]);
 
   // Keyboard shortcut listeners
   useEffect(() => {
@@ -171,7 +165,7 @@ function OnboardingFlow() {
                 Welcome to SaveForLatter
               </span>
               <h2 className="text-4xl md:text-5xl font-medium tracking-tight text-foreground pt-2">
-                What's your name?
+                What&apos;s your name?
               </h2>
             </div>
 
@@ -417,7 +411,7 @@ function OnboardingFlow() {
                     <div>
                       <h4 className="text-xs font-bold text-foreground">My way</h4>
                       <p className="text-[10px] text-muted-foreground mt-1.5 leading-relaxed">
-                        I'll organize things myself. I prefer manual folder hierarchies and manual tag collections.
+                        I&apos;ll organize things myself. I prefer manual folder hierarchies and manual tag collections.
                       </p>
                     </div>
                   </div>
@@ -513,7 +507,7 @@ function OnboardingFlow() {
                 Save something you want to remember.
               </h2>
               <p className="text-sm text-muted-foreground">
-                Paste a link, write a thought, or drop something you've discovered.
+                Paste a link, write a thought, or drop something you&apos;ve discovered.
               </p>
             </div>
 

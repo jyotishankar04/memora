@@ -75,7 +75,7 @@ export default function ReportPage() {
           {status === "done" ? (
             <div className="rounded-2xl border border-border bg-card p-8 text-center">
               <div className="mx-auto mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600">✓</div>
-              <h2 className="text-base font-semibold text-foreground">Thanks — that's in the tracker.</h2>
+              <h2 className="text-base font-semibold text-foreground">Thanks — that&apos;s in the tracker.</h2>
               <p className="mx-auto mt-2 max-w-xs text-xs text-muted-foreground">
                 {type === "bug" ? "We'll look into it." : "We'll consider it for a future release."}
                 {email ? " We'll follow up at the email you gave us if there's anything to share." : ""}

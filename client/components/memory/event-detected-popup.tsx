@@ -77,7 +77,7 @@ export function EventDetectedPopup({ notification, onClose }: EventDetectedPopup
         </DialogHeader>
 
         <p className="text-xs leading-relaxed text-muted-foreground">
-          <span className="font-semibold text-foreground">{memory?.title ?? "This memory"}</span> looks like it's about
+          <span className="font-semibold text-foreground">{memory?.title ?? "This memory"}</span> looks like it&apos;s about
           something on{" "}
           <span className="font-semibold text-foreground">
             {new Date(refs.suggestedEventAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}

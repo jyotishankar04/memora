@@ -84,7 +84,7 @@ export function EverywhereSection() {
           Wherever you already are
         </span>
         <h2 className="mt-4 text-3xl font-normal tracking-tight text-balance text-foreground sm:text-5xl">
-          Capture doesn't wait for you to switch apps.
+          Capture doesn&apos;t wait for you to switch apps.
         </h2>
         <p className="mt-4 text-base text-pretty text-muted-foreground">
           Save from the dashboard today, or bring in what you already have — the

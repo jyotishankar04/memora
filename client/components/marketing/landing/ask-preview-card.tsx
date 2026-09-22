@@ -66,7 +66,7 @@ export function AskPreviewCard({ className }: { className?: string }) {
           <MessageContent>
             <Bubble align="start" variant="muted">
               <BubbleContent className="text-sm leading-relaxed">
-                Not quite — the last thing you saved on it ends on "price out drives before deciding."
+                Not quite — the last thing you saved on it ends on &ldquo;price out drives before deciding.&rdquo;
               </BubbleContent>
             </Bubble>
           </MessageContent>

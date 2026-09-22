@@ -92,6 +92,10 @@ const riseItem: Variants = {
 export function MainFooter() {
   const { theme, setTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
+  // Must start false on both server and first client render (mount flag
+  // avoids a hydration mismatch against next-themes' resolved theme);
+  // flipped true only after hydration.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => setMounted(true), []);
   const isDark = mounted && theme === "dark";
 
