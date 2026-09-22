@@ -11,6 +11,12 @@ By participating, you're expected to follow the [Code of Conduct](./CODE_OF_COND
 - **Fix something** — browse [open issues](https://github.com/jyotishankar04/saveforlatter/issues), especially any marked `good first issue`, or fix something you've personally run into.
 - **Improve the docs** — the README, [`docs/`](./docs/README.md), `CLAUDE.md`, or the in-app Help Center are all fair game.
 
+## Before you start
+
+For a small, focused change (a bug fix, a docs fix, a small UI tweak), just open a PR — no need to ask first.
+
+For anything larger — a new feature, a new dependency, a change that touches the database schema, auth, or how AI providers are wired up — **open an issue first** to discuss the approach before you spend time implementing it. This saves everyone the awkward conversation after a big PR already exists: it's much easier to redirect an idea before code is written than to ask for a rewrite after.
+
 ## Project structure and architecture
 
 This is a monorepo of independent apps with no root workspace. Read [`docs/README.md`](./docs/README.md) before making a non-trivial change — it links to a getting-started guide, the architecture, and a reference page per feature. `CLAUDE.md` is a denser, single-file version of the same material. The short version:
@@ -23,22 +29,22 @@ This is a monorepo of independent apps with no root workspace. Read [`docs/READM
 
 See [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md) for the full local setup (Postgres, Redis, environment variables, OAuth). In short: `cd` into the app you're changing, `pnpm install`, then `pnpm dev`.
 
-Both `server/` and `client/` have a typecheck you should run before opening a PR:
+Both `server/` and `client/` have a typecheck you should run before opening a PR — the same checks CI runs on every PR:
 
 ```bash
 cd server && pnpm typecheck
-cd client && pnpm lint
+cd client && pnpm lint && pnpm build
 ```
 
-There's no automated test suite yet — for now, describe how you tested a change (manually, in your PR description) rather than relying on CI to catch regressions.
+There's no automated test suite yet, so CI catches typecheck/lint/build failures but not behavioral regressions — describe how you tested a change manually in your PR description.
 
 ## Making a change
 
-1. Fork the repo and create a branch off `main` for your change.
+1. Fork the repo and create a branch off `main` for your change — never `production`, which only ever receives a release PR from `main` (see [`docs/RELEASE_PROCESS.md`](./docs/RELEASE_PROCESS.md) if you're curious how releases work).
 2. Make your change, keeping it focused — a bug fix doesn't need an unrelated refactor riding along with it.
-3. Run the relevant typecheck/lint command above.
+3. Run the relevant typecheck/lint/build commands above.
 4. Commit with a clear message describing *why* the change was made, not just what changed.
-5. Open a pull request against `main`, describing what changed, why, and how you tested it.
+5. Open a pull request against `main`, describing what changed, why, and how you tested it. CI runs automatically; a maintainer reviews and merges.
 
 ## Code style
 
