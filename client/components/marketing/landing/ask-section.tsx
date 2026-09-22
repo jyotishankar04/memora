@@ -188,7 +188,7 @@ export function AskSection() {
               </span>
               <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
                 <HugeiconsIcon icon={Search} strokeWidth={2.25} className="h-3 w-3" />
-                Only searches what you've saved
+                Only searches what you&apos;ve saved
               </span>
             </div>
             <span className="ml-auto rounded-full border border-border px-2 py-0.5 text-[10px] font-medium tracking-wide text-muted-foreground uppercase">

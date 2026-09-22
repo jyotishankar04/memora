@@ -92,7 +92,7 @@ export function ChangelogSection() {
             Still shipping
           </span>
           <h2 className="text-3xl font-normal tracking-tight text-foreground sm:text-4xl md:text-5xl">
-            What's new.
+            What&apos;s new.
           </h2>
         </div>
         <Link

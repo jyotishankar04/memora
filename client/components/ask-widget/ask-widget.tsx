@@ -101,21 +101,19 @@ function parseToolOutput(output: unknown): SearchMemoriesResult | null {
 export function AskWidget() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
-  const [mode, setMode] = useState<WidgetMode>("popup");
+  // Lazy-initialized from localStorage rather than restored in an effect:
+  // the widget is only ever mounted closed (isOpen starts false, and mode/
+  // popupSize/sidebarWidth don't affect anything rendered until the user
+  // opens it), so there's no server/client markup to mismatch.
+  const [mode, setMode] = useState<WidgetMode>(readStoredMode);
   const [input, setInput] = useState("");
   const [threadId, setThreadId] = useState<string | null>(null);
   const pendingMessageRef = useRef<string | null>(null);
   const createThreadMutation = useCreateThreadMutation();
 
-  const [popupSize, setPopupSize] = useState(DEFAULT_POPUP_SIZE);
-  const [sidebarWidth, setSidebarWidth] = useState(DEFAULT_SIDEBAR_WIDTH);
+  const [popupSize, setPopupSize] = useState(readStoredPopupSize);
+  const [sidebarWidth, setSidebarWidth] = useState(readStoredSidebarWidth);
   const resizeStartRef = useRef<{ x: number; y: number; width: number; height: number } | null>(null);
-
-  useEffect(() => {
-    setMode(readStoredMode());
-    setPopupSize(readStoredPopupSize());
-    setSidebarWidth(readStoredSidebarWidth());
-  }, []);
 
   const setModeAndPersist = (next: WidgetMode) => {
     setMode(next);
@@ -194,6 +192,10 @@ export function AskWidget() {
   // the scenes.
   const onAskPage = pathname === "/app/ask";
   useEffect(() => {
+    // Resets local widget state in response to the route changing (an
+    // external system, from this component's perspective) — not a
+    // redundant render-time computation.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (onAskPage) setIsOpen(false);
   }, [onAskPage]);
 

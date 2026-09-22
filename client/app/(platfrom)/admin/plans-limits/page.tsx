@@ -203,7 +203,7 @@ export default function AdminPlansLimitsPage() {
             Create
           </button>
         </div>
-        <p className="text-[10px] text-muted-foreground">Limits default to unlimited — edit the new plan's card above after creating it.</p>
+        <p className="text-[10px] text-muted-foreground">Limits default to unlimited — edit the new plan&apos;s card above after creating it.</p>
       </div>
     </div>
   );

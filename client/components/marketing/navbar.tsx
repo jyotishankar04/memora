@@ -84,6 +84,9 @@ export function Navbar() {
 
 
   React.useEffect(() => {
+    // Must start false on both server and first client render (mount flag
+    // avoids a hydration mismatch); flipped true only after hydration.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMounted(true);
 
     const handleScroll = () => {
