@@ -26,6 +26,7 @@ import billingRoutes from "../modules/billing";
 import integrationsRoutes from "../modules/integrations";
 import batchRoutes from "../modules/batch";
 import searchRoutes from "../modules/search";
+import reportRoutes from "../modules/report";
 import { maintenanceMode } from "../shared/middlewares/maintenance-mode";
 
 const router = Router();
@@ -61,6 +62,7 @@ router.use("/billing", billingRoutes);
 router.use("/integrations", integrationsRoutes);
 router.use("/batch", batchRoutes);
 router.use("/search", searchRoutes);
+router.use("/reports", reportRoutes);
 router.use("/admin/flags", featureFlagsAdminRoutes);
 router.use("/admin/ai-usage", aiUsageRoutes);
 router.use("/admin/announcements", announcementsAdminRoutes);

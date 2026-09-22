@@ -41,6 +41,8 @@ import {
   Provider,
   ReferralCodeType,
   ReferralConversionStage,
+  ReportStatus,
+  ReportType,
   SettingsTheme,
   ShareAccessRequestStatus,
   ShareGrantSource,
@@ -108,6 +110,15 @@ export const announcementTypeEnum = pgEnum("announcement_type", [
 export const announcementDisplayModeEnum = pgEnum("announcement_display_mode", [
   AnnouncementDisplayMode.BANNER,
   AnnouncementDisplayMode.FULL_PAGE,
+]);
+
+export const reportTypeEnum = pgEnum("report_type", [ReportType.BUG, ReportType.FEATURE]);
+
+export const reportStatusEnum = pgEnum("report_status", [
+  ReportStatus.OPEN,
+  ReportStatus.REVIEWING,
+  ReportStatus.RESOLVED,
+  ReportStatus.DECLINED,
 ]);
 
 export const collectionSourceEnum = pgEnum("collection_source", [
@@ -1592,7 +1603,41 @@ export const importItems = pgTable(
 );
 
 // -----------------------------------------------------------------------------
-// 38. Relations
+// 38. Reports Table (bug reports and feature requests submitted from the
+//     public /report page — no auth required, but userId is captured when
+//     the submitter happens to be signed in. No admin UI reads this yet;
+//     it's reviewable directly via drizzle-kit studio until one exists.)
+// -----------------------------------------------------------------------------
+export const reports = pgTable(
+  "reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    type: reportTypeEnum("type").notNull(),
+    title: varchar("title", { length: 200 }).notNull(),
+    description: text("description").notNull(),
+    // Optional even when signed in — someone reporting a bug on behalf of a
+    // teammate, or just preferring not to be tied to their account email.
+    email: varchar("email", { length: 255 }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    status: reportStatusEnum("status").notNull().default(ReportStatus.OPEN),
+    // Where they were when they hit "report a bug" — real diagnostic value
+    // (which page, which app route) that a free-text description often omits.
+    pageUrl: text("page_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("idx_reports_type").on(table.type),
+    index("idx_reports_status").on(table.status),
+    index("idx_reports_created_at").on(table.createdAt),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 39. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {
@@ -1692,6 +1737,9 @@ export const  relations = defineRelations({
   },
   announcements: {
     createdByUser: { relation: "belongsTo", foreignKey: "createdBy" },
+  },
+  reports: {
+    user: { relation: "belongsTo", foreignKey: "userId" },
   },
   aiUsageLogs: {
     user: { relation: "belongsTo", foreignKey: "userId" },

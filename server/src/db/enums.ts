@@ -256,3 +256,20 @@ export enum ImportItemStatus {
   SKIPPED_DUPLICATE = "skipped_duplicate",
   FAILED = "failed",
 }
+
+export enum ReportType {
+  BUG = "bug",
+  FEATURE = "feature",
+}
+
+// No IN_PROGRESS — a report is either not yet looked at, actively being
+// reviewed, or settled one of two ways. Keeping it this small is deliberate:
+// there's no admin UI for this yet (see report.service.ts), so a status
+// this simple is one an operator can act on directly in the DB/Studio
+// without needing a richer workflow built first.
+export enum ReportStatus {
+  OPEN = "open",
+  REVIEWING = "reviewing",
+  RESOLVED = "resolved",
+  DECLINED = "declined",
+}
