@@ -19,8 +19,9 @@ jobs:
         working-directory: server
     steps:
       - uses: actions/checkout@v4
-      # server/package.json has no "packageManager" field (client's does),
-      # so pnpm/action-setup needs an explicit version here.
+      # pnpm/action-setup reads package.json from the repo root (not from
+      # `defaults.run.working-directory`), and there's no root package.json
+      # in this monorepo — so the version must always be pinned explicitly.
       - uses: pnpm/action-setup@v4
         with:
           version: 11.18.0
@@ -43,6 +44,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
+        with:
+          version: 11.18.0
       - uses: actions/setup-node@v4
         with:
           node-version: 22
