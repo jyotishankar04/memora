@@ -80,5 +80,5 @@ Semantic search works out of the box (the server covers embeddings by default), 
 ## What's next
 
 - [Architecture](./ARCHITECTURE.md) — the mental model before you change anything
-- [Features](./README.md#3-features) — a reference page per feature
+- [Features](./README.md#features) — a reference page per feature
 - [`CONTRIBUTING.md`](../CONTRIBUTING.md) — the branch/PR flow and the typecheck/lint commands to run before opening one

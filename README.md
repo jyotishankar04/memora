@@ -94,13 +94,13 @@ Each role can point at a different provider and model, or share one key across s
 
 ## Project structure
 
-See [`CLAUDE.md`](./CLAUDE.md) for the full guide to how this codebase is organized — module structure, database conventions, and per-app commands. It's written for AI coding agents working in this repo, but it's equally the fastest way for a human to get oriented.
+Start with [`docs/README.md`](./docs/README.md) for the full contributor documentation — a getting-started guide, the architecture, and a reference page per feature. [`CLAUDE.md`](./CLAUDE.md) is a second, denser guide to the same codebase written for AI coding agents, which also works well as a human quick-reference.
 
 ```
 server/     Express API — feature modules under src/modules/<name>/
 client/     Next.js dashboard — app/(marketing)/ and app/(platfrom)/app/
 extension/  Chrome MV3 extension — popup, service worker, content script
-docs/       Product/architecture specs (target design, not always current)
+docs/       Contributor documentation — start at docs/README.md
 ```
 
 ## Getting help

@@ -2,7 +2,7 @@
 
 This page is for contributors who want a mental model of how SaveForLatter is built before changing code. It covers the monorepo layout, the server's module pattern, the request lifecycle, database conventions, and the three subsystems most contributions touch: AI (bring-your-own-key), the ingestion pipeline, and search.
 
-It doesn't cover how to set up a local environment — see the [README](../README.md#getting-started) for that — or the exact shape of every table and route, which the [Feature Reference](./README.md#3-features) covers feature by feature.
+It doesn't cover how to set up a local environment — see [Getting started](./GETTING_STARTED.md) for that — or the exact shape of every table and route, which the [feature reference](./README.md#features) covers page by page.
 
 ## Monorepo layout
 

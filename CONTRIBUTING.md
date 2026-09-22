@@ -9,11 +9,11 @@ By participating, you're expected to follow the [Code of Conduct](./CODE_OF_COND
 - **Report a bug** — [open an issue](https://github.com/jyotishankar04/saveforlatter/issues/new) with steps to reproduce, what you expected, and what actually happened.
 - **Suggest a feature** — open an issue describing the problem it solves, not just the feature itself.
 - **Fix something** — browse [open issues](https://github.com/jyotishankar04/saveforlatter/issues), especially any marked `good first issue`, or fix something you've personally run into.
-- **Improve the docs** — the README, `CLAUDE.md`, or the in-app Help Center are all fair game.
+- **Improve the docs** — the README, [`docs/`](./docs/README.md), `CLAUDE.md`, or the in-app Help Center are all fair game.
 
-## Project structure
+## Project structure and architecture
 
-This is a monorepo of independent apps with no root workspace — see [`CLAUDE.md`](./CLAUDE.md) for the full layout, module conventions, and per-app commands before making changes. The short version:
+This is a monorepo of independent apps with no root workspace. Read [`docs/README.md`](./docs/README.md) before making a non-trivial change — it links to a getting-started guide, the architecture, and a reference page per feature. `CLAUDE.md` is a denser, single-file version of the same material. The short version:
 
 - `server/` — Express + TypeScript API. `pnpm dev` / `pnpm typecheck` from inside it.
 - `client/` — Next.js 16 web dashboard. `pnpm dev` / `pnpm lint` from inside it.
@@ -21,7 +21,7 @@ This is a monorepo of independent apps with no root workspace — see [`CLAUDE.m
 
 ## Getting set up
 
-See the [README](./README.md#getting-started) for the full local setup (Postgres, Redis, environment variables). In short: `cd` into the app you're changing, `pnpm install`, then `pnpm dev`.
+See [`docs/GETTING_STARTED.md`](./docs/GETTING_STARTED.md) for the full local setup (Postgres, Redis, environment variables, OAuth). In short: `cd` into the app you're changing, `pnpm install`, then `pnpm dev`.
 
 Both `server/` and `client/` have a typecheck you should run before opening a PR:
 

@@ -6,20 +6,24 @@ Read these three in order the first time; after that, come back to whichever pag
 
 1. **[Getting started](./GETTING_STARTED.md)** — get a full local environment running and verify it works, beyond the README's quick version.
 2. **[Architecture](./ARCHITECTURE.md)** — the mental model: monorepo layout, the server's module pattern, the request lifecycle, database conventions, and how AI, ingestion, and search fit together.
-3. **Features** — a reference page per feature, each naming the service file that owns it, the tables it touches, and the constraints worth knowing before you change it:
+3. **Features** (below) — a reference page per feature.
 
-   - [Accounts and sessions](./features/accounts-and-sessions.md)
-   - [Memories and capture](./features/memories-and-capture.md)
-   - [Collections and tags](./features/collections-and-tags.md)
-   - [Search](./features/search.md)
-   - [Ask assistant](./features/ask-assistant.md)
-   - [AI settings (bring your own key)](./features/ai-settings.md)
-   - [Sharing](./features/sharing.md)
-   - [Vault](./features/vault.md)
-   - [Calendar integrations](./features/calendar-integrations.md)
-   - [Import](./features/import.md)
-   - [Notifications](./features/notifications.md)
-   - [Admin](./features/admin.md)
+## Features
+
+A reference page per feature, each naming the service file that owns it, the tables it touches, and the constraints worth knowing before you change it:
+
+- [Accounts and sessions](./features/accounts-and-sessions.md)
+- [Memories and capture](./features/memories-and-capture.md)
+- [Collections and tags](./features/collections-and-tags.md)
+- [Search](./features/search.md)
+- [Ask assistant](./features/ask-assistant.md)
+- [AI settings (bring your own key)](./features/ai-settings.md)
+- [Sharing](./features/sharing.md)
+- [Vault](./features/vault.md)
+- [Calendar integrations](./features/calendar-integrations.md)
+- [Import](./features/import.md)
+- [Notifications](./features/notifications.md)
+- [Admin](./features/admin.md)
 
 ## Other documents in this directory
 
