@@ -24,7 +24,7 @@ import { ctaHref, SHOWCASE_MODE } from "@/lib/showcase";
 // reference has assumed social proof that isn't real (the hero's own
 // avatar-stack decision, the changelog's launch claims, etc.). Replaced
 // with three things that are actually true instead of an invented crowd.
-const REASSURANCES = ["No card required", "100 saves a month, free", "Upgrade or cancel anytime"];
+const REASSURANCES = ["No card required", "Free and open source", "Every feature, no limits"];
 
 export function FinalCtaSection() {
   return (
@@ -42,7 +42,7 @@ export function FinalCtaSection() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
             </span>
-            {SHOWCASE_MODE ? "Early access — join the waitlist" : "Free plan · 100 saves a month"}
+            {SHOWCASE_MODE ? "Early access — join the waitlist" : "Free & open source · no limits"}
           </Badge>
         </div>
 

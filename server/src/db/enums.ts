@@ -153,65 +153,15 @@ export enum PlanAssignmentStatus {
   SUPERSEDED = "superseded",
 }
 
+// Trimmed to the two sources that still exist — REFERRAL_REWARD/
+// COUPON_REDEMPTION/PAYMENT were how a paid-tier assignment got granted;
+// nothing writes those anymore now that there's no billing (removed along
+// with TransactionType/TransactionStatus/CouponDiscountType/
+// CouponRedemptionStatus/ReferralCodeType/ReferralConversionStage/
+// CreditLedgerReason, which had no reason to exist without it).
 export enum PlanAssignmentSource {
   ADMIN_MANUAL = "admin_manual",
   SIGNUP_DEFAULT = "signup_default",
-  REFERRAL_REWARD = "referral_reward",
-  COUPON_REDEMPTION = "coupon_redemption",
-  PAYMENT = "payment",
-}
-
-export enum TransactionType {
-  SUBSCRIPTION_PURCHASE = "subscription_purchase",
-  SUBSCRIPTION_RENEWAL = "subscription_renewal",
-  UPGRADE = "upgrade",
-  DOWNGRADE = "downgrade",
-  REFUND = "refund",
-  ADMIN_GRANT = "admin_grant",
-}
-
-export enum TransactionStatus {
-  PENDING = "pending",
-  SUCCEEDED = "succeeded",
-  FAILED = "failed",
-  REFUNDED = "refunded",
-  CANCELLED = "cancelled",
-}
-
-export enum CouponDiscountType {
-  PERCENTAGE = "percentage",
-  FIXED_AMOUNT = "fixed_amount",
-}
-
-// APPLIED = the code was entered/redeemed; CONVERTED = it actually led to a
-// paid transaction. Kept distinct so the admin funnel view can show
-// applied-vs-purchased, not just a single redemption count.
-export enum CouponRedemptionStatus {
-  APPLIED = "applied",
-  CONVERTED = "converted",
-  EXPIRED = "expired",
-  REVOKED = "revoked",
-}
-
-// USER = a normal user's own shareable code; ADMIN_ISSUED = a custom
-// creator/affiliate code an admin hands out.
-export enum ReferralCodeType {
-  USER = "user",
-  ADMIN_ISSUED = "admin_issued",
-}
-
-// APPLIED = the referred person signed up attributed to the code; CONVERTED
-// = they went on to make a purchase (referrer reward fires here).
-export enum ReferralConversionStage {
-  APPLIED = "applied",
-  CONVERTED = "converted",
-}
-
-export enum CreditLedgerReason {
-  REFERRAL_REWARD = "referral_reward",
-  ADMIN_ADJUSTMENT = "admin_adjustment",
-  PROMOTION = "promotion",
-  EXPIRATION = "expiration",
 }
 
 // TRANSACTIONAL = system-triggered (welcome, status-changed, share events),

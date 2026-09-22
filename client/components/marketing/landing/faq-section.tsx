@@ -48,7 +48,7 @@ const FAQS: Faq[] = [
   },
   {
     question: "Is there a free plan?",
-    answer: "Yes — 100 saves a month, web access, and standard keyword search, no card required. Upgrade when you actually hit the limit.",
+    answer: "It's just free — every feature, no limits, no card required, ever. This is an open-source project, not a paid product with a free tier.",
   },
 ];
 

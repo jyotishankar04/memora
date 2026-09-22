@@ -59,15 +59,10 @@ export default function TermsPage() {
           </section>
 
           <section className="space-y-3">
-            <h2 className="text-base font-bold text-foreground">4. Billing, Plans, & Subscriptions</h2>
+            <h2 className="text-base font-bold text-foreground">4. Pricing</h2>
             <p>
-              We offer Free and Pro subscription tiers. Payment terms are:
+              This product is free and open source. There is no paid tier, no subscription, and no billing — every account gets every feature with no usage limits.
             </p>
-            <ul className="list-disc pl-5 space-y-2">
-              <li>Pro plans are billed on a recurring monthly cycle as shown on our pricing grid.</li>
-              <li>You can cancel your subscription at any time. Cancelled accounts retain Pro access until the end of the billing period.</li>
-              <li>Payments are processed securely via third-party gateways. We do not store card credentials on our servers.</li>
-            </ul>
           </section>
 
         </div>

@@ -1,5 +1,4 @@
 import axios, { type AxiosError, type InternalAxiosRequestConfig } from "axios";
-import { getStoredReferralCode } from "@/lib/referral-storage";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000/api/v1";
 
@@ -142,15 +141,10 @@ export async function apiFetch<T>(path: string, options: ApiRequestOptions = {})
 
 /**
  * Full-page redirect to the backend, which handles the entire OAuth round
- * trip and redirects back with cookies set. Carries a stored referral code
- * through as ?ref=CODE if one was captured on an earlier visit — the
- * backend sets a short-lived cookie from it and reads it back once signup
- * actually completes (see server's auth.controller.ts).
+ * trip and redirects back with cookies set.
  */
 export function getProviderLoginUrl(provider: OAuthProvider): string {
-  const ref = getStoredReferralCode();
-  const query = ref ? `?ref=${encodeURIComponent(ref)}` : "";
-  return `${API_URL}/auth/${provider}${query}`;
+  return `${API_URL}/auth/${provider}`;
 }
 
 export async function getCurrentUser(): Promise<AuthUser> {

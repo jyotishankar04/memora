@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button";
 const categories = [
   { title: "Getting Started", desc: "Setting up your account, extension installation, and saving your first 10 items.", icon: Globe },
   { title: "AI Search & RAG", desc: "How natural language semantic search matches ideas, not just literal text.", icon: HelpCircle },
-  { title: "Account & Billing", desc: "Manage subscriptions, subscription plans (Pro & Free), billing cycles, and invoices.", icon: Key },
+  { title: "Account", desc: "Setting up your account, managing your profile, and account deletion.", icon: Key },
   { title: "Privacy & Security", desc: "Siloed context processing, account deletions, data encryption, and local-first strategies.", icon: Shield },
 ];
 

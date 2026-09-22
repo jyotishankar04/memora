@@ -28,7 +28,7 @@ import { BOOKING_URL } from "@/lib/booking";
 // happens that doesn't.
 const SERVICE_OPTIONS = [
   { value: "general", label: "General question" },
-  { value: "billing", label: "Billing & subscription" },
+  { value: "account", label: "Account" },
   { value: "bug", label: "Something's not working" },
   { value: "feature", label: "Feature request" },
   { value: "other", label: "Something else" },

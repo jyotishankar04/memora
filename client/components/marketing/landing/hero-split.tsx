@@ -124,7 +124,7 @@ export default function HeroSplit() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-primary opacity-60" />
               <span className="relative inline-flex h-1.5 w-1.5 rounded-full bg-primary" />
             </span>
-            {SHOWCASE_MODE ? "Early access — join the waitlist" : "Free plan · 100 saves a month"}
+            {SHOWCASE_MODE ? "Early access — join the waitlist" : "Free & open source · no limits"}
           </motion.span>
 
           <motion.h1

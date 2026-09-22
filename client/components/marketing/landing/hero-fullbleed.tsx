@@ -213,7 +213,7 @@ export default function HeroFullbleed() {
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <span className="text-[13px] font-medium text-foreground/55">
-                100 saves a month on the free plan. No card required.
+                Free and open source. No card required, no limits.
               </span>
             </motion.div>
           </motion.div>

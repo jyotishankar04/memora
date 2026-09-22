@@ -20,228 +20,46 @@ interface DefaultPlanSeed {
   features: Record<string, boolean>;
 }
 
-// Placeholders, same "not load-bearing" reasoning as every seed value in
-// this codebase (see seedDefaultFlags) — the entire point of this table is
-// that an admin edits these via admin/plans without a deploy. Prices are in
-// cents (this product prices in USD). Free tier is always $0 (1 plan).
-// Plus and Pro tiers each have 3 billing intervals: monthly, semi-annual (6 months, 15% discount), annual (12 months, 20% discount).
+// This product is free and open source — no paid tiers. One plan, every
+// limit unlimited (null), every feature flag that used to gate a paid tier
+// (vault, advancedSearch, directShares, etc. — see the removed Plus/Pro
+// seeds this replaced) granted by default. Kept as a `plans` row rather
+// than deleting the concept entirely: assertWithinLimit/hasFeature
+// (../../plans/plans.service.ts) are called from memory/collection/upload/
+// share/import/ai — a null limit already means "unlimited" to every one of
+// those call sites, so this is the change that makes the product free
+// without touching any of that call-site logic.
 const DEFAULT_PLANS: DefaultPlanSeed[] = [
-  // FREE PLAN (always $0 — no billing interval variants needed)
   {
     key: "free",
     name: "Free",
-    description: "Perfect for building your personal memory vault.",
+    description: "Everything, unlimited — this product isn't sold.",
     priceMinor: 0,
     currency: "usd",
     billingInterval: PlanBillingInterval.MONTHLY,
     isDefault: true,
     sortOrder: 0,
     limits: [
-      { limitType: PlanLimitType.MEMORY_COUNT, limitValue: 100 },
-      { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 20 },
-      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 20 },
-      { limitType: PlanLimitType.STORAGE_MB, limitValue: 250 },
-      { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 5 },
-      { limitType: PlanLimitType.PUBLIC_SHARE_COUNT, limitValue: 3 },
-    ],
-    features: {
-      batchOperations: true,
-      importExport: true,
-      calendarSync: true,
-      browserExtension: true,
-    },
-  },
-  // PLUS PLAN ($6/month, $30.60 for 6 months, $57.60 for 12 months)
-  {
-    key: "plus-monthly",
-    name: "Plus",
-    description: "For people who save more than they can keep track of.",
-    priceMinor: 600,
-    currency: "usd",
-    billingInterval: PlanBillingInterval.MONTHLY,
-    isDefault: false,
-    sortOrder: 1,
-    limits: [
       { limitType: PlanLimitType.MEMORY_COUNT, limitValue: null },
-      { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 300 },
-      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 300 },
-      { limitType: PlanLimitType.STORAGE_MB, limitValue: 5000 },
-      { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 100 },
-      { limitType: PlanLimitType.PUBLIC_SHARE_COUNT, limitValue: 25 },
-    ],
-    features: {
-      directShares: true,
-      privateShareRequests: true,
-      passwordProtectedShares: true,
-      advancedSearch: true,
-      batchOperations: true,
-      browserExtension: true,
-      calendarSync: true,
-      calendarMicrosoft: true,
-      emailCampaigns: true,
-      importExport: true,
-      vault: true,
-    },
-  },
-  {
-    key: "plus-semi-annual",
-    name: "Plus",
-    description: "For people who save more than they can keep track of.",
-    priceMinor: 3060,
-    currency: "usd",
-    billingInterval: PlanBillingInterval.SEMI_ANNUAL,
-    isDefault: false,
-    sortOrder: 2,
-    limits: [
-      { limitType: PlanLimitType.MEMORY_COUNT, limitValue: null },
-      { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 300 },
-      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 300 },
-      { limitType: PlanLimitType.STORAGE_MB, limitValue: 5000 },
-      { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 100 },
-      { limitType: PlanLimitType.PUBLIC_SHARE_COUNT, limitValue: 25 },
-    ],
-    features: {
-      directShares: true,
-      privateShareRequests: true,
-      passwordProtectedShares: true,
-      advancedSearch: true,
-      batchOperations: true,
-      browserExtension: true,
-      calendarSync: true,
-      calendarMicrosoft: true,
-      emailCampaigns: true,
-      importExport: true,
-      vault: true,
-    },
-  },
-  {
-    key: "plus-annual",
-    name: "Plus",
-    description: "For people who save more than they can keep track of.",
-    priceMinor: 5760,
-    currency: "usd",
-    billingInterval: PlanBillingInterval.YEARLY,
-    isDefault: false,
-    sortOrder: 3,
-    limits: [
-      { limitType: PlanLimitType.MEMORY_COUNT, limitValue: null },
-      { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 300 },
-      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 300 },
-      { limitType: PlanLimitType.STORAGE_MB, limitValue: 5000 },
-      { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: 100 },
-      { limitType: PlanLimitType.PUBLIC_SHARE_COUNT, limitValue: 25 },
-    ],
-    features: {
-      directShares: true,
-      privateShareRequests: true,
-      passwordProtectedShares: true,
-      advancedSearch: true,
-      batchOperations: true,
-      browserExtension: true,
-      calendarSync: true,
-      calendarMicrosoft: true,
-      emailCampaigns: true,
-      importExport: true,
-      vault: true,
-    },
-  },
-  // PRO PLAN ($12/month, $61.20 for 6 months, $115.20 for 12 months)
-  {
-    key: "pro-monthly",
-    name: "Pro",
-    description: "Ideal for power users who want a true second brain.",
-    priceMinor: 1200,
-    currency: "usd",
-    billingInterval: PlanBillingInterval.MONTHLY,
-    isDefault: false,
-    sortOrder: 4,
-    limits: [
-      { limitType: PlanLimitType.MEMORY_COUNT, limitValue: null },
-      { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 2000 },
-      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 2000 },
-      { limitType: PlanLimitType.STORAGE_MB, limitValue: 50000 },
+      { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: null },
+      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: null },
+      { limitType: PlanLimitType.STORAGE_MB, limitValue: null },
       { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: null },
       { limitType: PlanLimitType.PUBLIC_SHARE_COUNT, limitValue: null },
     ],
     features: {
+      batchOperations: true,
+      importExport: true,
+      calendarSync: true,
+      calendarMicrosoft: true,
+      browserExtension: true,
       directShares: true,
       privateShareRequests: true,
       passwordProtectedShares: true,
-      dataExport: true,
       advancedSearch: true,
-      batchOperations: true,
-      browserExtension: true,
-      calendarSync: true,
-      calendarMicrosoft: true,
-      emailCampaigns: true,
-      importExport: true,
       vault: true,
-      aiEventDetection: true,
-    },
-  },
-  {
-    key: "pro-semi-annual",
-    name: "Pro",
-    description: "Ideal for power users who want a true second brain.",
-    priceMinor: 6120,
-    currency: "usd",
-    billingInterval: PlanBillingInterval.SEMI_ANNUAL,
-    isDefault: false,
-    sortOrder: 5,
-    limits: [
-      { limitType: PlanLimitType.MEMORY_COUNT, limitValue: null },
-      { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 2000 },
-      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 2000 },
-      { limitType: PlanLimitType.STORAGE_MB, limitValue: 50000 },
-      { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: null },
-      { limitType: PlanLimitType.PUBLIC_SHARE_COUNT, limitValue: null },
-    ],
-    features: {
-      directShares: true,
-      privateShareRequests: true,
-      passwordProtectedShares: true,
+      emailCampaigns: true,
       dataExport: true,
-      advancedSearch: true,
-      batchOperations: true,
-      browserExtension: true,
-      calendarSync: true,
-      calendarMicrosoft: true,
-      emailCampaigns: true,
-      importExport: true,
-      vault: true,
-      aiEventDetection: true,
-    },
-  },
-  {
-    key: "pro-annual",
-    name: "Pro",
-    description: "Ideal for power users who want a true second brain.",
-    priceMinor: 11520,
-    currency: "usd",
-    billingInterval: PlanBillingInterval.YEARLY,
-    isDefault: false,
-    sortOrder: 6,
-    limits: [
-      { limitType: PlanLimitType.MEMORY_COUNT, limitValue: null },
-      { limitType: PlanLimitType.AI_MONTHLY_QUERIES, limitValue: 2000 },
-      { limitType: PlanLimitType.AI_MONTHLY_VISION_QUERIES, limitValue: 2000 },
-      { limitType: PlanLimitType.STORAGE_MB, limitValue: 50000 },
-      { limitType: PlanLimitType.COLLECTION_COUNT, limitValue: null },
-      { limitType: PlanLimitType.PUBLIC_SHARE_COUNT, limitValue: null },
-    ],
-    features: {
-      directShares: true,
-      privateShareRequests: true,
-      passwordProtectedShares: true,
-      dataExport: true,
-      advancedSearch: true,
-      batchOperations: true,
-      browserExtension: true,
-      calendarSync: true,
-      calendarMicrosoft: true,
-      emailCampaigns: true,
-      importExport: true,
-      vault: true,
       aiEventDetection: true,
     },
   },
@@ -258,17 +76,19 @@ export async function seedDefaultPlans(): Promise<void> {
   for (const seed of DEFAULT_PLANS) {
     await db
       .insert(plans)
-      .values({
-        key: seed.key,
-        name: seed.name,
-        description: seed.description,
-        priceMinor: seed.priceMinor,
-        currency: seed.currency,
-        billingInterval: seed.billingInterval,
-        isDefault: seed.isDefault,
-        sortOrder: seed.sortOrder,
-        features: seed.features,
-      })
+      .values([
+        {
+          key: seed.key,
+          name: seed.name,
+          description: seed.description,
+          priceMinor: seed.priceMinor,
+          currency: seed.currency,
+          billingInterval: seed.billingInterval,
+          isDefault: seed.isDefault,
+          sortOrder: seed.sortOrder,
+          features: seed.features,
+        },
+      ])
       .onConflictDoNothing({ target: plans.key });
 
     const [plan] = await db.select().from(plans).where(eq(plans.key, seed.key)).limit(1);

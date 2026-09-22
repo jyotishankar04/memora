@@ -18,8 +18,6 @@ import {
   MoonIcon as Moon,
   Sun01Icon as Sun,
   Layers01Icon as Layers,
-  CreditCardIcon as CreditCard,
-  Megaphone01Icon as Megaphone,
   Mail01Icon as Mail,
   SlideIcon as Sliders,
 } from "@hugeicons/core-free-icons";
@@ -64,33 +62,11 @@ const NAV_ENTRIES: NavEntry[] = [
   { label: "Features", href: "/admin/features", icon: Sliders },
   { label: "Configuration", href: "/admin/configuration", icon: Settings },
   { label: "Plans & Limits", href: "/admin/plans-limits", icon: Layers },
-  {
-    label: "Billing",
-    icon: CreditCard,
-    children: [
-      { label: "Plans", href: "/admin/plans-limits" },
-      { label: "Subscriptions", href: "/admin/billing/subscriptions" },
-      { label: "Revenue", href: "/admin/billing/revenue" },
-      { label: "Transactions", href: "/admin/billing/transactions" },
-    ],
-  },
-  {
-    label: "Growth & Promotions",
-    icon: Megaphone,
-    children: [
-      { label: "Referral Program", href: "/admin/growth/referrals" },
-      { label: "Coupons", href: "/admin/growth/coupons" },
-      { label: "Credits", href: "/admin/growth/credits" },
-    ],
-  },
 ];
 
 /**
  * Every leaf link, groups flattened, deduped by href — for the mobile pill
- * nav and topbar active-label lookup. "Plans & Limits" (top-level) and
- * "Billing > Plans" intentionally point at the same route (both were in the
- * requested nav spec), so without deduping this renders/keys that one route
- * twice in the flattened views. First occurrence wins.
+ * nav and topbar active-label lookup.
  */
 const NAV_LEAVES: NavLeaf[] = (() => {
   const seen = new Set<string>();
