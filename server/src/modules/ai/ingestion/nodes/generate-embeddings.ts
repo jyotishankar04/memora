@@ -7,7 +7,12 @@ import type { IngestionStateType, IngestionUpdate } from "../state";
 // document-level embedding from title+summary+intent+tags, plus one
 // embedding per chunk.
 export async function generateEmbeddings(state: IngestionStateType): Promise<IngestionUpdate> {
-  const embeddings = getEmbeddings();
+  const resolved = await getEmbeddings(state.userId);
+  if (!resolved) {
+    logNode(state.memoryId, "generateEmbeddings", { skipped: "AI not configured" });
+    return { documentEmbedding: [], chunkEmbeddings: [] };
+  }
+
   const docText = [
     state.aiTitle ?? "",
     state.aiSummary ?? "",
@@ -17,8 +22,8 @@ export async function generateEmbeddings(state: IngestionStateType): Promise<Ing
   const chunkTexts = state.chunks.map((chunk) => chunk.content);
 
   const [documentEmbedding, chunkEmbeddings] = await Promise.all([
-    embeddings.embedQuery(docText),
-    chunkTexts.length > 0 ? embeddings.embedDocuments(chunkTexts) : Promise.resolve([]),
+    resolved.client.embedQuery(docText),
+    chunkTexts.length > 0 ? resolved.client.embedDocuments(chunkTexts) : Promise.resolve([]),
   ]);
 
   logNode(state.memoryId, "generateEmbeddings", {
@@ -31,8 +36,8 @@ export async function generateEmbeddings(state: IngestionStateType): Promise<Ing
   void logAiUsage({
     userId: state.userId,
     requestType: "embedding:document",
-    provider: "openai",
-    model: "text-embedding-3-small",
+    provider: resolved.provider,
+    model: resolved.model,
     memoryId: state.memoryId,
     metadata: { calls: 1 + (chunkTexts.length > 0 ? 1 : 0), chunkCount: chunkTexts.length },
   });

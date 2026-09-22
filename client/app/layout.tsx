@@ -7,7 +7,6 @@ import { ThemeShortcut } from "@/components/common/theme-shortcut";
 import { Toaster } from "@/components/ui/toast";
 import { QueryProvider } from "./providers";
 import { AnnouncementGate } from "@/components/announcements/announcement-gate";
-import { ReferralCapture } from "@/components/referral-capture";
 import { ComingSoonGate } from "@/components/showcase/coming-soon-gate";
 
 const inter = Inter({subsets:['latin'],variable:'--font-sans'});
@@ -39,7 +38,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           <ThemeShortcut />
           <QueryProvider>
             <Toaster>
-              <ReferralCapture />
               <AnnouncementGate>{children}</AnnouncementGate>
             </Toaster>
           </QueryProvider>

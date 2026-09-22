@@ -5,9 +5,10 @@ import { AppError } from "../errors/app-error";
 // AES-256-GCM at-rest encryption for OAuth access/refresh tokens
 // (calendar_connections) — reversible, unlike scrypt-password.ts's one-way
 // KDF, since the server must decrypt these later to call the provider's
-// API on the user's behalf. Mirrors modules/billing/stripe-client.ts's
-// module-scoped nullable-memo degrade shape: unset key => every calendar
-// route treats tokens as unusable rather than crashing.
+// API on the user's behalf. The module-scoped nullable-memo degrade shape
+// below (unset key => every calendar route treats tokens as unusable
+// rather than crashing) is the same pattern this codebase uses anywhere a
+// missing optional secret should degrade a feature, not fail startup.
 const ALGORITHM = "aes-256-gcm";
 const KEY_LENGTH = 32;
 const IV_LENGTH = 12;

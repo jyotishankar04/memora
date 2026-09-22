@@ -1,10 +1,9 @@
 import { and, count, desc, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { db } from "../../db";
 import { attachments, collectionMemories, collections, memories, memoryTags, tags } from "../../db/schema";
-import { MemoryStatus, PlanLimitType, type MemoryType } from "../../db/enums";
+import { MemoryStatus, type MemoryType } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
 import { logger } from "../../shared/utils/logger";
-import { assertWithinLimit, hasFeature } from "../plans/plans.service";
 import { enqueueIngestion } from "../ai/ingestion/queue";
 import { getVectorStore } from "../ai/vector-store";
 import { hybridSearch, SEMANTIC_SIMILARITY_FLOOR } from "../ai/search";
@@ -372,15 +371,11 @@ async function attachAttachments(memoryIds: string[]): Promise<Map<string, Attac
 }
 
 /**
- * Pro-only. Every non-trashed memory, full detail (content/keywords/
- * attachments included) — unlike listMemories, no pagination, since this
- * backs a single JSON-dump download, not a browsing UI.
+ * Every non-trashed memory, full detail (content/keywords/attachments
+ * included) — unlike listMemories, no pagination, since this backs a
+ * single JSON-dump download, not a browsing UI.
  */
 export async function exportAllMemories(userId: string): Promise<MemoryDetail[]> {
-  if (!(await hasFeature(userId, "dataExport"))) {
-    throw new AppError("Exporting your data is a Pro feature", 403, "FEATURE_NOT_AVAILABLE");
-  }
-
   const rows = await db
     .select()
     .from(memories)
@@ -626,8 +621,6 @@ export async function createMemory(
   userId: string,
   input: CreateMemoryInput,
 ): Promise<MemoryDetail & { duplicateOf: { id: string; title: string } | null }> {
-  await assertWithinLimit(userId, PlanLimitType.MEMORY_COUNT, 1);
-
   // Non-blocking duplicate detection (docs/URL_CAPTURE_AND_PREVIEW.md) — never
   // a reason to refuse the save, only a hint the client can surface.
   const normalizedUrl = normalizeUrl(input.url);
@@ -704,7 +697,7 @@ export async function createMemory(
 
   // Fire-and-forget: AI ingestion runs async in the background — a queue
   // failure must never fail the create request itself.
-  enqueueIngestion(memoryId, userId).catch((err) => {
+  enqueueIngestion(memoryId).catch((err) => {
     logger.error({ memoryId, err }, "Failed to enqueue ingestion job");
   });
 
@@ -835,7 +828,7 @@ export async function submitBrowserCapture(
     .set({ browserCapture: payload, updatedAt: new Date() })
     .where(and(eq(memories.id, id), eq(memories.userId, userId)));
 
-  await enqueueIngestion(id, userId).catch((err) => {
+  await enqueueIngestion(id).catch((err) => {
     logger.error({ memoryId: id, err }, "Failed to enqueue ingestion job for browser capture");
   });
 
@@ -854,7 +847,7 @@ export async function refreshPreview(userId: string, id: string): Promise<Memory
     .set({ status: MemoryStatus.PROCESSING, updatedAt: new Date() })
     .where(and(eq(memories.id, id), eq(memories.userId, userId)));
 
-  await enqueueIngestion(id, userId).catch((err) => {
+  await enqueueIngestion(id).catch((err) => {
     logger.error({ memoryId: id, err }, "Failed to enqueue ingestion job for preview refresh");
   });
 

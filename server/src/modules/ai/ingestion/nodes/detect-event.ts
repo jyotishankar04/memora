@@ -41,6 +41,11 @@ export async function detectEvent(state: IngestionStateType): Promise<IngestionU
   }
 
   try {
+    const model = await getChatModel(state.userId, "fast");
+    if (!model) {
+      return { detectedEventAt: null, eventDetectionConfidence: null };
+    }
+
     const context =
       [
         state.existingTitle !== "Untitled" ? state.existingTitle : null,
@@ -50,7 +55,7 @@ export async function detectEvent(state: IngestionStateType): Promise<IngestionU
         .filter(Boolean)
         .join(" | ") || "(none available)";
 
-    const chain = prompt.pipe(getChatModel("fast")).pipe(new JsonOutputParser<EventDetection>());
+    const chain = prompt.pipe(model).pipe(new JsonOutputParser<EventDetection>());
     const result = await chain.invoke(
       {
         today: new Date().toISOString(),

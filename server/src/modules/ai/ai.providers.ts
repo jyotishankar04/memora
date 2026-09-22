@@ -1,9 +1,18 @@
 import { ChatGroq } from "@langchain/groq";
 import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
+import { ChatAnthropic } from "@langchain/anthropic";
 import type { BaseChatModel } from "@langchain/core/language_models/chat_models";
+import type { EmbeddingsInterface } from "@langchain/core/embeddings";
 import type { BaseMessage } from "@langchain/core/messages";
-import { env } from "../../config/env";
+import { HumanMessage } from "@langchain/core/messages";
+import { and, eq } from "drizzle-orm";
+import { db } from "../../db";
+import { aiCredentials, userAiRoleAssignments } from "../../db/schema";
+import { AiCredentialProvider, AiRole } from "../../db/enums";
+import { EMBEDDING_DIMENSIONS } from "../../db/pgvector-type";
+import { decryptToken } from "../../shared/crypto/token-cipher";
 import { logger } from "../../shared/utils/logger";
+import { env } from "../../config/env";
 import { createUsageCallback } from "../ai-usage/usage-logger";
 
 export interface UsageContext {
@@ -13,62 +22,159 @@ export interface UsageContext {
   threadId?: string | null;
 }
 
-// gpt-5-nano rejects any non-default temperature ("Unsupported value:
-// 'temperature' does not support 0.2 with this model. Only the default (1)
-// value is supported.", verified directly against the API) — omit the
-// param entirely for it rather than passing 1 explicitly, in case that
-// constraint tightens further later.
-function getOpenAiFallbackModel(): ChatOpenAI {
-  return new ChatOpenAI({ apiKey: env.OPENAI_API_KEY, model: "gpt-5-nano" });
+// Google's Gemini API ships an OpenAI-compatibility layer covering chat,
+// vision, and embeddings — reusing ChatOpenAI/OpenAIEmbeddings against this
+// base URL avoids needing a dedicated @langchain/google-genai integration
+// just for one more preset. Anthropic gets a real dedicated client below
+// because its wire format (tool-calling, message shape) isn't OpenAI-
+// compatible at all.
+const GOOGLE_OPENAI_COMPAT_BASE_URL = "https://generativelanguage.googleapis.com/v1beta/openai/";
+
+export interface ProviderCredentialInput {
+  provider: AiCredentialProvider;
+  apiKey: string;
+  baseUrl?: string | null;
+  model: string;
 }
 
-// Fast tier: extraction/tagging/classification (doc's "GPT-4o-mini-class") —
-// every currently-active ingestion node uses this tier for its small,
-// normal-question-shaped calls (fill in this field, classify this into one
-// of N buckets, write a 2-3 sentence summary). Groq's gpt-oss-120b — cheap
-// and fast on Groq's hardware regardless of the "120b" size.
-// Reasoning tier: summaries and anything needing real judgment (doc's
-// "Claude/GPT-4-class") — OpenAI's gpt-5-nano (same client as
-// getOpenAiFallbackModel above). Not called anywhere in the ingestion graph
-// yet, reserved for a future user-facing "Ask Memora" synthesis step.
-// Every ingestion node calls getChatModel(tier) instead of constructing a
-// client directly, so swapping either tier's provider/model later is a
-// change in this one file only.
-// Groq's lineup shifted away from the Llama 3.x models — verified against
-// GET https://api.groq.com/openai/v1/models for this account's current catalog.
-const FAST_MODEL = "openai/gpt-oss-120b";
+/**
+ * Every user brings and pays for their own AI provider account — this
+ * server never holds an AI API key of its own (see .env.example: there is
+ * deliberately no GROQ_API_KEY/OPENAI_API_KEY here anymore). Every resolver
+ * below returns null/[] rather than throwing when a role isn't configured,
+ * because "no key yet" is an expected, common state (a brand-new signup),
+ * not a failure — every call site treats that the same way it already
+ * treats a flaky provider: skip this enrichment step, never fail the whole
+ * memory/request over it.
+ */
+async function resolveCredential(userId: string, role: AiRole): Promise<ProviderCredentialInput | null> {
+  const [row] = await db
+    .select({
+      provider: aiCredentials.provider,
+      encryptedApiKey: aiCredentials.encryptedApiKey,
+      baseUrl: aiCredentials.baseUrl,
+      model: userAiRoleAssignments.model,
+    })
+    .from(userAiRoleAssignments)
+    .innerJoin(aiCredentials, eq(userAiRoleAssignments.credentialId, aiCredentials.id))
+    .where(and(eq(userAiRoleAssignments.userId, userId), eq(userAiRoleAssignments.role, role)))
+    .limit(1);
 
-export function getChatModel(tier: "fast" | "reasoning"): BaseChatModel {
-  if (tier === "reasoning") return getOpenAiFallbackModel();
-  return new ChatGroq({ apiKey: env.GROQ_API_KEY, model: FAST_MODEL, temperature: 0.2 });
+  if (!row) return null;
+
+  try {
+    return { provider: row.provider, apiKey: decryptToken(row.encryptedApiKey), baseUrl: row.baseUrl, model: row.model };
+  } catch (err) {
+    logger.error({ err, userId, role }, "resolveCredential: failed to decrypt stored API key");
+    return null;
+  }
 }
 
-export function getEmbeddings(): OpenAIEmbeddings {
-  return new OpenAIEmbeddings({ apiKey: env.OPENAI_API_KEY, model: "text-embedding-3-small" });
+/**
+ * The one platform-funded exception to BYOK — see .env.example's note above
+ * EMBEDDINGS_API_KEY. Returns null when unset, so a deployment that leaves
+ * it blank gets exactly the old fully-BYOK embeddings behavior.
+ */
+function platformEmbeddingsCredential(): ProviderCredentialInput | null {
+  if (!env.EMBEDDINGS_API_KEY) return null;
+  return {
+    provider: env.EMBEDDINGS_PROVIDER as AiCredentialProvider,
+    apiKey: env.EMBEDDINGS_API_KEY,
+    baseUrl: env.EMBEDDINGS_BASE_URL ?? null,
+    model: env.EMBEDDINGS_MODEL,
+  };
 }
 
-// Vision (image OCR/description) and the large-PDF page-1 summarizer both
-// need a model that might genuinely fail (rate limit, a provider outage)
-// without that ever failing the memory itself — invokeWithFallback tries
-// each model in order and only gives up (empty string) once every one of
-// them has failed.
-//
-// Vision-model note: this account's Groq catalog (checked against GET
-// https://api.groq.com/openai/v1/models) currently has no vision-capable
-// model at all — no Llama 4 Scout/Maverick, nothing multimodal, just the
-// text-only gpt-oss tier, whisper, and a couple TTS/guard models. So this
-// is a single-model list today; add a Groq entry ahead of gpt-5-nano here
-// the day that catalog gains a real vision model (cheaper/faster than
-// staying on OpenAI for every image). gpt-5-nano's vision support was
-// verified directly against the Chat Completions API (image_url input).
-export function getVisionModels(): BaseChatModel[] {
-  return [getOpenAiFallbackModel()];
+function openAiCompatBaseUrl(credential: ProviderCredentialInput): string | undefined {
+  if (credential.provider === AiCredentialProvider.GOOGLE) return GOOGLE_OPENAI_COMPAT_BASE_URL;
+  if (credential.provider === AiCredentialProvider.CUSTOM) return credential.baseUrl ?? undefined;
+  return undefined;
 }
 
-// Two different providers (not two Groq instances) so a Groq outage doesn't
-// take down both the primary and the fallback attempt.
-export function getTextFallbackModels(): BaseChatModel[] {
-  return [getChatModel("fast"), getOpenAiFallbackModel()];
+function buildChatModel(credential: ProviderCredentialInput, temperature?: number): BaseChatModel {
+  switch (credential.provider) {
+    case AiCredentialProvider.GROQ:
+      return new ChatGroq({ apiKey: credential.apiKey, model: credential.model, temperature });
+    case AiCredentialProvider.ANTHROPIC:
+      return new ChatAnthropic({ apiKey: credential.apiKey, model: credential.model, temperature });
+    case AiCredentialProvider.OPENAI:
+    case AiCredentialProvider.GOOGLE:
+    case AiCredentialProvider.CUSTOM:
+    default: {
+      const baseURL = openAiCompatBaseUrl(credential);
+      return new ChatOpenAI({
+        apiKey: credential.apiKey,
+        model: credential.model,
+        temperature,
+        ...(baseURL ? { configuration: { baseURL } } : {}),
+      });
+    }
+  }
+}
+
+/** Groq and Anthropic have no embeddings API — throws, since this is only ever reached via a code path that already excludes them (the settings UI's provider choices for the embeddings role, and testCredential below). */
+function buildEmbeddings(credential: ProviderCredentialInput): EmbeddingsInterface {
+  if (credential.provider === AiCredentialProvider.GROQ || credential.provider === AiCredentialProvider.ANTHROPIC) {
+    throw new Error(`${credential.provider} has no embeddings API`);
+  }
+  const baseURL = openAiCompatBaseUrl(credential);
+  return new OpenAIEmbeddings({
+    apiKey: credential.apiKey,
+    model: credential.model,
+    ...(baseURL ? { configuration: { baseURL } } : {}),
+  });
+}
+
+// Fast tier: extraction/tagging/classification — every ingestion node's
+// small, normal-question-shaped calls (fill in this field, classify this
+// into one of N buckets, write a 2-3 sentence summary).
+// Reasoning tier: the Ask SaveForLatter agent and anything needing real
+// judgment. Both are just the user's own chosen model for that role now —
+// see docs/AI_REQUIREMENTS.md for the original two-tier design this mirrors.
+export async function getChatModel(userId: string, tier: "fast" | "reasoning"): Promise<BaseChatModel | null> {
+  const credential = await resolveCredential(userId, tier === "fast" ? AiRole.FAST : AiRole.REASONING);
+  if (!credential) return null;
+  return buildChatModel(credential, tier === "fast" ? 0.2 : undefined);
+}
+
+export interface ResolvedEmbeddings {
+  client: EmbeddingsInterface;
+  provider: AiCredentialProvider;
+  model: string;
+}
+
+/**
+ * Bundled with provider/model (not just the client) so every call site's
+ * usage log reflects the actual choice instead of a hardcoded
+ * "openai"/"text-embedding-3-small". A user's own configured embeddings
+ * credential always wins when they have one; otherwise this falls back to
+ * the platform's own (EMBEDDINGS_API_KEY) — the one role that isn't purely
+ * BYOK, see the comment on platformEmbeddingsCredential above.
+ */
+export async function getEmbeddings(userId: string): Promise<ResolvedEmbeddings | null> {
+  const credential = (await resolveCredential(userId, AiRole.EMBEDDINGS)) ?? platformEmbeddingsCredential();
+  if (!credential) return null;
+  try {
+    return { client: buildEmbeddings(credential), provider: credential.provider, model: credential.model };
+  } catch (err) {
+    logger.error({ err, userId }, "getEmbeddings: failed to build embeddings client");
+    return null;
+  }
+}
+
+export async function getVisionModels(userId: string): Promise<BaseChatModel[]> {
+  const credential = await resolveCredential(userId, AiRole.VISION);
+  if (!credential) return [];
+  return [buildChatModel(credential)];
+}
+
+// Previously two different *providers* (Groq + OpenAI) so one outage
+// couldn't take down both the primary and fallback attempt. Under BYOK
+// there's exactly one model per role — this now just wraps getChatModel so
+// every existing invokeWithFallback call site keeps working unchanged.
+export async function getTextFallbackModels(userId: string): Promise<BaseChatModel[]> {
+  const model = await getChatModel(userId, "fast");
+  return model ? [model] : [];
 }
 
 export async function invokeWithFallback(
@@ -77,6 +183,8 @@ export async function invokeWithFallback(
   usage: UsageContext,
   timeoutMs = 20000,
 ): Promise<string> {
+  if (models.length === 0) return "";
+
   for (const model of models) {
     try {
       const response = await model.invoke(messages, { timeout: timeoutMs, callbacks: [createUsageCallback(usage)] });
@@ -88,4 +196,43 @@ export async function invokeWithFallback(
   }
   logger.error("invokeWithFallback: every model in the fallback list failed");
   return "";
+}
+
+export interface TestCredentialResult {
+  ok: boolean;
+  error?: string;
+  /** Only set for role "embeddings" — the settings UI surfaces this so a dimension mismatch is a clear, specific error rather than a generic failure. */
+  dimensions?: number;
+}
+
+/**
+ * A real, live call against the provider using credentials straight from
+ * the request body (never persisted plaintext) — used both by the "test
+ * connection" endpoint and by assignRole (ai-settings.service.ts), which
+ * requires a passing test before it will save a role assignment. This is
+ * the only place a non-1536-dim embedding model gets caught, since nothing
+ * in this codebase can know a model's output width without actually calling it.
+ */
+export async function testRoleCredential(input: ProviderCredentialInput, role: AiRole): Promise<TestCredentialResult> {
+  try {
+    if (role === AiRole.EMBEDDINGS) {
+      const embeddings = buildEmbeddings(input);
+      const vector = await embeddings.embedQuery("connection test");
+      if (vector.length !== EMBEDDING_DIMENSIONS) {
+        return {
+          ok: false,
+          dimensions: vector.length,
+          error: `This model produced ${vector.length}-dimensional vectors — embeddings must be exactly ${EMBEDDING_DIMENSIONS}-dimensional (e.g. OpenAI's text-embedding-3-small, or an equivalent on another provider).`,
+        };
+      }
+      return { ok: true, dimensions: vector.length };
+    }
+
+    const model = buildChatModel(input);
+    await model.invoke([new HumanMessage("Reply with the single word: ok")], { timeout: 15000 });
+    return { ok: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : "Connection test failed";
+    return { ok: false, error: message };
+  }
 }

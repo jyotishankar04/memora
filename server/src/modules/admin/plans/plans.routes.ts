@@ -5,8 +5,8 @@ import { AdminPlansController } from "./plans.controller";
 import { validateCreatePlan, validateUpdatePlan } from "./plans.validator";
 
 // Mounted at /admin/plans by ../index.ts. No delete route — plans are
-// retired via isActive: false (updatePlan), never removed, since history
-// (transactions, assignments) references them by id.
+// retired via isActive: false (updatePlan), never removed, since
+// user_plan_assignments references them by id.
 const router = Router();
 
 router.get("/", authenticate, requireAdmin, AdminPlansController.list);

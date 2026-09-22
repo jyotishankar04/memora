@@ -1,27 +1,492 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useRef, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { CheckIcon as Check, LoaderCircleIcon as Loader2 } from "@hugeicons/core-free-icons";
+import {
+  CheckIcon as Check,
+  LoaderCircleIcon as Loader2,
+  Add01Icon as Plus,
+  Delete02Icon as Trash,
+  PencilEdit02Icon as Pencil,
+  CheckmarkCircle01Icon as CheckCircle,
+  Alert01Icon as AlertIcon,
+} from "@hugeicons/core-free-icons";
 import { cn } from "@/lib/utils";
 import { useSettingsGroup } from "@/hooks/use-settings-group";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "@/components/ui/toast";
+import { ApiError } from "@/lib/auth";
+import {
+  assignRole,
+  createCredential,
+  deleteCredential,
+  EMBEDDINGS_INCOMPATIBLE_PROVIDERS,
+  getPlatformDefaults,
+  listCredentials,
+  listRoleAssignments,
+  PROVIDER_LABEL,
+  RECOMMENDED_MODELS,
+  ROLE_DESCRIPTION,
+  ROLE_LABEL,
+  unassignRole,
+  updateCredential,
+  type AiCredential,
+  type AiProvider,
+  type AiRole,
+  type AiRoleAssignment,
+} from "@/lib/ai-settings";
+
+const PROVIDERS: AiProvider[] = ["openai", "anthropic", "groq", "google", "custom"];
+const ROLES: AiRole[] = ["fast", "reasoning", "vision", "embeddings"];
 
 export default function AISettingsPage() {
+  return (
+    <div className="space-y-10 max-w-2xl text-xs font-semibold">
+      <div className="space-y-1 pb-4 border-b border-border/25">
+        <h3 className="text-sm font-bold text-foreground">AI</h3>
+        <p className="text-[10px] text-muted-foreground leading-relaxed">
+          This product doesn&apos;t pay for AI on your behalf — bring your own API key from any provider, and it&apos;s used only for your account. Nothing is shared with us or anyone else.
+        </p>
+      </div>
+
+      <ProviderKeysSection />
+      <ModelRolesSection />
+      <AiFeatureToggles />
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Provider keys — add/edit happen as inline forms on the page, not popups.
+// -----------------------------------------------------------------------------
+
+function ProviderKeysSection() {
+  const queryClient = useQueryClient();
+  const { data: credentials, isLoading } = useQuery({ queryKey: ["ai-settings", "credentials"], queryFn: listCredentials });
+  const [addOpen, setAddOpen] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [deleting, setDeleting] = useState<AiCredential | null>(null);
+
+  const deleteMutation = useMutation({
+    mutationFn: (id: string) => deleteCredential(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai-settings"] });
+      toast.add({ title: "Provider key removed.", type: "success" });
+      setDeleting(null);
+    },
+    onError: () => toast.add({ title: "Couldn't remove that key.", type: "error" }),
+  });
+
+  return (
+    <section className="space-y-3">
+      <div className="flex items-center justify-between">
+        <h4 className="text-foreground text-xs font-bold">Provider keys</h4>
+        {!addOpen && (
+          <Button
+            size="sm"
+            className="h-7 rounded-full text-[10px] gap-1 px-3"
+            onClick={() => {
+              setEditingId(null);
+              setAddOpen(true);
+            }}
+          >
+            <HugeiconsIcon icon={Plus} strokeWidth={2.25} className="h-3 w-3" />
+            Add key
+          </Button>
+        )}
+      </div>
+
+      {isLoading && <HugeiconsIcon icon={Loader2} strokeWidth={2.25} className="h-4 w-4 animate-spin text-muted-foreground" />}
+
+      {!isLoading && (credentials?.length ?? 0) === 0 && !addOpen && (
+        <div className="p-4 border border-dashed border-border/60 rounded-xl text-center text-[10px] text-muted-foreground">
+          No provider keys yet. Add one from OpenAI, Anthropic, Groq, Google, or any OpenAI-compatible endpoint.
+        </div>
+      )}
+
+      {(credentials?.length ?? 0) > 0 && (
+        <div className="space-y-2">
+          {credentials!.map((credential) =>
+            editingId === credential.id ? (
+              <CredentialForm
+                key={credential.id}
+                editing={credential}
+                onDone={() => setEditingId(null)}
+              />
+            ) : (
+              <div
+                key={credential.id}
+                className="flex items-center justify-between gap-3 p-3 border border-border bg-card rounded-xl"
+              >
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2">
+                    <span className="text-foreground truncate">{credential.label}</span>
+                    <Badge variant="secondary" className="text-[9px]">{PROVIDER_LABEL[credential.provider]}</Badge>
+                  </div>
+                  {credential.baseUrl && <p className="text-[9.5px] text-muted-foreground mt-0.5 truncate">{credential.baseUrl}</p>}
+                </div>
+                <div className="flex items-center gap-1 shrink-0">
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    onClick={() => {
+                      setAddOpen(false);
+                      setEditingId(credential.id);
+                    }}
+                  >
+                    <HugeiconsIcon icon={Pencil} strokeWidth={2.25} className="h-3.5 w-3.5" />
+                  </Button>
+                  <Button variant="ghost" size="icon-sm" onClick={() => setDeleting(credential)}>
+                    <HugeiconsIcon icon={Trash} strokeWidth={2.25} className="h-3.5 w-3.5 text-destructive" />
+                  </Button>
+                </div>
+              </div>
+            ),
+          )}
+        </div>
+      )}
+
+      {addOpen && <CredentialForm editing={null} onDone={() => setAddOpen(false)} />}
+
+      <AlertDialog open={!!deleting} onOpenChange={(open) => !open && setDeleting(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove &quot;{deleting?.label}&quot;?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Any role currently using this key (Fast/Reasoning/Vision/Embeddings) will become unconfigured until you assign a different key.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteMutation.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleteMutation.isPending}
+              onClick={() => deleting && deleteMutation.mutate(deleting.id)}
+            >
+              {deleteMutation.isPending ? "Removing…" : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </section>
+  );
+}
+
+/** Inline form — used both for "Add key" (editing=null, appended below the list) and "Edit" (editing=credential, replaces that row in place). */
+function CredentialForm({ editing, onDone }: { editing: AiCredential | null; onDone: () => void }) {
+  const queryClient = useQueryClient();
+  const [provider, setProvider] = useState<AiProvider>(editing?.provider ?? "openai");
+  const [label, setLabel] = useState(editing?.label ?? "");
+  const [apiKey, setApiKey] = useState("");
+  const [baseUrl, setBaseUrl] = useState(editing?.baseUrl ?? "");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      editing
+        ? updateCredential(editing.id, { label, apiKey: apiKey || undefined, baseUrl: provider === "custom" ? baseUrl : undefined })
+        : createCredential({ provider, label, apiKey, baseUrl: provider === "custom" ? baseUrl : undefined }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai-settings"] });
+      toast.add({ title: editing ? "Key updated." : "Key added.", type: "success" });
+      onDone();
+    },
+    onError: (err) => {
+      toast.add({ title: err instanceof ApiError ? err.message : "Couldn't save that key.", type: "error" });
+    },
+  });
+
+  const canSubmit = label.trim().length > 0 && (editing || apiKey.trim().length > 0) && (provider !== "custom" || baseUrl.trim().length > 0);
+
+  return (
+    <div className="p-4 border border-primary/30 bg-card rounded-xl space-y-3">
+      <div className="flex items-center justify-between">
+        <span className="text-foreground font-bold">{editing ? "Edit provider key" : "Add provider key"}</span>
+        <span className="text-[9px] text-muted-foreground font-normal">Encrypted at rest — used only for your account</span>
+      </div>
+
+      {!editing && (
+        <div className="space-y-1.5">
+          <Label>Provider</Label>
+          <Select value={provider} onValueChange={(v) => v && setProvider(v as AiProvider)}>
+            <SelectTrigger className="w-full">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {PROVIDERS.map((p) => (
+                <SelectItem key={p} value={p}>
+                  {PROVIDER_LABEL[p]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div className="space-y-1.5">
+          <Label>Label</Label>
+          <Input value={label} onChange={(e) => setLabel(e.target.value)} placeholder="e.g. My OpenAI key" />
+        </div>
+        <div className="space-y-1.5">
+          <Label>API key {editing && <span className="text-muted-foreground font-normal">(leave blank to keep current)</span>}</Label>
+          <Input type="password" value={apiKey} onChange={(e) => setApiKey(e.target.value)} placeholder={editing ? "••••••••" : "sk-..."} />
+        </div>
+      </div>
+
+      {provider === "custom" && (
+        <div className="space-y-1.5">
+          <Label>Base URL</Label>
+          <Input value={baseUrl} onChange={(e) => setBaseUrl(e.target.value)} placeholder="https://openrouter.ai/api/v1" />
+          <p className="text-[9.5px] text-muted-foreground">Any OpenAI-compatible endpoint — OpenRouter, Together, Fireworks, a local Ollama/LM Studio instance, etc.</p>
+        </div>
+      )}
+
+      <div className="flex items-center justify-end gap-2 pt-1">
+        <Button variant="outline" size="sm" onClick={onDone}>
+          Cancel
+        </Button>
+        <Button size="sm" disabled={!canSubmit || mutation.isPending} onClick={() => mutation.mutate()}>
+          {mutation.isPending ? "Saving…" : "Save"}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Model roles — one inline form per task, always visible, no popup.
+// -----------------------------------------------------------------------------
+
+function ModelRolesSection() {
+  const { data: credentials } = useQuery({ queryKey: ["ai-settings", "credentials"], queryFn: listCredentials });
+  const { data: assignments, isLoading: rolesLoading } = useQuery({ queryKey: ["ai-settings", "roles"], queryFn: listRoleAssignments });
+  const { data: platformDefaults } = useQuery({ queryKey: ["ai-settings", "platform-defaults"], queryFn: getPlatformDefaults });
+
+  const assignmentByRole = new Map((assignments ?? []).map((a) => [a.role, a]));
+
+  return (
+    <section className="space-y-3">
+      <div>
+        <h4 className="text-foreground text-xs font-bold">Model roles</h4>
+        <p className="text-[10px] text-muted-foreground mt-0.5">
+          Once you&apos;ve added a key above, choose which key and model handles each task. Unconfigured roles are simply skipped — nothing breaks, that enrichment just doesn&apos;t run yet.
+        </p>
+      </div>
+
+      <div className="space-y-3">
+        {ROLES.map((role) => (
+          <RoleForm
+            key={role}
+            role={role}
+            credentials={credentials ?? []}
+            current={assignmentByRole.get(role)}
+            rolesLoading={rolesLoading}
+            usesPlatformDefault={!assignmentByRole.get(role) && Boolean(platformDefaults?.[role])}
+          />
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function RoleForm({
+  role,
+  credentials,
+  current,
+  rolesLoading,
+  usesPlatformDefault,
+}: {
+  role: AiRole;
+  credentials: AiCredential[];
+  current: AiRoleAssignment | undefined;
+  rolesLoading: boolean;
+  usesPlatformDefault: boolean;
+}) {
+  const queryClient = useQueryClient();
+  const eligibleCredentials =
+    role === "embeddings" ? credentials.filter((c) => !EMBEDDINGS_INCOMPATIBLE_PROVIDERS.includes(c.provider)) : credentials;
+
+  const [credentialId, setCredentialId] = useState("");
+  const [model, setModel] = useState("");
+  // Seeds the form from the saved assignment exactly once, as soon as it's
+  // loaded — a plain useEffect on `current` would also fire (and clobber
+  // in-progress edits) on every background refetch, e.g. the 15s poll
+  // elsewhere in this app's query defaults.
+  const initializedRef = useRef(false);
+  useEffect(() => {
+    if (initializedRef.current || rolesLoading) return;
+    initializedRef.current = true;
+    setCredentialId(current?.credentialId ?? "");
+    setModel(current?.model ?? "");
+  }, [rolesLoading, current]);
+
+  const selectedCredential = eligibleCredentials.find((c) => c.id === credentialId);
+  const recommendations = selectedCredential ? RECOMMENDED_MODELS[selectedCredential.provider][role] ?? [] : [];
+  const isDirty = credentialId !== (current?.credentialId ?? "") || model !== (current?.model ?? "");
+
+  const assignMutation = useMutation({
+    mutationFn: () => assignRole(role, { credentialId, model }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai-settings", "roles"] });
+      toast.add({ title: `${ROLE_LABEL[role]} configured and verified.`, type: "success" });
+    },
+    onError: (err) => {
+      toast.add({ title: err instanceof ApiError ? err.message : "That didn't work — check the key and model name.", type: "error" });
+    },
+  });
+
+  const unassignMutation = useMutation({
+    mutationFn: () => unassignRole(role),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ai-settings", "roles"] });
+      setCredentialId("");
+      setModel("");
+      toast.add({ title: `${ROLE_LABEL[role]} unconfigured.`, type: "success" });
+    },
+  });
+
+  return (
+    <div className="p-4 border border-border bg-card rounded-xl space-y-3">
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <span className="text-foreground font-bold">{ROLE_LABEL[role]}</span>
+          <p className="text-[9.5px] text-muted-foreground mt-0.5 leading-relaxed max-w-md">{ROLE_DESCRIPTION[role]}</p>
+        </div>
+        {current ? (
+          <span className="flex items-center gap-1 text-[9px] text-emerald-600 shrink-0">
+            <HugeiconsIcon icon={CheckCircle} strokeWidth={2.25} className="h-3 w-3" />
+            Configured
+          </span>
+        ) : usesPlatformDefault ? (
+          <span className="flex items-center gap-1 text-[9px] text-primary shrink-0">
+            <HugeiconsIcon icon={CheckCircle} strokeWidth={2.25} className="h-3 w-3" />
+            Provided by default
+          </span>
+        ) : (
+          <span className="flex items-center gap-1 text-[9px] text-muted-foreground shrink-0">
+            <HugeiconsIcon icon={AlertIcon} strokeWidth={2.25} className="h-3 w-3" />
+            Not set
+          </span>
+        )}
+      </div>
+
+      {usesPlatformDefault && (
+        <p className="text-[9.5px] text-muted-foreground bg-primary/5 border border-primary/15 rounded-lg p-2">
+          Covered by us at no cost to you — add your own key below to use a different model instead.
+        </p>
+      )}
+
+      {role === "embeddings" && (
+        <p className="text-[10px] text-amber-600 bg-amber-500/10 border border-amber-500/20 rounded-lg p-2.5 leading-relaxed">
+          The model you pick must output exactly 1536-dimensional vectors (e.g. OpenAI&apos;s text-embedding-3-small). It&apos;s tested live when you save — a mismatched model is rejected with the actual dimension count.
+        </p>
+      )}
+
+      {eligibleCredentials.length === 0 ? (
+        <p className="text-[10px] text-muted-foreground">
+          {role === "embeddings"
+            ? "None of your saved keys support embeddings (Groq and Anthropic don't offer an embeddings API). Add an OpenAI, Google, or custom key above."
+            : "Add a provider key above, then come back here to assign it to this role."}
+        </p>
+      ) : (
+        <>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label>Key</Label>
+              <Select value={credentialId} onValueChange={(v) => v && setCredentialId(v)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Select a key" />
+                </SelectTrigger>
+                <SelectContent>
+                  {eligibleCredentials.map((c) => (
+                    <SelectItem key={c.id} value={c.id}>
+                      {c.label} · {PROVIDER_LABEL[c.provider]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label>Model</Label>
+              <Input value={model} onChange={(e) => setModel(e.target.value)} placeholder="e.g. gpt-4o-mini" />
+            </div>
+          </div>
+
+          {recommendations.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {recommendations.map((m) => (
+                <button
+                  key={m}
+                  type="button"
+                  onClick={() => setModel(m)}
+                  className={cn(
+                    "px-2 py-1 rounded-full border text-[9.5px] font-mono transition-colors",
+                    model === m ? "border-primary bg-primary/10 text-primary" : "border-border/60 text-muted-foreground hover:border-border hover:text-foreground",
+                  )}
+                >
+                  {m}
+                </button>
+              ))}
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-2 pt-1">
+            {current ? (
+              <Button variant="ghost" size="sm" className="text-destructive hover:text-destructive" disabled={unassignMutation.isPending} onClick={() => unassignMutation.mutate()}>
+                Unassign
+              </Button>
+            ) : (
+              <span />
+            )}
+            <Button
+              size="sm"
+              disabled={!credentialId || !model.trim() || !isDirty || assignMutation.isPending}
+              onClick={() => assignMutation.mutate()}
+            >
+              {assignMutation.isPending ? "Verifying…" : "Save"}
+            </Button>
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+// -----------------------------------------------------------------------------
+// Feature toggles (unrelated to provider config — which AI capabilities are
+// switched on at all)
+// -----------------------------------------------------------------------------
+
+function AiFeatureToggles() {
   const { value: ai, loading, error, set } = useSettingsGroup("ai");
 
   return (
-    <div className="space-y-6 max-w-md text-xs font-semibold">
-
-      <div className="space-y-1 pb-4 border-b border-border/25">
-        <h3 className="text-sm font-bold text-foreground">AI Features</h3>
-        <p className="text-[10px] text-muted-foreground">Manage personal memory models settings.</p>
+    <section className="space-y-3">
+      <div>
+        <h4 className="text-foreground text-xs font-bold">Features</h4>
+        <p className="text-[10px] text-muted-foreground mt-0.5">Which AI-powered capabilities are switched on (still requires the relevant role above to be configured).</p>
       </div>
 
       {loading && <HugeiconsIcon icon={Loader2} strokeWidth={2.25} className="h-4 w-4 animate-spin text-muted-foreground" />}
       {error && <p className="text-[10px] text-destructive">{error}</p>}
 
       {ai && (
-        <div className="space-y-4">
+        <div className="space-y-2">
           {(
             [
               { key: "autoOrganization", title: "Automatic organization", desc: "Sort incoming cards into appropriate folder collections." },
@@ -53,6 +518,6 @@ export default function AISettingsPage() {
           ))}
         </div>
       )}
-    </div>
+    </section>
   );
 }

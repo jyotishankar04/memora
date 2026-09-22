@@ -153,65 +153,15 @@ export enum PlanAssignmentStatus {
   SUPERSEDED = "superseded",
 }
 
+// Trimmed to the two sources that still exist — REFERRAL_REWARD/
+// COUPON_REDEMPTION/PAYMENT were how a paid-tier assignment got granted;
+// nothing writes those anymore now that there's no billing (removed along
+// with TransactionType/TransactionStatus/CouponDiscountType/
+// CouponRedemptionStatus/ReferralCodeType/ReferralConversionStage/
+// CreditLedgerReason, which had no reason to exist without it).
 export enum PlanAssignmentSource {
   ADMIN_MANUAL = "admin_manual",
   SIGNUP_DEFAULT = "signup_default",
-  REFERRAL_REWARD = "referral_reward",
-  COUPON_REDEMPTION = "coupon_redemption",
-  PAYMENT = "payment",
-}
-
-export enum TransactionType {
-  SUBSCRIPTION_PURCHASE = "subscription_purchase",
-  SUBSCRIPTION_RENEWAL = "subscription_renewal",
-  UPGRADE = "upgrade",
-  DOWNGRADE = "downgrade",
-  REFUND = "refund",
-  ADMIN_GRANT = "admin_grant",
-}
-
-export enum TransactionStatus {
-  PENDING = "pending",
-  SUCCEEDED = "succeeded",
-  FAILED = "failed",
-  REFUNDED = "refunded",
-  CANCELLED = "cancelled",
-}
-
-export enum CouponDiscountType {
-  PERCENTAGE = "percentage",
-  FIXED_AMOUNT = "fixed_amount",
-}
-
-// APPLIED = the code was entered/redeemed; CONVERTED = it actually led to a
-// paid transaction. Kept distinct so the admin funnel view can show
-// applied-vs-purchased, not just a single redemption count.
-export enum CouponRedemptionStatus {
-  APPLIED = "applied",
-  CONVERTED = "converted",
-  EXPIRED = "expired",
-  REVOKED = "revoked",
-}
-
-// USER = a normal user's own shareable code; ADMIN_ISSUED = a custom
-// creator/affiliate code an admin hands out.
-export enum ReferralCodeType {
-  USER = "user",
-  ADMIN_ISSUED = "admin_issued",
-}
-
-// APPLIED = the referred person signed up attributed to the code; CONVERTED
-// = they went on to make a purchase (referrer reward fires here).
-export enum ReferralConversionStage {
-  APPLIED = "applied",
-  CONVERTED = "converted",
-}
-
-export enum CreditLedgerReason {
-  REFERRAL_REWARD = "referral_reward",
-  ADMIN_ADJUSTMENT = "admin_adjustment",
-  PROMOTION = "promotion",
-  EXPIRATION = "expiration",
 }
 
 // TRANSACTIONAL = system-triggered (welcome, status-changed, share events),
@@ -255,4 +205,47 @@ export enum ImportItemStatus {
   CREATED = "created",
   SKIPPED_DUPLICATE = "skipped_duplicate",
   FAILED = "failed",
+}
+
+export enum ReportType {
+  BUG = "bug",
+  FEATURE = "feature",
+}
+
+// Named integrations get a first-class client (native tool-calling/message
+// format where it matters — Anthropic isn't OpenAI-wire-compatible, unlike
+// the other three). CUSTOM is the escape hatch for literally anything else
+// with an OpenAI-compatible endpoint (OpenRouter, Together, Fireworks, a
+// local Ollama/LM Studio instance, ...) — baseUrl is required only for it.
+export enum AiCredentialProvider {
+  OPENAI = "openai",
+  ANTHROPIC = "anthropic",
+  GROQ = "groq",
+  GOOGLE = "google",
+  CUSTOM = "custom",
+}
+
+// Mirrors the four model "slots" ai.providers.ts has always had internally
+// (fast/reasoning/vision) plus embeddings, now each independently pointed at
+// whichever saved credential+model the user assigns it to. EMBEDDINGS is
+// pinned to 1536-dimensional output (validated at assignment time, see
+// ai-settings.service.ts) because memories.document_embedding and
+// memory_chunks.embedding are fixed-width vector(1536) columns.
+export enum AiRole {
+  FAST = "fast",
+  REASONING = "reasoning",
+  VISION = "vision",
+  EMBEDDINGS = "embeddings",
+}
+
+// No IN_PROGRESS — a report is either not yet looked at, actively being
+// reviewed, or settled one of two ways. Keeping it this small is deliberate:
+// there's no admin UI for this yet (see report.service.ts), so a status
+// this simple is one an operator can act on directly in the DB/Studio
+// without needing a richer workflow built first.
+export enum ReportStatus {
+  OPEN = "open",
+  REVIEWING = "reviewing",
+  RESOLVED = "resolved",
+  DECLINED = "declined",
 }

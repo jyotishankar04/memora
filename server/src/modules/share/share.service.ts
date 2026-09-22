@@ -11,7 +11,6 @@ import {
   users,
 } from "../../db/schema";
 import {
-  PlanLimitType,
   ShareAccessRequestStatus,
   ShareGrantSource,
   ShareGrantStatus,
@@ -19,21 +18,10 @@ import {
   ShareResourceType,
 } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
-import { assertWithinLimit, hasFeature } from "../plans/plans.service";
 import { hashPassword as hashSharePassword } from "../../shared/crypto/scrypt-password";
 import { notifyAccessDecision, notifyAccessRequested, notifyShareInvite } from "./share.notify";
 import type { ShareRow } from "./share.access";
 import type { CreateShareInput, ListSharesQuery, UpdateShareInput } from "./share.schema";
-
-/**
- * Which plans.features key gates each link mode. Public is absent on
- * purpose — it's free but capped by the PUBLIC_SHARE_COUNT plan limit
- * instead, so everyone can publish a few links and only volume is paid for.
- */
-const LINK_ACCESS_FEATURE: Partial<Record<ShareLinkAccess, string>> = {
-  [ShareLinkAccess.REQUEST]: "privateShareRequests",
-  [ShareLinkAccess.PASSWORD]: "passwordProtectedShares",
-};
 
 // A denied request shouldn't be re-openable immediately — the partial
 // unique index only stops duplicate *pending* rows.
@@ -200,26 +188,6 @@ export async function updateShare(userId: string, shareId: string, patch: Update
   const existing = await loadOwnedShare(userId, shareId);
   const nextAccess = patch.linkAccess ?? (existing.linkAccess as ShareLinkAccess);
 
-  // Paid modes are feature-gated; public is quota-gated instead.
-  const featureKey = LINK_ACCESS_FEATURE[nextAccess];
-  if (featureKey && nextAccess !== existing.linkAccess) {
-    if (!(await hasFeature(userId, featureKey))) {
-      throw new AppError(
-        nextAccess === ShareLinkAccess.PASSWORD
-          ? "Password-protected links are a paid feature"
-          : "Private links with access requests are a paid feature",
-        403,
-        "FEATURE_NOT_AVAILABLE"
-      );
-    }
-  }
-
-  // Counted only on the transition into public, never retroactively — a
-  // user who downgrades keeps the links they already published.
-  if (nextAccess === ShareLinkAccess.PUBLIC && existing.linkAccess !== ShareLinkAccess.PUBLIC) {
-    await assertWithinLimit(userId, PlanLimitType.PUBLIC_SHARE_COUNT, 1);
-  }
-
   const updates: Partial<typeof shares.$inferInsert> = { updatedAt: new Date() };
 
   if (patch.linkAccess !== undefined) updates.linkAccess = patch.linkAccess;
@@ -376,10 +344,6 @@ export async function listGrants(userId: string, shareId: string): Promise<Grant
  */
 export async function inviteByEmail(userId: string, shareId: string, email: string): Promise<GrantResponse> {
   const share = await loadOwnedShare(userId, shareId);
-
-  if (!(await hasFeature(userId, "directShares"))) {
-    throw new AppError("Sharing with specific people is a paid feature", 403, "FEATURE_NOT_AVAILABLE");
-  }
 
   const [owner] = await db.select({ email: users.email, name: users.name }).from(users).where(eq(users.id, userId)).limit(1);
   if (owner?.email.toLowerCase() === email) {

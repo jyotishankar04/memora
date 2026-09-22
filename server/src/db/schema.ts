@@ -18,13 +18,12 @@ import { defineRelations, sql } from "drizzle-orm";
 import { vector, tsvector, EMBEDDING_DIMENSIONS } from "./pgvector-type";
 import {
   AccentColor,
+  AiCredentialProvider,
+  AiRole,
   AnnouncementDisplayMode,
   AnnouncementType,
   CalendarProvider,
   CollectionSource,
-  CouponDiscountType,
-  CouponRedemptionStatus,
-  CreditLedgerReason,
   EmailCategory,
   EmailStatus,
   EmailTemplateKey,
@@ -39,16 +38,14 @@ import {
   PlanBillingInterval,
   PlanLimitType,
   Provider,
-  ReferralCodeType,
-  ReferralConversionStage,
+  ReportStatus,
+  ReportType,
   SettingsTheme,
   ShareAccessRequestStatus,
   ShareGrantSource,
   ShareGrantStatus,
   ShareLinkAccess,
   ShareResourceType,
-  TransactionStatus,
-  TransactionType,
   UserStatus,
 } from "./enums";
 
@@ -110,6 +107,25 @@ export const announcementDisplayModeEnum = pgEnum("announcement_display_mode", [
   AnnouncementDisplayMode.FULL_PAGE,
 ]);
 
+export const reportTypeEnum = pgEnum("report_type", [ReportType.BUG, ReportType.FEATURE]);
+
+export const reportStatusEnum = pgEnum("report_status", [
+  ReportStatus.OPEN,
+  ReportStatus.REVIEWING,
+  ReportStatus.RESOLVED,
+  ReportStatus.DECLINED,
+]);
+
+export const aiCredentialProviderEnum = pgEnum("ai_credential_provider", [
+  AiCredentialProvider.OPENAI,
+  AiCredentialProvider.ANTHROPIC,
+  AiCredentialProvider.GROQ,
+  AiCredentialProvider.GOOGLE,
+  AiCredentialProvider.CUSTOM,
+]);
+
+export const aiRoleEnum = pgEnum("ai_role", [AiRole.FAST, AiRole.REASONING, AiRole.VISION, AiRole.EMBEDDINGS]);
+
 export const collectionSourceEnum = pgEnum("collection_source", [
   CollectionSource.USER,
   CollectionSource.SYSTEM,
@@ -124,8 +140,16 @@ export const planLimitTypeEnum = pgEnum("plan_limit_type", [
   PlanLimitType.PUBLIC_SHARE_COUNT,
 ]);
 
+// SEMI_ANNUAL was missing here even though it's a real PlanBillingInterval
+// value (added in 464160f) and already exists on the live Postgres enum —
+// this TS-side definition just never caught up, which is what made
+// seedDefaultPlans's `billingInterval: seed.billingInterval` fail to
+// typecheck (Drizzle infers the column's TS type from this list, not from
+// the enum import). Also visible client-side (client/lib/plans.ts needed
+// the same value added to its own local union to match).
 export const planBillingIntervalEnum = pgEnum("plan_billing_interval", [
   PlanBillingInterval.MONTHLY,
+  PlanBillingInterval.SEMI_ANNUAL,
   PlanBillingInterval.YEARLY,
   PlanBillingInterval.ONE_TIME,
 ]);
@@ -176,58 +200,12 @@ export const planAssignmentStatusEnum = pgEnum("plan_assignment_status", [
   PlanAssignmentStatus.SUPERSEDED,
 ]);
 
+// Trimmed to the two sources that still exist — REFERRAL_REWARD/
+// COUPON_REDEMPTION/PAYMENT were how a paid-tier assignment got granted;
+// nothing writes those anymore now that there's no billing.
 export const planAssignmentSourceEnum = pgEnum("plan_assignment_source", [
   PlanAssignmentSource.ADMIN_MANUAL,
   PlanAssignmentSource.SIGNUP_DEFAULT,
-  PlanAssignmentSource.REFERRAL_REWARD,
-  PlanAssignmentSource.COUPON_REDEMPTION,
-  PlanAssignmentSource.PAYMENT,
-]);
-
-export const transactionTypeEnum = pgEnum("transaction_type", [
-  TransactionType.SUBSCRIPTION_PURCHASE,
-  TransactionType.SUBSCRIPTION_RENEWAL,
-  TransactionType.UPGRADE,
-  TransactionType.DOWNGRADE,
-  TransactionType.REFUND,
-  TransactionType.ADMIN_GRANT,
-]);
-
-export const transactionStatusEnum = pgEnum("transaction_status", [
-  TransactionStatus.PENDING,
-  TransactionStatus.SUCCEEDED,
-  TransactionStatus.FAILED,
-  TransactionStatus.REFUNDED,
-  TransactionStatus.CANCELLED,
-]);
-
-export const couponDiscountTypeEnum = pgEnum("coupon_discount_type", [
-  CouponDiscountType.PERCENTAGE,
-  CouponDiscountType.FIXED_AMOUNT,
-]);
-
-export const couponRedemptionStatusEnum = pgEnum("coupon_redemption_status", [
-  CouponRedemptionStatus.APPLIED,
-  CouponRedemptionStatus.CONVERTED,
-  CouponRedemptionStatus.EXPIRED,
-  CouponRedemptionStatus.REVOKED,
-]);
-
-export const referralCodeTypeEnum = pgEnum("referral_code_type", [
-  ReferralCodeType.USER,
-  ReferralCodeType.ADMIN_ISSUED,
-]);
-
-export const referralConversionStageEnum = pgEnum("referral_conversion_stage", [
-  ReferralConversionStage.APPLIED,
-  ReferralConversionStage.CONVERTED,
-]);
-
-export const creditLedgerReasonEnum = pgEnum("credit_ledger_reason", [
-  CreditLedgerReason.REFERRAL_REWARD,
-  CreditLedgerReason.ADMIN_ADJUSTMENT,
-  CreditLedgerReason.PROMOTION,
-  CreditLedgerReason.EXPIRATION,
 ]);
 
 export const emailCategoryEnum = pgEnum("email_category", [
@@ -1208,10 +1186,10 @@ export const plans = pgTable(
     isDefault: boolean("is_default").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     // Admin-editable, boolean/on-off perks distinct from the numeric
-    // PlanLimitType quota system above (memory_count etc.) — for capabilities
-    // that are either on or off rather than a countable limit, e.g.
-    // publicCollections. Checked via plans/plans.service.ts's hasFeature(),
-    // the boolean-returning counterpart to assertWithinLimit().
+    // PlanLimitType quota system above (memory_count etc.). Record-keeping
+    // only now — nothing in the app enforces these anymore (see the note
+    // above admin/plans/plans.service.ts's DEFAULT_PLANS: the single Free
+    // plan has every limit and feature unconditionally unlimited/on).
     features: jsonb("features").$type<Record<string, boolean>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -1283,217 +1261,13 @@ export const userPlanAssignments = pgTable(
 );
 
 // -----------------------------------------------------------------------------
-// 27. Transactions Table (billing events — shaped so a future Stripe
-//     integration just writes rows here. `provider`/`providerRef` are null
-//     today; the unique pair is inert while null and starts deduping webhook
-//     replays the moment a real payment provider is wired in.)
+// 27. (Removed: Transactions, Coupons, Coupon Redemptions, Referral Codes,
+//     Referral Conversions, Credit Ledger, User Credit Balances — this
+//     product has no billing, so there's nothing for any of them to
+//     record. plans/planLimits/userPlanAssignments above stayed: they're
+//     what grants everyone the single unlimited free plan, not a
+//     paid-tier mechanism.)
 // -----------------------------------------------------------------------------
-export const transactions = pgTable(
-  "transactions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
-    planId: uuid("plan_id").references(() => plans.id, { onDelete: "restrict" }),
-    planAssignmentId: uuid("plan_assignment_id").references(() => userPlanAssignments.id, {
-      onDelete: "set null",
-    }),
-    type: transactionTypeEnum("type").notNull(),
-    status: transactionStatusEnum("status").notNull().default(TransactionStatus.PENDING),
-    amountMinor: integer("amount_minor").notNull().default(0), // cents; 0 for admin_grant
-    currency: varchar("currency", { length: 3 }).notNull().default("usd"),
-    provider: varchar("provider", { length: 50 }), // null today; "stripe" once integrated
-    providerRef: varchar("provider_ref", { length: 255 }), // future Stripe payment_intent/charge id
-    // No FK back to coupon_redemptions here — that link lives on
-    // coupon_redemptions.transactionId instead (it's a backward reference,
-    // this would be a forward one to a table defined later in this file).
-    // Find "which redemption led to this transaction" via
-    // `coupon_redemptions WHERE transaction_id = X`.
-    metadata: jsonb("metadata"),
-    initiatedBy: uuid("initiated_by").references(() => users.id, { onDelete: "set null" }), // admin if manual, null if automated
-    occurredAt: timestamp("occurred_at", { withTimezone: true }).notNull().defaultNow(),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [
-    index("idx_transactions_user_occurred").on(table.userId, table.occurredAt),
-    index("idx_transactions_status").on(table.status),
-    uniqueIndex("uq_transactions_provider_ref").on(table.provider, table.providerRef),
-  ]
-);
-
-// -----------------------------------------------------------------------------
-// 28. Coupons Table (admin-created discount codes — including custom
-//     creator/affiliate codes, via `label`/`createdBy`. Tracks the discount
-//     funnel only, not commission payout.)
-// -----------------------------------------------------------------------------
-export const coupons = pgTable(
-  "coupons",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    code: varchar("code", { length: 50 }).notNull().unique(),
-    label: varchar("label", { length: 150 }), // internal note, e.g. affiliate/creator name
-    discountType: couponDiscountTypeEnum("discount_type").notNull(),
-    discountValue: integer("discount_value").notNull(), // percent (0-100) or amountMinor, depending on discountType
-    applicablePlanId: uuid("applicable_plan_id").references(() => plans.id, { onDelete: "restrict" }), // null = any plan
-    maxRedemptions: integer("max_redemptions"), // null = unlimited
-    maxRedemptionsPerUser: integer("max_redemptions_per_user").notNull().default(1),
-    // Denormalized, atomically incremented alongside each redemption insert
-    // inside one transaction (see coupons.service.ts) — avoids a COUNT(*)
-    // over coupon_redemptions on every apply check.
-    redemptionCount: integer("redemption_count").notNull().default(0),
-    startsAt: timestamp("starts_at", { withTimezone: true }),
-    expiresAt: timestamp("expires_at", { withTimezone: true }),
-    isActive: boolean("is_active").notNull().default(true),
-    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [index("idx_coupons_active").on(table.isActive)]
-);
-
-// -----------------------------------------------------------------------------
-// 29. Coupon Redemptions Table (applied vs. converted funnel per redemption —
-//     `status` distinguishes "code was entered" from "it led to a purchase."
-//     Race-safety: redemption runs inside one transaction with
-//     `SELECT ... FOR UPDATE` on the coupon row to lock it before re-checking
-//     maxRedemptions/window/active and incrementing redemptionCount.)
-// -----------------------------------------------------------------------------
-export const couponRedemptions = pgTable(
-  "coupon_redemptions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    couponId: uuid("coupon_id")
-      .notNull()
-      .references(() => coupons.id, { onDelete: "restrict" }),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
-    status: couponRedemptionStatusEnum("status").notNull().default(CouponRedemptionStatus.APPLIED),
-    appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(),
-    convertedAt: timestamp("converted_at", { withTimezone: true }),
-    transactionId: uuid("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
-    discountAmountMinor: integer("discount_amount_minor"), // snapshot at redemption time, survives a later coupon reprice
-    ipAddress: varchar("ip_address", { length: 45 }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [
-    index("idx_coupon_redemptions_coupon_id").on(table.couponId),
-    index("idx_coupon_redemptions_user_id").on(table.userId),
-    index("idx_coupon_redemptions_status").on(table.status),
-    index("idx_coupon_redemptions_transaction_id").on(table.transactionId),
-  ]
-);
-
-// -----------------------------------------------------------------------------
-// 30. Referral Codes Table (a user's own shareable code, or an admin-issued
-//     creator/affiliate code. `clickCount` is a coarse, denormalized
-//     top-of-funnel counter — no row per anonymous click, see
-//     referral_conversions below for the attributed-signup funnel.)
-// -----------------------------------------------------------------------------
-export const referralCodes = pgTable(
-  "referral_codes",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    code: varchar("code", { length: 50 }).notNull().unique(),
-    type: referralCodeTypeEnum("type").notNull().default(ReferralCodeType.USER),
-    ownerUserId: uuid("owner_user_id").references(() => users.id, { onDelete: "set null" }), // who earns the reward
-    rewardCreditsAmount: integer("reward_credits_amount").notNull(),
-    clickCount: integer("click_count").notNull().default(0),
-    isActive: boolean("is_active").notNull().default(true),
-    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }), // null for self-serve user codes
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [index("idx_referral_codes_type").on(table.type)]
-);
-
-// -----------------------------------------------------------------------------
-// 31. Referral Conversions Table (one row per referred signup, attributed to
-//     a code — first attribution wins, see the unique index. `stage` tracks
-//     applied (signed up) vs. converted (first purchase); the referrer's
-//     credit reward is granted when it advances to converted.)
-// -----------------------------------------------------------------------------
-export const referralConversions = pgTable(
-  "referral_conversions",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    referralCodeId: uuid("referral_code_id")
-      .notNull()
-      .references(() => referralCodes.id, { onDelete: "restrict" }),
-    referredUserId: uuid("referred_user_id").references(() => users.id, { onDelete: "set null" }),
-    stage: referralConversionStageEnum("stage").notNull().default(ReferralConversionStage.APPLIED),
-    appliedAt: timestamp("applied_at", { withTimezone: true }).notNull().defaultNow(), // the referred user's signup time
-    convertedAt: timestamp("converted_at", { withTimezone: true }),
-    transactionId: uuid("transaction_id").references(() => transactions.id, { onDelete: "set null" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-    updatedAt: timestamp("updated_at", { withTimezone: true })
-      .notNull()
-      .defaultNow()
-      .$onUpdate(() => new Date()),
-  },
-  (table) => [
-    uniqueIndex("uq_referral_conversions_referred_user").on(table.referredUserId),
-    index("idx_referral_conversions_code_id").on(table.referralCodeId),
-    index("idx_referral_conversions_stage").on(table.stage),
-  ]
-);
-
-// -----------------------------------------------------------------------------
-// 32. Credit Ledger Table (append-only reward-currency ledger — never
-//     updated or deleted, always the reconciliation source of truth for
-//     user_credit_balances below. userId uses "set null" rather than this
-//     schema's usual cascade: losing rows on user deletion would corrupt
-//     platform-wide "credits issued" reporting.)
-// -----------------------------------------------------------------------------
-export const creditLedger = pgTable(
-  "credit_ledger",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
-    amount: integer("amount").notNull(), // signed — positive = credit, negative = debit
-    reason: creditLedgerReasonEnum("reason").notNull(),
-    // Polymorphic, same style as adminAuditLogs — e.g. referenceType
-    // "referral_conversion" | "admin_adjustment".
-    referenceType: varchar("reference_type", { length: 50 }),
-    referenceId: varchar("reference_id", { length: 255 }),
-    note: text("note"),
-    createdBy: uuid("created_by").references(() => users.id, { onDelete: "set null" }), // admin for manual adjustments, null if system-generated
-    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
-  },
-  (table) => [
-    index("idx_credit_ledger_user_created").on(table.userId, table.createdAt),
-    index("idx_credit_ledger_reference").on(table.referenceType, table.referenceId),
-  ]
-);
-
-// -----------------------------------------------------------------------------
-// 33. User Credit Balances Table (denormalized cache of credit_ledger's
-//     running sum, same reasoning as coupons.redemptionCount — kept
-//     atomically consistent by updating it inside the same transaction as
-//     every ledger insert. Pure live cache, no standalone meaning once the
-//     user is gone, so this one cascades unlike credit_ledger itself.)
-// -----------------------------------------------------------------------------
-export const userCreditBalances = pgTable("user_credit_balances", {
-  userId: uuid("user_id")
-    .primaryKey()
-    .references(() => users.id, { onDelete: "cascade" }),
-  balance: integer("balance").notNull().default(0),
-  updatedAt: timestamp("updated_at", { withTimezone: true })
-    .notNull()
-    .defaultNow()
-    .$onUpdate(() => new Date()),
-});
 
 // -----------------------------------------------------------------------------
 // 34. Email Campaigns Table (one row per admin bulk-compose action — the
@@ -1592,7 +1366,108 @@ export const importItems = pgTable(
 );
 
 // -----------------------------------------------------------------------------
-// 38. Relations
+// 38. Reports Table (bug reports and feature requests submitted from the
+//     public /report page — no auth required, but userId is captured when
+//     the submitter happens to be signed in. No admin UI reads this yet;
+//     it's reviewable directly via drizzle-kit studio until one exists.)
+// -----------------------------------------------------------------------------
+export const reports = pgTable(
+  "reports",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    type: reportTypeEnum("type").notNull(),
+    title: varchar("title", { length: 200 }).notNull(),
+    description: text("description").notNull(),
+    // Optional even when signed in — someone reporting a bug on behalf of a
+    // teammate, or just preferring not to be tied to their account email.
+    email: varchar("email", { length: 255 }),
+    userId: uuid("user_id").references(() => users.id, { onDelete: "set null" }),
+    status: reportStatusEnum("status").notNull().default(ReportStatus.OPEN),
+    // Where they were when they hit "report a bug" — real diagnostic value
+    // (which page, which app route) that a free-text description often omits.
+    pageUrl: text("page_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    index("idx_reports_type").on(table.type),
+    index("idx_reports_status").on(table.status),
+    index("idx_reports_created_at").on(table.createdAt),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 39. AI Credentials Table (bring-your-own-key — every user supplies and pays
+//     for their own AI provider account; the platform never holds/spends an
+//     AI API key of its own. `label` is user-facing ("My OpenAI key"); the
+//     key itself is AES-256-GCM-encrypted at rest via shared/crypto/token-
+//     cipher.ts, same as calendar_connections' OAuth tokens. `baseUrl` is
+//     only meaningful (and required, enforced in ai-settings.service.ts) for
+//     provider "custom" — any other provider's endpoint is hardcoded in
+//     ai.providers.ts.
+// -----------------------------------------------------------------------------
+export const aiCredentials = pgTable(
+  "ai_credentials",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: aiCredentialProviderEnum("provider").notNull(),
+    label: varchar("label", { length: 100 }).notNull(),
+    encryptedApiKey: text("encrypted_api_key").notNull(),
+    baseUrl: text("base_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index("idx_ai_credentials_user_id").on(table.userId)]
+);
+
+// -----------------------------------------------------------------------------
+// 40. User AI Role Assignments Table (one row per user per role — which
+//     saved credential + which model string handles that role's calls.
+//     `verifiedAt` is set only after a real test call against the provider
+//     succeeds — see ai-settings.service.ts's testCredential/assignRole —
+//     so the settings UI can distinguish "saved" from "confirmed working."
+//     A role with no row here is simply unconfigured: every ai.providers.ts
+//     resolver treats that as "skip this AI step," never as an error to
+//     surface mid-pipeline (see ingestion nodes' `if (!model) return {...}`
+//     guards).
+// -----------------------------------------------------------------------------
+export const userAiRoleAssignments = pgTable(
+  "user_ai_role_assignments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: aiRoleEnum("role").notNull(),
+    credentialId: uuid("credential_id")
+      .notNull()
+      .references(() => aiCredentials.id, { onDelete: "cascade" }),
+    model: varchar("model", { length: 150 }).notNull(),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("uq_user_ai_role_assignments_user_role").on(table.userId, table.role),
+    index("idx_user_ai_role_assignments_user_id").on(table.userId),
+    index("idx_user_ai_role_assignments_credential_id").on(table.credentialId),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 41. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {
@@ -1604,10 +1479,8 @@ export const  relations = defineRelations({
     aiUsageLogs: { relation: "hasMany", foreignKey: "userId" },
     collections: { relation: "hasMany", foreignKey: "userId" },
     planAssignments: { relation: "hasMany", foreignKey: "userId" },
-    transactions: { relation: "hasMany", foreignKey: "userId" },
-    couponRedemptions: { relation: "hasMany", foreignKey: "userId" },
-    referralCodes: { relation: "hasMany", foreignKey: "ownerUserId" },
-    creditLedgerEntries: { relation: "hasMany", foreignKey: "userId" },
+    aiCredentials: { relation: "hasMany", foreignKey: "userId" },
+    aiRoleAssignments: { relation: "hasMany", foreignKey: "userId" },
     shares: { relation: "hasMany", foreignKey: "ownerId" },
     shareGrants: { relation: "hasMany", foreignKey: "userId" },
     notifications: { relation: "hasMany", foreignKey: "userId" },
@@ -1655,43 +1528,14 @@ export const  relations = defineRelations({
     plan: { relation: "belongsTo", foreignKey: "planId" },
     assignedByUser: { relation: "belongsTo", foreignKey: "assignedBy" },
   },
-  transactions: {
-    user: { relation: "belongsTo", foreignKey: "userId" },
-    plan: { relation: "belongsTo", foreignKey: "planId" },
-    planAssignment: { relation: "belongsTo", foreignKey: "planAssignmentId" },
-    initiatedByUser: { relation: "belongsTo", foreignKey: "initiatedBy" },
-  },
-  coupons: {
-    redemptions: { relation: "hasMany", foreignKey: "couponId" },
-    applicablePlan: { relation: "belongsTo", foreignKey: "applicablePlanId" },
-    createdByUser: { relation: "belongsTo", foreignKey: "createdBy" },
-  },
-  couponRedemptions: {
-    coupon: { relation: "belongsTo", foreignKey: "couponId" },
-    user: { relation: "belongsTo", foreignKey: "userId" },
-    transaction: { relation: "belongsTo", foreignKey: "transactionId" },
-  },
-  referralCodes: {
-    ownerUser: { relation: "belongsTo", foreignKey: "ownerUserId" },
-    conversions: { relation: "hasMany", foreignKey: "referralCodeId" },
-  },
-  referralConversions: {
-    referralCode: { relation: "belongsTo", foreignKey: "referralCodeId" },
-    referredUser: { relation: "belongsTo", foreignKey: "referredUserId" },
-    transaction: { relation: "belongsTo", foreignKey: "transactionId" },
-  },
-  creditLedger: {
-    user: { relation: "belongsTo", foreignKey: "userId" },
-    createdByUser: { relation: "belongsTo", foreignKey: "createdBy" },
-  },
-  userCreditBalances: {
-    user: { relation: "belongsTo", foreignKey: "userId" },
-  },
   featureFlags: {
     updatedByUser: { relation: "belongsTo", foreignKey: "updatedBy" },
   },
   announcements: {
     createdByUser: { relation: "belongsTo", foreignKey: "createdBy" },
+  },
+  reports: {
+    user: { relation: "belongsTo", foreignKey: "userId" },
   },
   aiUsageLogs: {
     user: { relation: "belongsTo", foreignKey: "userId" },
@@ -1753,5 +1597,13 @@ export const  relations = defineRelations({
   rolePermissions: {
     role: { relation: "belongsTo", foreignKey: "roleId" },
     permission: { relation: "belongsTo", foreignKey: "permissionId" },
+  },
+  aiCredentials: {
+    user: { relation: "belongsTo", foreignKey: "userId" },
+    roleAssignments: { relation: "hasMany", foreignKey: "credentialId" },
+  },
+  aiRoleAssignments: {
+    user: { relation: "belongsTo", foreignKey: "userId" },
+    credential: { relation: "belongsTo", foreignKey: "credentialId" },
   },
 });

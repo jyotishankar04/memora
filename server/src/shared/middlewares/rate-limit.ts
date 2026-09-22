@@ -54,3 +54,16 @@ export const shareRequestRateLimiter = rateLimit({
   handler: rateLimitHandler,
   keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip ?? ""),
 });
+
+// Bug/feature report spam. No auth required to submit one, so the account
+// (when signed in) or the IP is the only identity available — same
+// fallback shape as shareRequestRateLimiter, just generous enough that a
+// frustrated user filing a couple of real reports in a row never hits it.
+export const reportRateLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: rateLimitHandler,
+  keyGenerator: (req) => req.user?.id ?? ipKeyGenerator(req.ip ?? ""),
+});

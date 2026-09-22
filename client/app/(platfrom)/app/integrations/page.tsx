@@ -5,7 +5,6 @@ import Link from "next/link";
 import { HugeiconsIcon } from "@hugeicons/react";
 import {
   ChromeIcon,
-  SmartPhone01Icon as Mobile,
   CheckmarkCircle02Icon as CheckCircle,
   Search01Icon as SearchIcon,
 } from "@hugeicons/core-free-icons";
@@ -158,7 +157,6 @@ export default function IntegrationsPage() {
     { key: "google-calendar", title: "Google Calendar", description: "Sync detected and manually added events straight to your Google Calendar.", category: "Calendar", connected: isCalendarConnected("google") },
     { key: "microsoft-outlook", title: "Outlook", description: "Sync detected and manually added events straight to your Outlook calendar.", category: "Calendar", connected: isCalendarConnected("microsoft") },
     { key: "browser-extension", title: "Browser extension", description: "Quick-capture from any tab with a keyboard shortcut. Not yet published to the Chrome Web Store.", category: "Coming soon", connected: false },
-    { key: "mobile-app", title: "Mobile app", description: "Save and browse your memories on iOS and Android. Not yet released.", category: "Coming soon", connected: false },
   ];
 
   const q = query.trim().toLowerCase();
@@ -300,17 +298,6 @@ export default function IntegrationsPage() {
             />
           )}
 
-          {visible.has("mobile-app") && (
-            <IntegrationCard
-              iconBg="bg-pink-500"
-              icon={<HugeiconsIcon icon={Mobile} strokeWidth={2.25} className="h-4.5 w-4.5 text-white" />}
-              title="Mobile app"
-              category="Coming soon"
-              connected={false}
-              description={cardMeta[3].description}
-              action={<ConnectPill state="coming-soon">Coming soon</ConnectPill>}
-            />
-          )}
         </div>
       )}
 

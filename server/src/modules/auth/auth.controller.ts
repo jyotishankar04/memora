@@ -8,18 +8,14 @@ import { isProviderEnabled, isSignupsEnabled } from "../feature-flags/feature-fl
 import {
   OAUTH_NEXT_COOKIE,
   OAUTH_STATE_COOKIE,
-  REFERRAL_CODE_COOKIE,
   REFRESH_TOKEN_COOKIE,
   clearAuthCookies,
   clearOAuthNextCookie,
   clearOAuthStateCookie,
-  clearReferralCodeCookie,
   setAuthCookies,
   setOAuthNextCookie,
   setOAuthStateCookie,
-  setReferralCodeCookie,
 } from "../../shared/utils/cookies";
-import { recordReferralSignup } from "../referrals/referrals.service";
 import { claimPendingGrantsForEmail } from "../share/share.service";
 import { sendEmail } from "../email";
 import { EmailCategory, EmailTemplateKey } from "../../db/enums";
@@ -61,13 +57,11 @@ export function sanitizeNextPath(next: unknown): string | null {
 
 async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (code: string) => Promise<OAuthProfile>) {
   const cookieState = req.cookies?.[OAUTH_STATE_COOKIE];
-  const referralCode = req.cookies?.[REFERRAL_CODE_COOKIE] as string | undefined;
   // Re-validated on the way out as well as on the way in: the cookie is
   // ours and httpOnly, but the redirect is the dangerous side, so the check
   // belongs where the value is used.
   const nextPath = sanitizeNextPath(req.cookies?.[OAUTH_NEXT_COOKIE]);
   clearOAuthStateCookie(res);
-  clearReferralCodeCookie(res);
   clearOAuthNextCookie(res);
 
   const { code, state, error: providerError } = req.query as { code?: string; state?: string; error?: string };
@@ -85,8 +79,8 @@ async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (c
 
     if (isNewUser) {
       await assignDefaultRole(user.id);
-      // Never blocks/fails the signup itself — same fire-and-forget shape
-      // as recordReferralSignup right below.
+      // Never blocks/fails the signup itself — a failed welcome send
+      // shouldn't fail account creation.
       const { subject, html } = welcomeEmailTemplate({ name: user.name });
       sendEmail({
         to: user.email,
@@ -96,12 +90,6 @@ async function handleOAuthCallback(req: Request, res: Response, exchangeCode: (c
         subject,
         html,
       }).catch(() => {});
-      // Never blocks/fails the signup itself — an unknown, expired, or
-      // missing code just means no attribution, same "attach if present"
-      // shape as everything else in this callback.
-      if (referralCode) {
-        await recordReferralSignup(referralCode, user.id).catch(() => {});
-      }
     }
 
     // Runs on every login, not just signup: an invite that arrives between
@@ -140,8 +128,6 @@ export class AuthController {
     }
     const state = crypto.randomUUID();
     setOAuthStateCookie(res, state);
-    const ref = req.query.ref as string | undefined;
-    if (ref) setReferralCodeCookie(res, ref);
     const next = sanitizeNextPath(req.query.next);
     if (next) setOAuthNextCookie(res, next);
     res.redirect(buildGoogleAuthUrl(state));
@@ -153,8 +139,6 @@ export class AuthController {
     }
     const state = crypto.randomUUID();
     setOAuthStateCookie(res, state);
-    const ref = req.query.ref as string | undefined;
-    if (ref) setReferralCodeCookie(res, ref);
     const next = sanitizeNextPath(req.query.next);
     if (next) setOAuthNextCookie(res, next);
     res.redirect(buildGithubAuthUrl(state));
