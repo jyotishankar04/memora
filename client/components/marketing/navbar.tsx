@@ -28,26 +28,34 @@ import { AnnouncementBanner } from "@/components/marketing/announcement-banner";
 import { MaintenanceModal } from "@/components/marketing/maintenance-modal";
 import { ctaHref } from "@/lib/showcase";
 
+// Reverted to the floating/popup pill style — the one before it was swapped
+// for a solid border-b "Navigation2"-style bar. That version's real content
+// carries over: the mega-menu still points at /features#everywhere etc.
+// (not the four now-deleted /features/* sub-pages), and "How it works" now
+// points at /features#how-it-works rather than the /how-it-works page,
+// which had already been deleted from this repo (visible in this session's
+// very first `git status`, before any of this navbar work started) — the
+// last pill version predates that fix, so it's carried forward here too.
 const features = [
   {
-    title: "Quick Capture",
-    description: "Save anything instantly.",
-    href: "/features/quick-capture",
+    title: "Capture anything",
+    description: "Web, import, and soon the extension & mobile app.",
+    href: "/features#everywhere",
   },
   {
-    title: "Bookmarks",
-    description: "Keep your important links organized.",
-    href: "/features/bookmarks",
+    title: "Every format",
+    description: "Links, videos, notes, images, documents, voice.",
+    href: "/features#formats",
   },
   {
-    title: "Notes",
-    description: "Capture ideas before they disappear.",
-    href: "/features/notes",
+    title: "Ask your library",
+    description: "Answers that point back to the memory they came from.",
+    href: "/features#ask",
   },
   {
-    title: "Collections",
-    description: "Group related things together.",
-    href: "/features/collections",
+    title: "See the shape of it",
+    description: "Related by meaning, by tag, or by collection.",
+    href: "/features#graph",
   },
 ];
 
@@ -124,8 +132,8 @@ export function Navbar() {
                 <NavigationMenuTrigger
                   className={cn(
                     "h-9 rounded-full bg-transparent px-4 text-sm font-medium transition-all duration-300 data-[popup-open]:bg-muted data-[popup-open]:text-foreground",
-                    useWhiteText 
-                      ? "text-zinc-300 hover:text-white hover:bg-white/10 focus:bg-white/10" 
+                    useWhiteText
+                      ? "text-zinc-300 hover:text-white hover:bg-white/10 focus:bg-white/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted focus:bg-muted"
                   )}
                 >
@@ -183,11 +191,11 @@ export function Navbar() {
               {/* How it works */}
               <NavigationMenuItem>
                 <Link
-                  href="/how-it-works"
+                  href="/features#how-it-works"
                   className={cn(
                     "inline-flex h-9 items-center rounded-full px-4 text-sm font-medium transition-all duration-300",
-                    useWhiteText 
-                      ? "text-zinc-300 hover:text-white hover:bg-white/10" 
+                    useWhiteText
+                      ? "text-zinc-300 hover:text-white hover:bg-white/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
@@ -200,8 +208,8 @@ export function Navbar() {
                 <NavigationMenuTrigger
                   className={cn(
                     "h-9 rounded-full bg-transparent px-4 text-sm font-medium transition-all duration-300 data-[popup-open]:bg-muted data-[popup-open]:text-foreground",
-                    useWhiteText 
-                      ? "text-zinc-300 hover:text-white hover:bg-white/10 focus:bg-white/10" 
+                    useWhiteText
+                      ? "text-zinc-300 hover:text-white hover:bg-white/10 focus:bg-white/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted focus:bg-muted"
                   )}
                 >
@@ -234,8 +242,8 @@ export function Navbar() {
                   href="/pricing"
                   className={cn(
                     "inline-flex h-9 items-center rounded-full px-4 text-sm font-medium transition-all duration-300",
-                    useWhiteText 
-                      ? "text-zinc-300 hover:text-white hover:bg-white/10" 
+                    useWhiteText
+                      ? "text-zinc-300 hover:text-white hover:bg-white/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
@@ -254,8 +262,8 @@ export function Navbar() {
             size="icon"
             className={cn(
               "h-9 w-9 rounded-full transition-all duration-300",
-              useWhiteText 
-                ? "text-zinc-300 hover:text-white hover:bg-white/10" 
+              useWhiteText
+                ? "text-zinc-300 hover:text-white hover:bg-white/10"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             )}
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -328,8 +336,8 @@ export function Navbar() {
             size="icon"
             className={cn(
               "h-9 w-9 rounded-full transition-all duration-300",
-              useWhiteText 
-                ? "text-zinc-300 hover:text-white hover:bg-white/10" 
+              useWhiteText
+                ? "text-zinc-300 hover:text-white hover:bg-white/10"
                 : "text-muted-foreground hover:text-foreground hover:bg-muted"
             )}
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
@@ -367,8 +375,8 @@ export function Navbar() {
                   size="icon"
                   className={cn(
                     "h-9 w-9 rounded-full transition-all duration-300",
-                    useWhiteText 
-                      ? "text-zinc-300 hover:text-white hover:bg-white/10" 
+                    useWhiteText
+                      ? "text-zinc-300 hover:text-white hover:bg-white/10"
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 />
@@ -397,7 +405,7 @@ export function Navbar() {
                     </h4>
                     <div className="space-y-2">
                       <Link
-                        href="/how-it-works"
+                        href="/features#how-it-works"
                         className="block px-2 py-1.5 text-sm font-medium text-foreground hover:bg-muted rounded-md transition-colors"
                       >
                         How it works

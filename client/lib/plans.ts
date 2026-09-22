@@ -15,7 +15,10 @@ export interface Plan {
   description: string | null;
   priceMinor: number;
   currency: string;
-  billingInterval: "monthly" | "yearly" | "one_time";
+  // Mirrors the server's PlanBillingInterval enum (server/src/db/enums.ts) —
+  // semi_annual was added there and never here, which is why the pricing
+  // table's "every 6 months" branch looked unreachable to the compiler.
+  billingInterval: "monthly" | "semi_annual" | "yearly" | "one_time";
   isActive: boolean;
   isDefault: boolean;
   sortOrder: number;

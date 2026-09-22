@@ -142,26 +142,29 @@ export default function PricingPage() {
                       <td className="py-4 px-4 font-medium text-foreground text-sm">{feature.label}</td>
                       {plans.map((plan) => {
                         let hasFeature = false;
-                        let value = null;
+                        // Annotated rather than left to evolve from `null`: the
+                        // limit keys are optional, so each read is number |
+                        // null | undefined and formatLimit takes number | null.
+                        let value: number | null = null;
 
                         // Check plan limits
                         if (feature.key === "memory_count" && "memory_count" in plan.limits) {
-                          value = plan.limits.memory_count;
+                          value = plan.limits.memory_count ?? null;
                           hasFeature = value !== null;
                         } else if (feature.key === "ai_monthly_queries" && "ai_monthly_queries" in plan.limits) {
-                          value = plan.limits.ai_monthly_queries;
+                          value = plan.limits.ai_monthly_queries ?? null;
                           hasFeature = value !== null;
                         } else if (feature.key === "ai_monthly_vision_queries" && "ai_monthly_vision_queries" in plan.limits) {
-                          value = plan.limits.ai_monthly_vision_queries;
+                          value = plan.limits.ai_monthly_vision_queries ?? null;
                           hasFeature = value !== null;
                         } else if (feature.key === "storage_mb" && "storage_mb" in plan.limits) {
-                          value = plan.limits.storage_mb;
+                          value = plan.limits.storage_mb ?? null;
                           hasFeature = value !== null;
                         } else if (feature.key === "collection_count" && "collection_count" in plan.limits) {
-                          value = plan.limits.collection_count;
+                          value = plan.limits.collection_count ?? null;
                           hasFeature = value !== null;
                         } else if (feature.key === "public_share_count" && "public_share_count" in plan.limits) {
-                          value = plan.limits.public_share_count;
+                          value = plan.limits.public_share_count ?? null;
                           hasFeature = value !== null;
                         } else if (feature.key in (plan.features || {})) {
                           hasFeature = (plan.features as Record<string, boolean>)[feature.key] === true;
