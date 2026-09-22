@@ -32,7 +32,7 @@ import {
   MessageScrollerViewport,
 } from "@/components/ui/message-scroller";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
-import { ctaHref } from "@/lib/showcase";
+import { useAuthCta } from "@/hooks/use-auth-cta";
 
 // A scripted preview, not a live RAG call — visitors can type, but every
 // reply is one of a few fixed scenarios matched by keyword, same idea as
@@ -102,6 +102,7 @@ function matchScenario(text: string): Scenario | null {
 }
 
 export function AskSection() {
+  const cta = useAuthCta();
   const composerId = useId();
   const [draft, setDraft] = useState("");
   const [turns, setTurns] = useState<Turn[]>([]);
@@ -305,10 +306,10 @@ export function AskSection() {
                               </Bubble>
                               {!turn.grounded && (
                                 <Link
-                                  href={ctaHref("/auth/signup?plan=free")}
+                                  href={cta.href}
                                   className="mt-1 inline-block text-xs font-medium text-primary hover:underline"
                                 >
-                                  Start free →
+                                  {cta.label} →
                                 </Link>
                               )}
                             </MessageContent>

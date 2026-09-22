@@ -6,8 +6,9 @@ import bgDark from "@/public/memora-bg-dark.webp";
 import bgLight from "@/public/memora-bg-light.webp";
 import { motion, type Variants } from "motion/react";
 import { ArrowRight, Layers, MessageSquareQuote, SearchCheck } from "lucide-react";
-import { ctaHref, SHOWCASE_MODE } from "@/lib/showcase";
+import { SHOWCASE_MODE } from "@/lib/showcase";
 import { Navbar } from "@/components/marketing/navbar";
+import { useAuthCta } from "@/hooks/use-auth-cta";
 
 const CAPABILITIES = [
   { icon: Layers, body: "Links, videos, notes, images, documents and voice all go in the same box." },
@@ -68,6 +69,8 @@ const footerItemVariants: Variants = {
  * where foreground/70 holds ~7:1.
  */
 export default function HeroStacked() {
+  const cta = useAuthCta();
+
   return (
     <div className="relative min-h-screen w-full overflow-hidden bg-background font-sans antialiased selection:bg-primary/25 selection:text-foreground">
       <div className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
@@ -166,10 +169,10 @@ export default function HeroStacked() {
 
               <motion.div variants={bodyItemVariants} className="flex flex-wrap items-center gap-5">
                 <Link
-                  href={ctaHref("/auth/signup?plan=free")}
+                  href={cta.href}
                   className="group flex min-h-[40px] items-center gap-2 rounded-full bg-primary px-7 py-4 text-[16px] font-medium text-primary-foreground shadow-md transition-all will-change-transform hover:bg-primary/90 active:scale-[0.96]"
                 >
-                  Start free
+                  {cta.label}
                   <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
                 </Link>
 
@@ -211,10 +214,10 @@ export default function HeroStacked() {
               hero yet, so the corner points somewhere that exists. */}
           <motion.div variants={footerItemVariants}>
             <Link
-              href="/pricing"
+              href="/contribute"
               className="group flex items-center gap-2 pb-2 text-sm font-medium whitespace-nowrap text-foreground/80 transition-colors hover:text-foreground"
             >
-              <span>See plans</span>
+              <span>Free & open source</span>
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
             </Link>
           </motion.div>

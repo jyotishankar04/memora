@@ -40,13 +40,14 @@ Visual description: <structured description>`;
  */
 export async function analyzeImage(imageUrl: string, usage: UsageContext): Promise<string> {
   try {
+    if (!usage.userId) return "";
     const message = new HumanMessage({
       content: [
         { type: "text", text: PROMPT },
         { type: "image_url", image_url: { url: imageUrl } },
       ],
     });
-    return (await invokeWithFallback(getVisionModels(), [message], usage)).trim();
+    return (await invokeWithFallback(await getVisionModels(usage.userId), [message], usage)).trim();
   } catch (err) {
     logger.warn({ err, imageUrl }, "analyzeImage: failed to analyze image");
     return "";

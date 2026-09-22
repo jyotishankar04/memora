@@ -212,6 +212,32 @@ export enum ReportType {
   FEATURE = "feature",
 }
 
+// Named integrations get a first-class client (native tool-calling/message
+// format where it matters — Anthropic isn't OpenAI-wire-compatible, unlike
+// the other three). CUSTOM is the escape hatch for literally anything else
+// with an OpenAI-compatible endpoint (OpenRouter, Together, Fireworks, a
+// local Ollama/LM Studio instance, ...) — baseUrl is required only for it.
+export enum AiCredentialProvider {
+  OPENAI = "openai",
+  ANTHROPIC = "anthropic",
+  GROQ = "groq",
+  GOOGLE = "google",
+  CUSTOM = "custom",
+}
+
+// Mirrors the four model "slots" ai.providers.ts has always had internally
+// (fast/reasoning/vision) plus embeddings, now each independently pointed at
+// whichever saved credential+model the user assigns it to. EMBEDDINGS is
+// pinned to 1536-dimensional output (validated at assignment time, see
+// ai-settings.service.ts) because memories.document_embedding and
+// memory_chunks.embedding are fixed-width vector(1536) columns.
+export enum AiRole {
+  FAST = "fast",
+  REASONING = "reasoning",
+  VISION = "vision",
+  EMBEDDINGS = "embeddings",
+}
+
 // No IN_PROGRESS — a report is either not yet looked at, actively being
 // reviewed, or settled one of two ways. Keeping it this small is deliberate:
 // there's no admin UI for this yet (see report.service.ts), so a status

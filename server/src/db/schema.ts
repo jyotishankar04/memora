@@ -18,6 +18,8 @@ import { defineRelations, sql } from "drizzle-orm";
 import { vector, tsvector, EMBEDDING_DIMENSIONS } from "./pgvector-type";
 import {
   AccentColor,
+  AiCredentialProvider,
+  AiRole,
   AnnouncementDisplayMode,
   AnnouncementType,
   CalendarProvider,
@@ -113,6 +115,16 @@ export const reportStatusEnum = pgEnum("report_status", [
   ReportStatus.RESOLVED,
   ReportStatus.DECLINED,
 ]);
+
+export const aiCredentialProviderEnum = pgEnum("ai_credential_provider", [
+  AiCredentialProvider.OPENAI,
+  AiCredentialProvider.ANTHROPIC,
+  AiCredentialProvider.GROQ,
+  AiCredentialProvider.GOOGLE,
+  AiCredentialProvider.CUSTOM,
+]);
+
+export const aiRoleEnum = pgEnum("ai_role", [AiRole.FAST, AiRole.REASONING, AiRole.VISION, AiRole.EMBEDDINGS]);
 
 export const collectionSourceEnum = pgEnum("collection_source", [
   CollectionSource.USER,
@@ -1174,10 +1186,10 @@ export const plans = pgTable(
     isDefault: boolean("is_default").notNull().default(false),
     sortOrder: integer("sort_order").notNull().default(0),
     // Admin-editable, boolean/on-off perks distinct from the numeric
-    // PlanLimitType quota system above (memory_count etc.) — for capabilities
-    // that are either on or off rather than a countable limit, e.g.
-    // publicCollections. Checked via plans/plans.service.ts's hasFeature(),
-    // the boolean-returning counterpart to assertWithinLimit().
+    // PlanLimitType quota system above (memory_count etc.). Record-keeping
+    // only now — nothing in the app enforces these anymore (see the note
+    // above admin/plans/plans.service.ts's DEFAULT_PLANS: the single Free
+    // plan has every limit and feature unconditionally unlimited/on).
     features: jsonb("features").$type<Record<string, boolean>>().notNull().default({}),
     createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
     updatedAt: timestamp("updated_at", { withTimezone: true })
@@ -1388,7 +1400,74 @@ export const reports = pgTable(
 );
 
 // -----------------------------------------------------------------------------
-// 39. Relations
+// 39. AI Credentials Table (bring-your-own-key — every user supplies and pays
+//     for their own AI provider account; the platform never holds/spends an
+//     AI API key of its own. `label` is user-facing ("My OpenAI key"); the
+//     key itself is AES-256-GCM-encrypted at rest via shared/crypto/token-
+//     cipher.ts, same as calendar_connections' OAuth tokens. `baseUrl` is
+//     only meaningful (and required, enforced in ai-settings.service.ts) for
+//     provider "custom" — any other provider's endpoint is hardcoded in
+//     ai.providers.ts.
+// -----------------------------------------------------------------------------
+export const aiCredentials = pgTable(
+  "ai_credentials",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    provider: aiCredentialProviderEnum("provider").notNull(),
+    label: varchar("label", { length: 100 }).notNull(),
+    encryptedApiKey: text("encrypted_api_key").notNull(),
+    baseUrl: text("base_url"),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [index("idx_ai_credentials_user_id").on(table.userId)]
+);
+
+// -----------------------------------------------------------------------------
+// 40. User AI Role Assignments Table (one row per user per role — which
+//     saved credential + which model string handles that role's calls.
+//     `verifiedAt` is set only after a real test call against the provider
+//     succeeds — see ai-settings.service.ts's testCredential/assignRole —
+//     so the settings UI can distinguish "saved" from "confirmed working."
+//     A role with no row here is simply unconfigured: every ai.providers.ts
+//     resolver treats that as "skip this AI step," never as an error to
+//     surface mid-pipeline (see ingestion nodes' `if (!model) return {...}`
+//     guards).
+// -----------------------------------------------------------------------------
+export const userAiRoleAssignments = pgTable(
+  "user_ai_role_assignments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: aiRoleEnum("role").notNull(),
+    credentialId: uuid("credential_id")
+      .notNull()
+      .references(() => aiCredentials.id, { onDelete: "cascade" }),
+    model: varchar("model", { length: 150 }).notNull(),
+    verifiedAt: timestamp("verified_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+    updatedAt: timestamp("updated_at", { withTimezone: true })
+      .notNull()
+      .defaultNow()
+      .$onUpdate(() => new Date()),
+  },
+  (table) => [
+    uniqueIndex("uq_user_ai_role_assignments_user_role").on(table.userId, table.role),
+    index("idx_user_ai_role_assignments_user_id").on(table.userId),
+    index("idx_user_ai_role_assignments_credential_id").on(table.credentialId),
+  ]
+);
+
+// -----------------------------------------------------------------------------
+// 41. Relations
 // -----------------------------------------------------------------------------
 export const  relations = defineRelations({
   users: {
@@ -1400,10 +1479,8 @@ export const  relations = defineRelations({
     aiUsageLogs: { relation: "hasMany", foreignKey: "userId" },
     collections: { relation: "hasMany", foreignKey: "userId" },
     planAssignments: { relation: "hasMany", foreignKey: "userId" },
-    transactions: { relation: "hasMany", foreignKey: "userId" },
-    couponRedemptions: { relation: "hasMany", foreignKey: "userId" },
-    referralCodes: { relation: "hasMany", foreignKey: "ownerUserId" },
-    creditLedgerEntries: { relation: "hasMany", foreignKey: "userId" },
+    aiCredentials: { relation: "hasMany", foreignKey: "userId" },
+    aiRoleAssignments: { relation: "hasMany", foreignKey: "userId" },
     shares: { relation: "hasMany", foreignKey: "ownerId" },
     shareGrants: { relation: "hasMany", foreignKey: "userId" },
     notifications: { relation: "hasMany", foreignKey: "userId" },
@@ -1520,5 +1597,13 @@ export const  relations = defineRelations({
   rolePermissions: {
     role: { relation: "belongsTo", foreignKey: "roleId" },
     permission: { relation: "belongsTo", foreignKey: "permissionId" },
+  },
+  aiCredentials: {
+    user: { relation: "belongsTo", foreignKey: "userId" },
+    roleAssignments: { relation: "hasMany", foreignKey: "credentialId" },
+  },
+  aiRoleAssignments: {
+    user: { relation: "belongsTo", foreignKey: "userId" },
+    credential: { relation: "belongsTo", foreignKey: "credentialId" },
   },
 });

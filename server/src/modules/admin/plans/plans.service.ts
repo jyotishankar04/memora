@@ -20,15 +20,13 @@ interface DefaultPlanSeed {
   features: Record<string, boolean>;
 }
 
-// This product is free and open source — no paid tiers. One plan, every
-// limit unlimited (null), every feature flag that used to gate a paid tier
-// (vault, advancedSearch, directShares, etc. — see the removed Plus/Pro
-// seeds this replaced) granted by default. Kept as a `plans` row rather
-// than deleting the concept entirely: assertWithinLimit/hasFeature
-// (../../plans/plans.service.ts) are called from memory/collection/upload/
-// share/import/ai — a null limit already means "unlimited" to every one of
-// those call sites, so this is the change that makes the product free
-// without touching any of that call-site logic.
+// This product is free and open source — no paid tiers, and no enforcement
+// left to configure: the memory/collection/upload/share/import/ai modules
+// that used to call assertWithinLimit/hasFeature/canCreateSystemCollection
+// (plans/plans.service.ts) no longer call them at all. This `plans` row (and
+// its limits/features below) is pure record-keeping now — GET /plans/me
+// still shows it on the billing settings page, nothing reads it to gate
+// anything.
 const DEFAULT_PLANS: DefaultPlanSeed[] = [
   {
     key: "free",

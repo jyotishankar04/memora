@@ -4,7 +4,7 @@ import { MessageCircleQuestion, Search, Network, LockKeyhole, Layers, CalendarCl
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { HugeiconsIcon } from "@hugeicons/react";
 import { Type as KeywordIcon } from "lucide-react";
-import { SparklesIcon as MeaningIcon, ChromeIcon, SmartPhone01Icon as SmartPhone, Upload01Icon as Upload } from "@hugeicons/core-free-icons";
+import { SparklesIcon as MeaningIcon, ChromeIcon, Upload01Icon as Upload } from "@hugeicons/core-free-icons";
 import { Badge } from "@/components/ui/badge";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 import { AskPreviewCard } from "@/components/marketing/landing/ask-preview-card";
@@ -134,7 +134,6 @@ function MiniCaptureSurfaces() {
     { label: "Web", soon: false, render: () => <GlobeLucide className="h-3.5 w-3.5 text-primary" strokeWidth={2.25} /> },
     { label: "Import", soon: false, render: () => <HugeiconsIcon icon={Upload} strokeWidth={2.25} className="h-3.5 w-3.5 text-primary" /> },
     { label: "Extension", soon: true, render: () => <HugeiconsIcon icon={ChromeIcon} strokeWidth={2.25} className="h-3.5 w-3.5 text-primary" /> },
-    { label: "Mobile", soon: true, render: () => <HugeiconsIcon icon={SmartPhone} strokeWidth={2.25} className="h-3.5 w-3.5 text-primary" /> },
   ];
   return (
     <div className="grid h-full w-full grid-cols-2 gap-1.5 p-3">
@@ -223,7 +222,7 @@ const FEATURES: Feature[] = [
   {
     icon: GlobeLucide,
     title: "Wherever you already are",
-    description: "The dashboard and bulk import work today — the extension and mobile app are on the way.",
+    description: "The dashboard and bulk import work today — the browser extension is on the way.",
     visual: <MiniCaptureSurfaces />,
   },
   {

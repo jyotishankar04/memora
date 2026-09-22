@@ -13,7 +13,7 @@ import { InputGroup, InputGroupAddon, InputGroupInput } from "@/components/ui/in
 import { Badge } from "@/components/ui/badge";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 import type { MemoryType } from "@/types/memory";
-import { ctaHref } from "@/lib/showcase";
+import { useAuthCta } from "@/hooks/use-auth-cta";
 import { cn } from "@/lib/utils";
 
 // No live search here — same reasoning as the Ask section: an unauthenticated
@@ -81,6 +81,7 @@ const rowVariants: Variants = {
 };
 
 export function SearchSection() {
+  const cta = useAuthCta();
   const [query, setQuery] = useState("");
   const [active, setActive] = useState<Scenario | null>(null);
   const [missed, setMissed] = useState(false);
@@ -184,10 +185,10 @@ export function SearchSection() {
                 everything you&rsquo;ve saved.
               </p>
               <Link
-                href={ctaHref("/auth/signup?plan=free")}
+                href={cta.href}
                 className="text-xs font-medium text-primary hover:underline"
               >
-                Start free →
+                {cta.label} →
               </Link>
             </motion.div>
           )}

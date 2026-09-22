@@ -8,10 +8,11 @@ import { Logo } from "@/components/logo";
 import { motion, type Variants } from "motion/react";
 import { ArrowRight, Layers, MessageSquareQuote, SearchCheck } from "lucide-react";
 import { ctaHref, SHOWCASE_MODE } from "@/lib/showcase";
+import { useAuthCta } from "@/hooks/use-auth-cta";
 
 const NAV_LINKS = [
   { label: "Features", href: "/features" },
-  { label: "Pricing", href: "/pricing" },
+  { label: "Contribute", href: "/contribute" },
   { label: "Changelog", href: "/changelog" },
   { label: "Blog", href: "/blog" },
 ] as const;
@@ -67,6 +68,8 @@ const capabilitiesVariants: Variants = {
  * the dark version are the same design, not two of them.
  */
 export default function HeroSplit() {
+  const cta = useAuthCta();
+
   return (
     <div className="relative flex min-h-screen w-full flex-col overflow-hidden bg-background font-sans text-foreground antialiased">
       <motion.header
@@ -92,17 +95,19 @@ export default function HeroSplit() {
         </nav>
 
         <div className="flex items-center gap-2">
+          {!cta.isAuthenticated && (
+            <Link
+              href={ctaHref("/auth/login")}
+              className="hidden min-h-[40px] items-center rounded-full px-4 text-[14px] font-medium text-muted-foreground transition-colors hover:text-foreground sm:flex"
+            >
+              Log in
+            </Link>
+          )}
           <Link
-            href={ctaHref("/auth/login")}
-            className="hidden min-h-[40px] items-center rounded-full px-4 text-[14px] font-medium text-muted-foreground transition-colors hover:text-foreground sm:flex"
-          >
-            Log in
-          </Link>
-          <Link
-            href={ctaHref("/auth/signup?plan=free")}
+            href={cta.href}
             className="group flex min-h-[40px] items-center gap-2 rounded-full bg-foreground px-5 text-[14px] font-medium text-background transition-all will-change-transform hover:opacity-90 active:scale-[0.96]"
           >
-            Start free
+            {cta.label}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </div>
@@ -147,10 +152,10 @@ export default function HeroSplit() {
 
           <motion.div variants={copyItemVariants} className="flex flex-wrap items-center gap-3">
             <Link
-              href={ctaHref("/auth/signup?plan=free")}
+              href={cta.href}
               className="group flex min-h-[48px] items-center gap-2 rounded-full bg-foreground px-6 text-[15px] font-medium text-background transition-all will-change-transform hover:opacity-90 active:scale-[0.97]"
             >
-              Start free
+              {cta.label}
               <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
             </Link>
             <Link

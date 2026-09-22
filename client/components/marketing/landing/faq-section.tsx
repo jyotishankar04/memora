@@ -15,7 +15,7 @@ const STAGGER_DELAY = 0.08;
 // use?", "What frameworks are supported?"). Answers here are checked
 // against the same facts established building the rest of this page: the
 // vault is a PIN gate, not encryption; the extension is Chrome-only and
-// not yet published; the mobile app isn't released yet.
+// not yet published; there's no mobile app.
 interface Faq {
   question: string;
   answer: string;
@@ -39,7 +39,7 @@ const FAQS: Faq[] = [
   },
   {
     question: "Is there a mobile app?",
-    answer: "One's built for iOS and Android, but it hasn't been released yet. The web dashboard works on mobile browsers in the meantime.",
+    answer: "No native app — the web dashboard is fully responsive and works well in a mobile browser instead.",
   },
   {
     question: "What can I import from another tool?",

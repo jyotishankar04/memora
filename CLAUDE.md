@@ -4,13 +4,14 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Repository structure
 
-This is **Memora**, a "second brain" capture/search/RAG product, split into four independent apps with no root workspace linking them (no root `package.json`). Each app has its own `pnpm-workspace.yaml` and lockfile — `cd` into an app directory before installing or running anything:
+This is **Memora**, a "second brain" capture/search/RAG product, split into three independent apps with no root workspace linking them (no root `package.json`). Each app has its own `pnpm-workspace.yaml` and lockfile — `cd` into an app directory before installing or running anything:
 
 - `server/` — Express + TypeScript API (the backend for all clients). This is the primary area of active development.
 - `client/` — Next.js 16 web dashboard.
 - `extension/` — Chrome MV3 extension (Vite + React) for quick-capture from the browser.
-- `mobile/` — Expo / React Native app (file-based routing via `expo-router`).
 - `docs/` — Product/architecture specs (see below) — these describe the *target* design, not always the current implementation.
+
+There is no mobile app — an earlier Expo/React Native `mobile/` app was removed; the web dashboard is the only client on phones for now.
 
 ## `docs/` — read before implementing backend features
 
@@ -66,6 +67,3 @@ Next.js 16 App Router. Route groups: `app/(marketing)/` (public/marketing pages)
 
 ## Extension (`extension/`)
 Vite + React, Chrome Manifest V3. Three entry points: `src/popup/` (capture UI reading the active tab), `src/background/service-worker.ts` (context menus, keyboard shortcuts, notifications), `src/content/content-script.ts` (reads the web client's auth token from `localStorage` on the app's own domain and syncs it into `chrome.storage.local` for the extension to use). `pnpm dev` (vite) / `pnpm build` (`tsc && vite build`).
-
-## Mobile (`mobile/`)
-Expo + `expo-router` (file-based routing, tabs layout under `app/(tabs)/`). Global state lives in `context/MemoryContext.tsx`. `pnpm start` / `pnpm android` / `pnpm ios` / `pnpm web`.

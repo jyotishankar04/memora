@@ -41,6 +41,7 @@ import { getMemory } from "@/lib/memories";
 import { usePlanLimit } from "@/hooks/use-plan-limit";
 import { PlanLimitNotice, ProBadge } from "@/components/plan-limit-notice";
 import { MemoryPreviewCard } from "@/components/memory-preview-card";
+import { AiConfiguredGate } from "@/components/ai-configured-gate";
 import { cn } from "@/lib/utils";
 import type { MemoryType } from "@/types/memory";
 import { Attachment, AttachmentContent, AttachmentDescription, AttachmentGroup, AttachmentMedia, AttachmentTitle, AttachmentTrigger } from "@/components/ui/attachment";
@@ -458,6 +459,7 @@ export default function AskPage() {
   });
 
   return (
+    <AiConfiguredGate className="h-full">
     <div className="h-full flex">
       {/* Secondary sidebar — thread history, scoped to this page (not the
           app's own nav sidebar). Collapsed away once the main sidebar is
@@ -674,5 +676,6 @@ export default function AskPage() {
         </CommandList>
       </CommandDialog>
     </div>
+    </AiConfiguredGate>
   );
 }

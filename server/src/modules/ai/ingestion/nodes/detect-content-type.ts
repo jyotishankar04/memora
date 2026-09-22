@@ -49,7 +49,13 @@ export async function detectContentType(state: IngestionStateType): Promise<Inge
     return { contentType: null, extractedFields: {}, detectedUrl: detectedUrl?.href ?? null };
   }
 
-  const chain = prompt.pipe(getChatModel("fast")).pipe(new JsonOutputParser<ContentTypeExtraction>());
+  const model = await getChatModel(state.userId, "fast");
+  if (!model) {
+    logNode(state.memoryId, "detectContentType", { skipped: "AI not configured" });
+    return { contentType: null, extractedFields: {}, detectedUrl: detectedUrl?.href ?? null };
+  }
+
+  const chain = prompt.pipe(model).pipe(new JsonOutputParser<ContentTypeExtraction>());
   const result = await chain.invoke(
     { content: state.rawContent.slice(0, 4000) },
     { callbacks: [createUsageCallback({ userId: state.userId, requestType: "ingestion:detect_content_type", memoryId: state.memoryId })] },

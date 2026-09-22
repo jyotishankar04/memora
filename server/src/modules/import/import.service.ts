@@ -1,10 +1,9 @@
 import { and, count, eq } from "drizzle-orm";
 import { db } from "../../db";
 import { importBatches, importItems, memories } from "../../db/schema";
-import { ImportItemStatus, ImportSourceType, MemoryStatus, MemoryType, PlanLimitType } from "../../db/enums";
+import { ImportItemStatus, ImportSourceType, MemoryStatus, MemoryType } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
-import { assertWithinLimit, resolveEffectivePlan } from "../../modules/plans/plans.service";
-import { DEFAULT_QUEUE_PRIORITY, PLAN_QUEUE_PRIORITY, ingestionQueue } from "../ai/ingestion/queue";
+import { ingestionQueue } from "../ai/ingestion/queue";
 import { normalizeUrl } from "../memory/normalize-url";
 import { parseBookmarksHtml } from "./bookmark-parser";
 import { parseUrlList } from "./url-list-parser";
@@ -40,14 +39,6 @@ export async function runImport(userId: string, input: ImportInput) {
       "IMPORT_TOO_LARGE",
     );
   }
-
-  // Fail fast for the whole batch, once — not per-row.
-  await assertWithinLimit(userId, PlanLimitType.MEMORY_COUNT, inBatchUnique.length);
-
-  // Resolve the plan/priority ONCE, reuse for every enqueue — enqueueIngestion
-  // resolves it per-call, which would be N redundant DB reads for a bulk import.
-  const { plan } = await resolveEffectivePlan(userId);
-  const priority = PLAN_QUEUE_PRIORITY[plan.key] ?? DEFAULT_QUEUE_PRIORITY;
 
   // Upfront bulk dedupe against the DB — one query for all of the user's
   // existing normalizedUrls, not a per-row lookup.
@@ -101,9 +92,9 @@ export async function runImport(userId: string, input: ImportInput) {
     return { batchId: batch.id, created: memoryRows };
   });
 
-  // Fired after commit — mirrors sendBulkEmail's shape, using the priority
-  // resolved once above rather than calling enqueueIngestion per row.
-  await Promise.all(created.map((m) => ingestionQueue.add("ingest", { memoryId: m.id }, { priority })));
+  // Fired after commit — mirrors sendBulkEmail's shape, batched directly
+  // against the queue rather than calling enqueueIngestion per row.
+  await Promise.all(created.map((m) => ingestionQueue.add("ingest", { memoryId: m.id })));
 
   return { batchId, totalCount: inBatchUnique.length, createdCount: created.length, skippedCount: duplicates.length };
 }

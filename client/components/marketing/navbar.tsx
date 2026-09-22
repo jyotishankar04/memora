@@ -39,7 +39,7 @@ import { ctaHref } from "@/lib/showcase";
 const features = [
   {
     title: "Capture anything",
-    description: "Web, import, and soon the extension & mobile app.",
+    description: "Web, import, and soon the browser extension.",
     href: "/features#everywhere",
   },
   {
@@ -236,10 +236,10 @@ export function Navbar() {
                 </NavigationMenuContent>
               </NavigationMenuItem>
 
-              {/* Pricing */}
+              {/* Contribute */}
               <NavigationMenuItem>
                 <Link
-                  href="/pricing"
+                  href="/contribute"
                   className={cn(
                     "inline-flex h-9 items-center rounded-full px-4 text-sm font-medium transition-all duration-300",
                     useWhiteText
@@ -247,7 +247,7 @@ export function Navbar() {
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   )}
                 >
-                  Pricing
+                  Contribute
                 </Link>
               </NavigationMenuItem>
             </NavigationMenuList>
@@ -411,10 +411,10 @@ export function Navbar() {
                         How it works
                       </Link>
                       <Link
-                        href="/pricing"
+                        href="/contribute"
                         className="block px-2 py-1.5 text-sm font-medium text-foreground hover:bg-muted rounded-md transition-colors"
                       >
-                        Pricing
+                        Contribute
                       </Link>
                     </div>
                   </div>

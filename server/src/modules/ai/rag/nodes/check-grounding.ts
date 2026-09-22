@@ -9,12 +9,6 @@ import { INTERNAL_EVENT_TAG } from "../internal-tag";
 
 const groundingSchema = z.object({ grounded: z.boolean() });
 
-// Zod-validated structured output (model.withStructuredOutput), not a bare
-// JsonOutputParser<T> cast — matches this graph's convention (see
-// tools/search-memories.ts's result schema) of validating every LLM-produced
-// structured value at runtime, not just trusting a TS type annotation.
-const groundingModel = getChatModel("fast").withStructuredOutput(groundingSchema);
-
 /** Every ToolMessage since the last human turn — what the final answer had available. */
 function collectToolResultsText(messages: RAGStateType["messages"]): string {
   const results: string[] = [];
@@ -39,6 +33,12 @@ export const checkGroundingNode: GraphNode<typeof RAGState> = async (state, conf
 
   const userId = (config.context as { userId?: string } | undefined)?.userId ?? null;
   const threadId = (config.configurable as { thread_id?: string } | undefined)?.thread_id ?? null;
+
+  // No AI configured — nothing meaningful to check the answer against (and
+  // agentNode's reply in that case is already just the "connect your AI
+  // key" message), so treat as grounded rather than looping pointlessly.
+  const groundingModel = userId ? (await getChatModel(userId, "fast"))?.withStructuredOutput(groundingSchema) : null;
+  if (!groundingModel) return { grounded: true };
 
   const toolResults = collectToolResultsText(state.messages);
   const prompt = GROUNDING_CHECK_PROMPT.replace("{toolResults}", toolResults).replace("{answer}", answer);

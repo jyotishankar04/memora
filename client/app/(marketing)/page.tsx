@@ -1,6 +1,6 @@
 import HeroStacked from "@/components/marketing/landing/hero-stacked";
 import { FeaturesGridCards } from "@/components/marketing/landing/features-grid-cards";
-import PricingTableSection from "@/components/marketing/landing/pricing-table-section";
+import { ContributeSection } from "@/components/marketing/landing/contribute-section";
 import { FaqSection } from "@/components/marketing/landing/faq-section";
 import { FinalCtaSection } from "@/components/marketing/landing/final-cta-section";
 import MainFooter from "@/components/marketing/landing/main-footer";
@@ -36,18 +36,17 @@ import MainFooter from "@/components/marketing/landing/main-footer";
  * grid and pricing — removed per request, not deleted (changelog-
  * section.tsx still exists and still renders on /changelog itself).
  *
- * Pricing is PricingTableSection, not pricing-section.tsx's PricingSection
- * — the latter has a hardcoded static `plans` array (baked-in prices), the
- * former is the one /pricing itself actually uses, backed by a real
- * listPublicPlans() query. Using the live one here means this page's
- * prices can't drift from the real ones.
+ * There's no pricing section anymore — this product isn't sold. ContributeSection
+ * (also the whole content of /contribute) replaced it: the Buy Me a Coffee
+ * support ask, what "free" actually means, and how to contribute code —
+ * not a plans grid.
  */
 export default function MarketingPage() {
   return (
     <>
       <HeroStacked />
       <FeaturesGridCards />
-      <PricingTableSection />
+      <ContributeSection />
       <FaqSection />
       <FinalCtaSection />
       <MainFooter />

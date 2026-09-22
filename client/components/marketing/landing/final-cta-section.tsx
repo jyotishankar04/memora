@@ -4,7 +4,8 @@ import Link from "next/link";
 import { ArrowRight, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ctaHref, SHOWCASE_MODE } from "@/lib/showcase";
+import { SHOWCASE_MODE } from "@/lib/showcase";
+import { useAuthCta } from "@/hooks/use-auth-cta";
 
 // Adapted from a pasted CTA reference. Real fixes needed before any of the
 // content mattered:
@@ -27,6 +28,8 @@ import { ctaHref, SHOWCASE_MODE } from "@/lib/showcase";
 const REASSURANCES = ["No card required", "Free and open source", "Every feature, no limits"];
 
 export function FinalCtaSection() {
+  const cta = useAuthCta();
+
   return (
     <section className="relative flex w-full items-center justify-center overflow-hidden px-6 py-20 sm:py-28 md:px-12">
       {/* Dot-grid texture, faded to nothing toward the top — decorative
@@ -58,8 +61,8 @@ export function FinalCtaSection() {
         </p>
 
         <div className="flex flex-col items-center justify-center gap-3 sm:flex-row sm:gap-4">
-          <Button size="lg" render={<Link href={ctaHref("/auth/signup?plan=free")} />} nativeButton={false} className="group w-full gap-2 sm:w-auto">
-            Start free
+          <Button size="lg" render={<Link href={cta.href} />} nativeButton={false} className="group w-full gap-2 sm:w-auto">
+            {cta.label}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
           </Button>
           <Button size="lg" variant="outline" render={<Link href="/features" />} nativeButton={false} className="w-full sm:w-auto">

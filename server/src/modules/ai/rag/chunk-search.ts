@@ -65,9 +65,12 @@ async function chunkLexicalSearch(userId: string, queryText: string, limit: numb
 async function chunkSemanticSearch(userId: string, queryText: string, limit: number): Promise<ChunkLegResult[]> {
   if (queryText.length < MIN_SEMANTIC_QUERY_LENGTH) return [];
 
+  const resolved = await getEmbeddings(userId);
+  if (!resolved) return [];
+
   try {
-    const embedding = await getEmbeddings().embedQuery(queryText);
-    void logAiUsage({ userId, requestType: "embedding:query", provider: "openai", model: "text-embedding-3-small" });
+    const embedding = await resolved.client.embedQuery(queryText);
+    void logAiUsage({ userId, requestType: "embedding:query", provider: resolved.provider, model: resolved.model });
     const results = await getVectorStore().searchChunksByEmbedding(userId, embedding, limit);
     return results.map((r) => ({ chunkId: r.chunkId, memoryId: r.memoryId, content: r.content, score: r.score }));
   } catch (err) {

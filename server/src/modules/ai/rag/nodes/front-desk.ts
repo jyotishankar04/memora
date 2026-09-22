@@ -9,12 +9,6 @@ import { INTERNAL_EVENT_TAG } from "../internal-tag";
 
 const classifySchema = z.object({ inScope: z.boolean() });
 
-// Fast tier for both calls — classification is a cheap yes/no, and the
-// decline reply is a short canned-shaped message, neither needs the
-// reasoning tier the main agent uses.
-const classifyModel = getChatModel("fast").withStructuredOutput(classifySchema);
-const declineModel = getChatModel("fast");
-
 /**
  * Runs before the main agent on every turn — a cheap gate so an obviously
  * off-topic request ("write me a poem", "what's 12*7") gets a direct,
@@ -36,6 +30,13 @@ export const frontDeskNode: GraphNode<typeof RAGState> = async (state, config) =
   const userId = (config.context as { userId?: string } | undefined)?.userId ?? null;
   const threadId = (config.configurable as { thread_id?: string } | undefined)?.thread_id ?? null;
 
+  // No AI configured at all — skip this cheap pre-filter and let agentNode
+  // be the single place that surfaces the "connect your AI key" message,
+  // rather than duplicating that decision here too.
+  if (!userId) return { inScope: true };
+  const classifyModel = (await getChatModel(userId, "fast"))?.withStructuredOutput(classifySchema);
+  if (!classifyModel) return { inScope: true };
+
   const prompt = FRONT_DESK_CLASSIFY_PROMPT.replace("{query}", query);
   // Tagged internal — this classifier call must never leak into the client
   // stream (same reasoning as checkGrounding's tagged call).
@@ -45,6 +46,8 @@ export const frontDeskNode: GraphNode<typeof RAGState> = async (state, config) =
   });
   if (inScope) return { inScope: true };
 
+  const declineModel = await getChatModel(userId, "fast");
+  if (!declineModel) return { inScope: true };
   const decline = await declineModel.invoke([new SystemMessage(FRONT_DESK_DECLINE_PROMPT), ...state.messages], {
     callbacks: [createUsageCallback({ userId, requestType: "rag:front_desk_decline", threadId })],
   });

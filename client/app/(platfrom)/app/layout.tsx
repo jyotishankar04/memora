@@ -66,6 +66,7 @@ import { Logo } from "@/components/logo";
 import { NextStepProvider, NextStep } from "nextstepjs";
 import { useNextAdapter } from "nextstepjs/adapters/next";
 import { productTourSteps, TourCard, TourAutoStart } from "@/components/product-tour";
+import { AskWidget } from "@/components/ask-widget/ask-widget";
 
 /** Exact-matches Home ("/app"); prefix-matches everything else, so a nav
  * item for a list route (Tags, Collections, Memories) stays highlighted on
@@ -1359,6 +1360,8 @@ function AppShell({ children }: { children: React.ReactNode }) {
           onClose={() => setEventPopupNotification(null)}
         />
       )}
+
+      <AskWidget />
 
       {/* Global CSS animations styles */}
       <style>{`

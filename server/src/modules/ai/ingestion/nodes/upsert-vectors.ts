@@ -4,43 +4,10 @@ import { collectionMemories, collections, memories, memoryTags, users } from "..
 import { CollectionSource, MemoryStatus, MemoryType } from "../../../../db/enums";
 import { resolveTagIds, type Tx } from "../../../memory/memory.service";
 import { EVENT_DETECTION_CONFIDENCE_THRESHOLD, notifyEventDetected } from "../../../memory/memory.notify";
-import { canCreateSystemCollection } from "../../../plans/plans.service";
 import { getVectorStore } from "../../vector-store";
 import { isVideoUrl } from "../extract-url";
 import { logNode } from "../log";
 import type { IngestionStateType, IngestionUpdate } from "../state";
-
-// Reused across every memory the agent files once a user's plan-tier cap
-// on auto-organized collections is reached, instead of endlessly proposing
-// new ones — see canCreateSystemCollection.
-const GENERAL_COLLECTION_NAME = "General";
-
-async function findOrCreateGeneralCollection(tx: Tx, userId: string): Promise<string> {
-  const [existing] = await tx
-    .select({ id: collections.id })
-    .from(collections)
-    .where(
-      and(
-        eq(collections.userId, userId),
-        eq(collections.name, GENERAL_COLLECTION_NAME),
-        eq(collections.source, CollectionSource.SYSTEM),
-      ),
-    )
-    .limit(1);
-  if (existing) return existing.id;
-
-  const [created] = await tx
-    .insert(collections)
-    .values({
-      userId,
-      name: GENERAL_COLLECTION_NAME,
-      icon: "📥",
-      description: "Everything the agent files once you've reached your collection limit.",
-      source: CollectionSource.SYSTEM,
-    })
-    .returning({ id: collections.id });
-  return created.id;
-}
 
 async function assignCollection(tx: Tx, state: IngestionStateType): Promise<string | null> {
   if (state.collectionAction === "existing" && state.collectionName) {
@@ -57,22 +24,16 @@ async function assignCollection(tx: Tx, state: IngestionStateType): Promise<stri
   }
 
   if (state.collectionAction === "new" && state.collectionName) {
-    const canCreate = await canCreateSystemCollection(state.userId, tx);
-
-    const collectionId = canCreate
-      ? (
-          await tx
-            .insert(collections)
-            .values({
-              userId: state.userId,
-              name: state.collectionName,
-              icon: state.collectionIcon || "📁",
-              description: state.collectionDescription,
-              source: CollectionSource.SYSTEM,
-            })
-            .returning({ id: collections.id })
-        )[0].id
-      : await findOrCreateGeneralCollection(tx, state.userId);
+    const [{ id: collectionId }] = await tx
+      .insert(collections)
+      .values({
+        userId: state.userId,
+        name: state.collectionName,
+        icon: state.collectionIcon || "📁",
+        description: state.collectionDescription,
+        source: CollectionSource.SYSTEM,
+      })
+      .returning({ id: collections.id });
 
     await tx
       .insert(collectionMemories)
@@ -169,17 +130,28 @@ export async function upsertVectors(state: IngestionStateType): Promise<Ingestio
     assignedCollectionId = await assignCollection(tx, state);
   });
 
-  await getVectorStore().upsertMemoryVectors({
-    memoryId: state.memoryId,
-    userId: state.userId,
-    documentEmbedding: state.documentEmbedding,
-    chunks: state.chunks.map((chunk, index) => ({
-      index: chunk.index,
-      content: chunk.content,
-      tokenCount: chunk.tokenCount,
-      embedding: state.chunkEmbeddings[index] ?? [],
-    })),
-  });
+  // Skipped (not written as an empty/zero vector) when embeddings weren't
+  // configured for this run — memories.document_embedding is a nullable
+  // vector(1536) column and memory_chunks.embedding is NOT NULL, so there's
+  // no valid "empty" vector to write for either. On a re-ingestion this also
+  // means a previously-computed embedding is left untouched rather than
+  // wiped out just because the key isn't configured right now; the fresh
+  // AI_NOT_CONFIGURED case for a brand-new memory just leaves both at their
+  // natural empty state (column default null / zero chunk rows) until
+  // embeddings get configured and it's reprocessed.
+  if (state.documentEmbedding.length > 0) {
+    await getVectorStore().upsertMemoryVectors({
+      memoryId: state.memoryId,
+      userId: state.userId,
+      documentEmbedding: state.documentEmbedding,
+      chunks: state.chunks.map((chunk, index) => ({
+        index: chunk.index,
+        content: chunk.content,
+        tokenCount: chunk.tokenCount,
+        embedding: state.chunkEmbeddings[index] ?? [],
+      })),
+    });
+  }
 
   if (state.detectedEventAt && (state.eventDetectionConfidence ?? 0) >= EVENT_DETECTION_CONFIDENCE_THRESHOLD) {
     const [row] = await db

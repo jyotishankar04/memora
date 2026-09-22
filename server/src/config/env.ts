@@ -54,17 +54,25 @@ const envSchema = z
     R2_BUCKET_NAME: z.string().min(1, "R2_BUCKET_NAME is required"),
     R2_PUBLIC_URL: z.string().url("R2_PUBLIC_URL must be a valid URL"),
 
-    // AI ingestion (docs/AI_REQUIREMENTS.md): Groq for the LLM steps, OpenAI
-    // for embeddings only (matches the schema's hardcoded vector(1536)).
-    GROQ_API_KEY: z.string().min(1, "GROQ_API_KEY is required"),
-    OPENAI_API_KEY: z.string().min(1, "OPENAI_API_KEY is required"),
-
     // Vector storage backend — local/dev uses the pgvector columns already
     // on `memories`/`memory_chunks`; production points at Upstash Vector
     // instead, so vector search load never competes with the primary DB.
     VECTOR_STORE_PROVIDER: z.enum(["pgvector", "upstash"]).default("pgvector"),
     UPSTASH_VECTOR_REST_URL: z.string().url().optional(),
     UPSTASH_VECTOR_REST_TOKEN: z.string().optional(),
+
+    // Every AI role is bring-your-own-key EXCEPT this one: embeddings are
+    // cheap enough (fractions of a cent per memory) that the platform pays
+    // for them directly, so semantic search works the moment someone signs
+    // up rather than staying dark until they've configured a key. Optional
+    // — same degrade-gracefully pattern as every other secret here: if
+    // unset, getEmbeddings() just has nothing to fall back to, and a user's
+    // own configured embeddings credential (Settings -> AI) always takes
+    // priority over this when they have one. See ai.providers.ts.
+    EMBEDDINGS_PROVIDER: z.enum(["openai", "google", "custom"]).default("openai"),
+    EMBEDDINGS_API_KEY: z.string().optional(),
+    EMBEDDINGS_MODEL: z.string().default("text-embedding-3-small"),
+    EMBEDDINGS_BASE_URL: z.string().url().optional(),
 
     // Langfuse (self-hosted, see docker-compose.yml's langfuse-* services) —
     // traces every node/LLM call in the ingestion pipeline. Optional: if
@@ -141,6 +149,13 @@ const envSchema = z
     {
       message: "UPSTASH_VECTOR_REST_URL and UPSTASH_VECTOR_REST_TOKEN are required when VECTOR_STORE_PROVIDER=upstash",
       path: ["UPSTASH_VECTOR_REST_TOKEN"],
+    }
+  )
+  .refine(
+    (data) => !data.EMBEDDINGS_API_KEY || data.EMBEDDINGS_PROVIDER !== "custom" || !!data.EMBEDDINGS_BASE_URL,
+    {
+      message: "EMBEDDINGS_BASE_URL is required when EMBEDDINGS_PROVIDER=custom",
+      path: ["EMBEDDINGS_BASE_URL"],
     }
   );
 

@@ -1,9 +1,8 @@
 import { and, count, eq, inArray } from "drizzle-orm";
 import { db } from "../../db";
 import { collectionMemories, collections, memories } from "../../db/schema";
-import { CollectionSource, PlanLimitType } from "../../db/enums";
+import { CollectionSource } from "../../db/enums";
 import { AppError } from "../../shared/errors/app-error";
-import { assertWithinLimit } from "../plans/plans.service";
 import type { CreateCollectionInput, ListCollectionsQuery, UpdateCollectionInput } from "./collection.schema";
 
 export interface CollectionResponse {
@@ -52,8 +51,6 @@ export async function createCollection(
   // Every collection created through this endpoint is user-owned — system
   // collections come from internal processes (onboarding defaults,
   // AI-suggested groupings), never this API.
-  await assertWithinLimit(userId, PlanLimitType.COLLECTION_COUNT, 1);
-
   const [row] = await db
     .insert(collections)
     .values({ userId, name: input.name, icon: input.icon, description: input.description, source: CollectionSource.USER })
@@ -135,10 +132,6 @@ export async function convertToUser(userId: string, id: string): Promise<Collect
   if (existing.source === CollectionSource.USER) {
     throw new AppError("This collection is already yours", 400, "ALREADY_USER_COLLECTION");
   }
-
-  // Converting makes a previously-uncounted collection start counting
-  // against the plan's collection limit — check before committing to it.
-  await assertWithinLimit(userId, PlanLimitType.COLLECTION_COUNT, 1);
 
   const [row] = await db
     .update(collections)

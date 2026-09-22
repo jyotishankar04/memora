@@ -37,6 +37,12 @@ Respond as strict JSON: {{"action": "existing"|"new"|"none", "collectionName": "
 
 /** Conservative by design — most memories should come back "none" rather than spawning a new collection per save. */
 export async function organizeCollection(state: IngestionStateType): Promise<IngestionUpdate> {
+  const model = await getChatModel(state.userId, "fast");
+  if (!model) {
+    logNode(state.memoryId, "organizeCollection", { skipped: "AI not configured" });
+    return { collectionAction: "none", collectionName: null, collectionIcon: null, collectionDescription: null };
+  }
+
   const existing = await db
     .select({ name: collections.name, description: collections.description })
     .from(collections)
@@ -47,7 +53,7 @@ export async function organizeCollection(state: IngestionStateType): Promise<Ing
       ? existing.map((c) => `- ${c.name}${c.description ? `: ${c.description}` : ""}`).join("\n")
       : "(none yet)";
 
-  const chain = prompt.pipe(getChatModel("fast")).pipe(new JsonOutputParser<CollectionDecision>());
+  const chain = prompt.pipe(model).pipe(new JsonOutputParser<CollectionDecision>());
   const decision = await chain.invoke(
     {
       title: state.aiTitle ?? state.existingTitle,

@@ -7,7 +7,7 @@ import bgLight from "@/public/memora-bg-light.webp";
 import { Logo } from "@/components/logo";
 import { motion, type Variants } from "motion/react";
 import { ArrowRight, Layers, MessageSquareQuote, SearchCheck } from "lucide-react";
-import { ctaHref } from "@/lib/showcase";
+import { useAuthCta } from "@/hooks/use-auth-cta";
 
 /**
  * Hero A — full-bleed photograph with the copy sitting in the bottom band.
@@ -15,6 +15,8 @@ import { ctaHref } from "@/lib/showcase";
  * position), so light and dark read as one place at two times of day.
  */
 export default function HeroFullbleed() {
+  const cta = useAuthCta();
+
   // Nav: slides down from top with blur, fast spring
   const navVariants: Variants = {
     hidden: { opacity: 0, y: -18, filter: 'blur(6px)' },
@@ -118,7 +120,7 @@ export default function HeroFullbleed() {
           <div className="hidden items-center gap-10 text-[13px] font-medium tracking-[0.05em] text-foreground/80 md:flex">
             {[
               { label: 'FEATURES', href: '/features' },
-              { label: 'PRICING', href: '/pricing' },
+              { label: 'CONTRIBUTE', href: '/contribute' },
               { label: 'CHANGELOG', href: '/changelog' },
               { label: 'BLOG', href: '/blog' },
               { label: 'HELP', href: '/help' },
@@ -134,10 +136,10 @@ export default function HeroFullbleed() {
           </div>
 
           <Link
-            href={ctaHref("/auth/signup?plan=free")}
+            href={cta.href}
             className="group flex min-h-[40px] items-center gap-2 rounded-full bg-primary px-6 py-2.5 text-[14px] font-medium text-primary-foreground shadow-sm transition-all will-change-transform hover:bg-primary/90 active:scale-[0.96]"
           >
-            Start free
+            {cta.label}
             <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
           </Link>
         </motion.nav>
@@ -206,10 +208,10 @@ export default function HeroFullbleed() {
 
             <motion.div variants={rightItemVariants} className="flex flex-col gap-3">
               <Link
-                href={ctaHref("/auth/signup?plan=free")}
+                href={cta.href}
                 className="group flex min-h-[40px] w-fit items-center gap-2 rounded-full bg-primary px-7 py-3.5 text-[15px] font-medium text-primary-foreground shadow-md transition-all will-change-transform hover:bg-primary/90 active:scale-[0.96]"
               >
-                Start free
+                {cta.label}
                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-0.5" />
               </Link>
               <span className="text-[13px] font-medium text-foreground/55">

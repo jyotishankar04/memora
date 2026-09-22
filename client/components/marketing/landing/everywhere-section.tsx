@@ -2,17 +2,18 @@
 
 import { motion, type Variants } from "motion/react";
 import { HugeiconsIcon } from "@hugeicons/react";
-import { ChromeIcon, SmartPhone01Icon as SmartPhone, Upload01Icon as Upload } from "@hugeicons/core-free-icons";
+import { ChromeIcon, Upload01Icon as Upload } from "@hugeicons/core-free-icons";
 import { Badge } from "@/components/ui/badge";
 import { MEMORY_TYPE_ICONS } from "@/lib/memory-icons";
 
-// Grounded in what actually ships — and, for Extension/Mobile, in what the
-// product ITSELF says: app/(platfrom)/app/integrations/page.tsx lists both
-// under category "Coming soon" with the literal descriptions "Not yet
-// published to the Chrome Web Store" and "Not yet released." An earlier
-// version of this section presented both as live, present-tense capture
-// surfaces — wrong, caught by checking the in-app page's own copy, not just
-// whether the code exists in extension/ and mobile/.
+// Grounded in what actually ships — and, for the Extension, in what the
+// product ITSELF says: app/(platfrom)/app/integrations/page.tsx lists it
+// under category "Coming soon" with the literal description "Not yet
+// published to the Chrome Web Store." An earlier version of this section
+// presented it as a live, present-tense capture surface — wrong, caught by
+// checking the in-app page's own copy, not just whether the code exists in
+// extension/. There's no mobile app — an earlier one was removed from the
+// monorepo entirely, not just deprioritized.
 interface Surface {
   icon: typeof ChromeIcon;
   title: string;
@@ -35,12 +36,6 @@ const SURFACES: Surface[] = [
     icon: ChromeIcon,
     title: "Extension",
     body: "Quick-capture from any tab with a keyboard shortcut — not yet published to the Chrome Web Store.",
-    comingSoon: true,
-  },
-  {
-    icon: SmartPhone,
-    title: "Mobile",
-    body: "Save and browse your memories on iOS and Android — not yet released.",
     comingSoon: true,
   },
 ];
@@ -93,7 +88,7 @@ export function EverywhereSection() {
         </h2>
         <p className="mt-4 text-base text-pretty text-muted-foreground">
           Save from the dashboard today, or bring in what you already have — the
-          extension and mobile app are on the way.
+          browser extension is on the way.
         </p>
       </div>
 

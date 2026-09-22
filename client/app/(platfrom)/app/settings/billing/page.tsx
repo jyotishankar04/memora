@@ -6,6 +6,7 @@ import { HugeiconsIcon } from "@hugeicons/react";
 import { CheckmarkCircle01Icon as CheckCircle } from "@hugeicons/core-free-icons";
 import { getMyPlan, formatLimitValue, PLAN_LIMIT_LABEL, type PlanLimitType } from "@/lib/plans";
 import { QueryErrorState } from "@/components/query-error-state";
+import { SupportProjectCard } from "@/components/support-project-card";
 
 const LIMIT_ORDER: PlanLimitType[] = [
   "memory_count",
@@ -64,6 +65,8 @@ export default function BillingSettingsPage() {
           <div className="p-4 border border-border/60 bg-muted/15 rounded-xl space-y-1 text-[10px] text-muted-foreground font-semibold leading-relaxed">
             <p>This product is open source and free for everyone — there&apos;s no paid tier and nothing to upgrade to.</p>
           </div>
+
+          <SupportProjectCard />
 
         </div>
       )}

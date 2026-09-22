@@ -58,7 +58,13 @@ export async function generateAiInsights(state: IngestionStateType): Promise<Ing
       .filter(Boolean)
       .join(" | ") || "(none available)";
 
-  const chain = prompt.pipe(getChatModel("fast")).pipe(new JsonOutputParser<Insights>());
+  const model = await getChatModel(state.userId, "fast");
+  if (!model) {
+    logNode(state.memoryId, "generateAiInsights", { skipped: "AI not configured" });
+    return { aiTitle: null, aiSummary: null, suggestedTags: [] };
+  }
+
+  const chain = prompt.pipe(model).pipe(new JsonOutputParser<Insights>());
   const insights = await chain.invoke(
     {
       content: (state.rawContent || "(none captured)").slice(0, 4000),
